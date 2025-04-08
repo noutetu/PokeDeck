@@ -46,13 +46,20 @@ def convert_csv_to_json(csv_path, output_path):
             "id": str(row["ID"]),
             "name": row["Name"],
             "cardType": row["CardType"] if isinstance(row["CardType"], str) else "",
-            "imageKey": row["ImageKey"] if isinstance(row["ImageKey"], str) else "",
-            "tags": row["Tags"].split(',') if isinstance(row["Tags"], str) else [],
+            "evolutionStage": row["EvolutionStage"] if isinstance(row.get("EvolutionStage"), str) else "",
+            "pack": row["Pack"] if isinstance(row.get("Pack"), str) else "",
             "hp": safe_int(row["HP"]),
             "type": row["Type"] if isinstance(row["Type"], str) else "",
             "weakness": row["Weakness"] if isinstance(row["Weakness"], str) else "",
             "retreatCost": safe_int(row["RetreatCost"]),
-            "moves": []
+            "ability": {
+                "name": row["AbilityName"] if isinstance(row.get("AbilityName"), str) else "",
+                "effect": row["Ability"] if isinstance(row.get("Ability"), str) else ""
+            },
+            "moves": [],
+            "maxDamage": safe_int(row.get("MaxDamage")),
+            "tags": row["Tags"].split(',') if isinstance(row["Tags"], str) else [],
+            "imageKey": row["ImageKey"] if isinstance(row["ImageKey"], str) else ""
         }
 
         move1 = build_move(row, "Move1")
@@ -67,7 +74,6 @@ def convert_csv_to_json(csv_path, output_path):
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump({ "cards": cards }, f, ensure_ascii=False, indent=2)
 
-
     print(f"✅ JSONファイルを出力しました：{output_path}")
 
 # ▼ ここが「実行部分」 ▼
@@ -80,4 +86,3 @@ if __name__ == "__main__":
     csv_path = sys.argv[1]
     output_path = "output.json"
     convert_csv_to_json(csv_path, output_path)
-
