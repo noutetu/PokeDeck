@@ -1,10 +1,14 @@
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
+using UnityEngine.UI; // Added to include RawImage
 using UnityEngine;
+using UnityEngine.Networking;
 
 public class CardManager : MonoBehaviour
 {
     public static CardManager Instance { get; private set; }
+    [SerializeField] RawImage rawimage; 
 
     private Dictionary<string, CardData> cardDict;
 
@@ -33,9 +37,29 @@ public class CardManager : MonoBehaviour
     {
         if (cardDict != null && cardDict.TryGetValue(id, out var card))
         {
+            Debug.Log($"🟢 カード {card.name} を取得しました");
+            // 画像を表示する処理
+            StartCoroutine(LoadTextureFromWeb(card.imageKey));
+
             return card;
         }
         Debug.LogWarning($"Card ID {id} not found.");
         return null;
+    }
+
+    private IEnumerator LoadTextureFromWeb(string url)
+    {
+        UnityWebRequest request = UnityWebRequestTexture.GetTexture(url);
+        yield return request.SendWebRequest();
+
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+            rawimage.texture = ((DownloadHandlerTexture)request.downloadHandler).texture;
+            Debug.Log("✅ JSON取得成功！");
+        }
+        else
+        {
+            Debug.LogError("❌ JSON取得失敗: " + request.error);
+        }
     }
 }

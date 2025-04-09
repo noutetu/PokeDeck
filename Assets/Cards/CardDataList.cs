@@ -13,13 +13,18 @@ public class CardData
     public string id;
     public string name;
     public string cardType;
-    public string imageKey;
-    public List<string> tags;
+    public string evolutionStage;
+    public string pack;
     public int hp;
     public string type;
     public string weakness;
     public int retreatCost;
+    public string abilityName;
+    public string abilityEffect;
     public List<MoveData> moves;
+    public List<string> tags;
+    public int maxDamage;
+    public string imageKey;
 }
 
 [Serializable]

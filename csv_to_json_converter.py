@@ -52,10 +52,8 @@ def convert_csv_to_json(csv_path, output_path):
             "type": row["Type"] if isinstance(row["Type"], str) else "",
             "weakness": row["Weakness"] if isinstance(row["Weakness"], str) else "",
             "retreatCost": safe_int(row["RetreatCost"]),
-            "ability": {
-                "name": row["AbilityName"] if isinstance(row.get("AbilityName"), str) else "",
-                "effect": row["Ability"] if isinstance(row.get("Ability"), str) else ""
-            },
+            "abilityName": row["AbilityName"] if isinstance(row.get("AbilityName"), str) else "",
+            "abilityEffect": row["Ability"] if isinstance(row.get("Ability"), str) else "",
             "moves": [],
             "maxDamage": safe_int(row.get("MaxDamage")),
             "tags": row["Tags"].split(',') if isinstance(row["Tags"], str) else [],
