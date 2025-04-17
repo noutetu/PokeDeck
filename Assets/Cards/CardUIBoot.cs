@@ -36,9 +36,11 @@ public class CardUIBoot : MonoBehaviour
 
             // ✅ JsonUtility → Newtonsoft.Json に変更！
             var loadedModel = JsonConvert.DeserializeObject<AllCardModel>(jsonText);
+            SetCardData(loadedModel.cards);
+            
             Debug.Log("画像の読み込み開始");
             // 画像の読み込みを非同期で行う
-            await LoadImages(loadedModel.cards);
+            await SetImages(loadedModel.cards);
             Debug.Log("画像の読み込み完了");
 
             Debug.Log($"📦 読み込んだカード数: {loadedModel.cards.Count}");
@@ -50,7 +52,15 @@ public class CardUIBoot : MonoBehaviour
             Debug.LogError("❌ JSON読み込み失敗: " + request.error);
         }
     }
-    private async UniTask LoadImages(List<CardModel> cards)
+    private void SetCardData(List<CardModel> cards)
+    {
+        foreach (var card in cards)
+        {
+            card.SetCardType(card.cardType);
+        }
+    }
+
+    private async UniTask SetImages(List<CardModel> cards)
     {
         foreach (var card in cards)
         {

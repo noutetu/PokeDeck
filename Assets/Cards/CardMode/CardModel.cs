@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 
 // ----------------------------------------------------------------------
 // カードのデータを保持するクラス（Model）
@@ -26,6 +25,35 @@ public class CardModel
     public int maxDamage;
     public string imageKey;
     public Texture2D imageTexture;
+    public CardType cardTypeOnEnum;
+    
+    public void SetCardType(string type)
+    {
+        switch (type)
+        {
+            case "非EX":
+                cardTypeOnEnum = CardType.非EX;
+                break;
+            case "EX":
+                cardTypeOnEnum = CardType.EX;
+                break;
+            case "サポート":
+                cardTypeOnEnum = CardType.サポート;
+                break;
+            case "グッズ":
+                cardTypeOnEnum = CardType.グッズ;
+                break;
+            case "ポケモンの道具":
+                cardTypeOnEnum = CardType.ポケモンの道具;
+                break;
+            case "グッズ(化石)":
+                cardTypeOnEnum = CardType.化石;
+                break;
+            default:
+                Debug.LogError("❌ カードタイプが不明: " + type);
+                break;
+        }
+    }
 }
 
 public class MoveData
@@ -34,4 +62,26 @@ public class MoveData
     public int damage;
     public string effect;
     public Dictionary<string, int> cost;
+}
+public enum CardType
+{
+    非EX,
+    EX,
+    サポート,
+    グッズ,
+    ポケモンの道具,
+    化石,
+}
+public enum Type
+{
+    草,
+    炎,
+    水,
+    雷,
+    闘,
+    超,
+    悪,
+    鋼,
+    ドラゴン,
+    無色,
 }

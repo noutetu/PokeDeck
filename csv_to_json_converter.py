@@ -1,12 +1,14 @@
 import pandas as pd
 import json
 
+# ----------------------------------------------------------------------
 def safe_int(value):
     try:
         return int(value)
     except (ValueError, TypeError):
         return 0
 
+# ----------------------------------------------------------------------
 def parse_cost(cost_str):
     if pd.isna(cost_str):
         return {}
@@ -21,22 +23,25 @@ def parse_cost(cost_str):
                 continue
     return result
 
+# ----------------------------------------------------------------------
 def build_move(row, prefix):
     name = row.get(f"{prefix}Name")
     damage = row.get(f"{prefix}Damage")
     effect = row.get(f"{prefix}Effect")
     cost = parse_cost(row.get(f"{prefix}Cost"))
 
-    if pd.isna(name):
+    # 技名・効果どちらも無ければ技としては無効
+    if pd.isna(name) and not isinstance(effect, str):
         return None
 
     return {
-        "name": name,
+        "name": name if isinstance(name, str) else "",
         "damage": safe_int(damage),
         "effect": effect if isinstance(effect, str) else "",
         "cost": cost
     }
 
+# ----------------------------------------------------------------------
 def convert_csv_to_json(csv_path, output_path):
     df = pd.read_csv(csv_path)
     cards = []
@@ -74,7 +79,8 @@ def convert_csv_to_json(csv_path, output_path):
 
     print(f"✅ JSONファイルを出力しました：{output_path}")
 
-# ▼ ここが「実行部分」 ▼
+# ----------------------------------------------------------------------
+# ▼ 実行部分 ▼
 if __name__ == "__main__":
     import sys
     if len(sys.argv) < 2:

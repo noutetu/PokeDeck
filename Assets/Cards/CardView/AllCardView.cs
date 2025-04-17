@@ -50,7 +50,6 @@ public class AllCardView : MonoBehaviour
             return;
         }
 
-        Debug.Log("カードをインスタンス化: " + card.name);
         view.Setup(card);
     }
 

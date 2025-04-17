@@ -11,7 +11,22 @@ public class AllCardPresenter
     private AllCardModel model;
     public ReactiveCollection<CardModel> DisplayedCards { get; private set; } = new ReactiveCollection<CardModel>();
     // 読み込み完了イベント
-public Subject<Unit> OnLoadComplete { get; } = new Subject<Unit>();
+    public Subject<Unit> OnLoadComplete { get; } = new Subject<Unit>();
+
+    // Enumと対応するアイコンの辞書
+    public Dictionary<Type,Sprite> typeIcons = new Dictionary<Type, Sprite>
+    {
+        { Type.草, Resources.Load<Sprite>("Icons/Grass") },
+        { Type.炎, Resources.Load<Sprite>("Icons/Fire") },
+        { Type.水, Resources.Load<Sprite>("Icons/Water") },
+        { Type.雷, Resources.Load<Sprite>("Icons/Electric") },
+        { Type.闘, Resources.Load<Sprite>("Icons/Fighting") },
+        { Type.超, Resources.Load<Sprite>("Icons/Psychic") },
+        { Type.悪, Resources.Load<Sprite>("Icons/Dark") },
+        { Type.鋼, Resources.Load<Sprite>("Icons/Steel") },
+        { Type.ドラゴン, Resources.Load<Sprite>("Icons/Dragon") },
+        { Type.無色, Resources.Load<Sprite>("Icons/Colorless") }
+    };
 
     public AllCardPresenter(AllCardModel model)
     {
