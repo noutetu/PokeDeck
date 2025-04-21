@@ -14,7 +14,7 @@ public class AllCardPresenter
     public Subject<Unit> OnLoadComplete { get; } = new Subject<Unit>();
 
     // Enumと対応するアイコンの辞書
-    public Dictionary<Type,Sprite> typeIcons = new Dictionary<Type, Sprite>
+    public Dictionary<Type, Sprite> typeIcons = new Dictionary<Type, Sprite>
     {
         { Type.草, Resources.Load<Sprite>("Icons/Grass") },
         { Type.炎, Resources.Load<Sprite>("Icons/Fire") },
@@ -43,4 +43,13 @@ public class AllCardPresenter
         }
         OnLoadComplete.OnNext(Unit.Default); // 読み込み完了イベントを発行
     }
+    public void AddCards(List<CardModel> newCards)
+    {
+        foreach (var card in newCards)
+        {
+            DisplayedCards.Add(card);
+        }
+        OnLoadComplete.OnNext(Unit.Default); // 読み込み完了イベントを発行
+    }
+
 }
