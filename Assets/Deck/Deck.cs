@@ -446,7 +446,7 @@ public class Deck
     }
 
     /// <summary>
-    /// デッキ内のカードをID順、その後カードタイプ順に並び替える
+    /// デッキ内のカードをカードタイプ順、その後ID順に並び替える
     /// エネルギー、特殊エネルギー、スタジアムは除外してリストの最後に配置
     /// </summary>
     public void SortCardsByTypeAndID()
@@ -454,19 +454,66 @@ public class Deck
         if (_cardIds == null || _cardIds.Count <= 1)
             return;
             
+        // ソート前のカード情報をログ
+        Debug.Log($"デッキ「{_name}」のソート前: {_cardIds.Count}枚");
+        LogCardOrder("ソート前", _cardIds);
+            
         // カードIDのリストをクローン
         List<string> sortedCardIds = new List<string>(_cardIds);
         
-        // LINQ を使用して、まずIDで並べ替えた後、カードタイプで並び替える
+        // LINQ を使用して、まずカードタイプで並べ替えた後、ID順で並べ替える（順序を変更）
         sortedCardIds = sortedCardIds
-            .OrderBy(id => id)  // まずID順（セット番号順）
-            .ThenBy(id => GetCardTypeSortPriority(GetCardModel(id)))  // 次にカードタイプ順
+            .OrderBy(id => GetCardTypeSortPriority(GetCardModel(id)))  // まずカードタイプ順（優先度が低い順）
+            .ThenBy(id => id)  // 次にID順（セット番号順）
             .ToList();
         
         // 並び替えたIDリストで元のリストを置き換え
         _cardIds = sortedCardIds;
         
-        Debug.Log($"デッキ「{_name}」のカードをID順→カードタイプ順に並び替えました：{_cardIds.Count}枚");
+        // ソート後のカード情報をログ
+        LogCardOrder("ソート後", _cardIds);
+        
+        Debug.Log($"デッキ「{_name}」のカードをカードタイプ順→ID順に並び替えました：{_cardIds.Count}枚");
+    }
+    
+    /// <summary>
+    /// カードの並び順をログに出力
+    /// </summary>
+    private void LogCardOrder(string prefix, List<string> cardIds)
+    {
+        if (cardIds == null || cardIds.Count == 0)
+            return;
+            
+        Debug.Log($"===== {prefix} カード一覧 =====");
+        
+        for (int i = 0; i < cardIds.Count; i++)
+        {
+            string cardId = cardIds[i];
+            CardModel card = GetCardModel(cardId);
+            
+            if (card != null)
+            {
+                string cardType = "";
+                string evolutionStage = "";
+                int priority = GetCardTypeSortPriority(card);
+                
+                // カードタイプまたは進化段階を文字列で表現
+                if (!string.IsNullOrEmpty(card.evolutionStage))
+                {
+                    evolutionStage = $"進化段階: {card.evolutionStage}";
+                }
+                
+                cardType = $"タイプ: {card.cardType}";
+                
+                Debug.Log($"[{i+1:D2}] ID: {cardId}, 名前: {card.name}, {evolutionStage} {cardType}, 優先度: {priority}");
+            }
+            else
+            {
+                Debug.Log($"[{i+1:D2}] ID: {cardId}, カードモデルなし");
+            }
+        }
+        
+        Debug.Log($"===== {prefix} カード一覧終了 =====");
     }
 
     /// <summary>
@@ -501,13 +548,14 @@ public class Deck
                 return 40;
             case Enum.CardType.グッズ:
                 return 50;
-            case Enum.CardType.ポケモンの道具:
+            case Enum.CardType.ポケモンのどうぐ:
                 return 60;
             case Enum.CardType.サポート:
                 return 70;
             default:
                 return 800; // その他のカードは後方に配置
         }
+        
     }
 }
 

@@ -17,7 +17,7 @@ namespace Enum
                 case "EX": return CardType.EX;
                 case "サポート": return CardType.サポート;
                 case "グッズ": return CardType.グッズ;
-                case "ポケモンの道具": return CardType.ポケモンの道具;
+                case "ポケモンのどうぐ": return CardType.ポケモンのどうぐ;
                 case "化石": return CardType.化石;
                 default:
                     Debug.LogError($"❌ 未知のカードタイプ: {typeString}");

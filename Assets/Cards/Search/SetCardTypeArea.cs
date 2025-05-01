@@ -40,7 +40,7 @@ public class SetCardTypeArea : MonoBehaviour, IFilterArea
         SetupToggleListener(supportToggle, CardType.サポート);
         SetupToggleListener(itemToggle, CardType.グッズ);
         SetupToggleListener(fossilToggle, CardType.化石);
-        SetupToggleListener(pokemonToolToggle, CardType.ポケモンの道具);
+        SetupToggleListener(pokemonToolToggle, CardType.ポケモンのどうぐ);
     }
     
     // ----------------------------------------------------------------------

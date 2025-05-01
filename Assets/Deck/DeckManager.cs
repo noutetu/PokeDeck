@@ -2,8 +2,6 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using Newtonsoft.Json;
-using UnityEngine.UI; // UIコンポーネント用
-using System.Linq;
 using System.Collections;
 using Cysharp.Threading.Tasks; // UniTask用
 using UnityEngine.Networking; // UnityWebRequest用
@@ -47,7 +45,7 @@ public class DeckManager : MonoBehaviour
     private bool _isDeckPanelVisible = false;
     public bool IsDeckPanelVisible => _isDeckPanelVisible;
 
-    private void Awake()
+    private async void Awake()
     {
         // シングルトンの設定
         if (_instance != null && _instance != this)
@@ -59,61 +57,64 @@ public class DeckManager : MonoBehaviour
         _instance = this;
         DontDestroyOnLoad(gameObject);
         
-        // カードデータベースが初期化されるのを待つために、起動順序を調整
-        StartCoroutine(InitializeWithDelay());
+        // 初期化をUniTaskで実行
+        await InitializeAsync();
     }
     
     /// <summary>
-    /// カードデータベースの初期化を待ってからデッキを読み込む
+    /// UniTaskを使ってCardDatabaseの初期化を待機し、DeckManagerを初期化する
     /// </summary>
-    private IEnumerator InitializeWithDelay()
+    private async UniTask InitializeAsync()
     {
-        Debug.Log("🔄 DeckManager: カードデータベースの初期化を待機中...");
+        Debug.Log("🔄 DeckManager: 初期化を開始します");
         
-        // カードデータベースが初期化されるのを最大5秒待つ
-        float waitTime = 0f;
-        float maxWaitTime = 5f;
-        
-        while (CardDatabase.Instance == null && waitTime < maxWaitTime)
+        try
         {
-            yield return new WaitForSeconds(0.1f);
-            waitTime += 0.1f;
-        }
-        
-        if (CardDatabase.Instance == null)
-        {
-            Debug.LogError("❌ DeckManager: カードデータベースの初期化に失敗しました。デッキのカード情報が正しく復元されない可能性があります。");
-        }
-        else
-        {
-            Debug.Log($"✅ DeckManager: カードデータベースの初期化完了 (待機時間: {waitTime:F1}秒)");
+            // CardDatabaseの初期化完了を待機
+            float startTime = Time.time;
+            await CardDatabase.WaitForInitializationAsync();
+            float waitTime = Time.time - startTime;
             
-            // カードデータベースに登録されているカード数をログ出力
-            Debug.Log($"📊 CardDatabase: 登録済みカード数: {CardDatabase.GetAllCards().Count}枚");
-        }
-        
-        // カードデータベースが利用可能になったらデッキを読み込む
-        LoadDecks();
-        
-        // 常に新しいデッキを作成
-        _currentDeck = new Deck { Name = "新規デッキ" };
-        Debug.Log("📝 DeckManager: 新規デッキを作成しました");
-        
-        // 既存のデッキが存在する場合はカード参照を復元
-        if (_savedDecks.Count > 0)
-        {
-            // カード参照の復元
-            RestoreCardReferencesInDecks();
-            Debug.Log($"既存デッキ {_savedDecks.Count}個のカード参照を復元しました");
-        }
-        
-        Debug.Log($"✅ DeckManager初期化完了: {_savedDecks.Count}個のデッキが読み込まれ、新規デッキが作成されました");
+            // CardDatabaseが正しく初期化されているか確認
+            if (CardDatabase.Instance != null)
+            {
+                Debug.Log($"✅ DeckManager: カードデータベースの初期化完了 (待機時間: {waitTime:F1}秒)");
+                
+                // カードデータベースに登録されているカード数をログ出力
+                Debug.Log($"📊 CardDatabase: 登録済みカード数: {CardDatabase.GetAllCards().Count}枚");
+            }
+            else
+            {
+                Debug.LogError("❌ DeckManager: カードデータベースの初期化に失敗しました。デッキのカード情報が正しく復元されない可能性があります。");
+            }
+            
+            // カードデータベースが利用可能になったらデッキを読み込む
+            LoadDecks();
+            
+            // 常に新しいデッキを作成
+            _currentDeck = new Deck { Name = "新規デッキ" };
+            Debug.Log("📝 DeckManager: 新規デッキを作成しました");
+            
+            // 既存のデッキが存在する場合はカード参照を復元
+            if (_savedDecks.Count > 0)
+            {
+                // カード参照の復元
+                RestoreCardReferencesInDecks();
+                Debug.Log($"既存デッキ {_savedDecks.Count}個のカード参照を復元しました");
+            }
+            
+            Debug.Log($"✅ DeckManager初期化完了: {_savedDecks.Count}個のデッキが読み込まれ、新規デッキが作成されました");
 
-        // パネルの初期状態は非表示
-        if (deckPanel != null)
+            // パネルの初期状態は非表示
+            if (deckPanel != null)
+            {
+                deckPanel.SetActive(false);
+                _isDeckPanelVisible = false;
+            }
+        }
+        catch (System.Exception ex)
         {
-            deckPanel.SetActive(false);
-            _isDeckPanelVisible = false;
+            Debug.LogError($"❌ DeckManager初期化中にエラーが発生しました: {ex.Message}");
         }
     }
 
@@ -376,7 +377,6 @@ public class DeckManager : MonoBehaviour
             Debug.LogWarning("CardDatabaseインスタンスが初期化されていません。カード参照の復元が遅延される場合があります。");
             return;
         }
-
         // デッキから参照されているすべてのカードIDを集める
         HashSet<string> allCardIds = new HashSet<string>();
         foreach (var deck in _savedDecks)
@@ -455,7 +455,8 @@ public class DeckManager : MonoBehaviour
                     var cardModel = _currentDeck.GetCardModel(cardId);
                     if (cardModel != null && cardModel.imageTexture == null && !string.IsNullOrEmpty(cardModel.imageKey))
                     {
-                        tasks.Add(DownloadCardImage(cardModel));
+                        // ImageCacheManagerを使用してカード画像を読み込む
+                        tasks.Add(ImageCacheManager.Instance.GetCardTextureAsync(cardModel));
                         processedCards.Add(cardId);
                     }
                 }
@@ -487,7 +488,8 @@ public class DeckManager : MonoBehaviour
                     var cardModel = deck.GetCardModel(cardId);
                     if (cardModel != null && cardModel.imageTexture == null && !string.IsNullOrEmpty(cardModel.imageKey))
                     {
-                        tasks.Add(DownloadCardImage(cardModel));
+                        // ImageCacheManagerを使用してカード画像を読み込む
+                        tasks.Add(ImageCacheManager.Instance.GetCardTextureAsync(cardModel));
                         processedCards.Add(cardId);
                         otherDeckCardCount++;
                     }
@@ -504,39 +506,6 @@ public class DeckManager : MonoBehaviour
         }
         
         Debug.Log($"すべてのデッキのカード画像 合計{processedCards.Count}枚の読み込みが完了しました。");
-    }
-
-    /// <summary>
-    /// カード画像を非同期でダウンロードし設定する
-    /// </summary>
-    private async UniTask DownloadCardImage(CardModel card)
-    {
-        if (card == null || string.IsNullOrEmpty(card.imageKey))
-            return;
-
-        try
-        {
-            // WebRequestを使ってテクスチャを取得
-            using var request = UnityWebRequestTexture.GetTexture(card.imageKey);
-            await request.SendWebRequest();
-
-            if (request.result == UnityWebRequest.Result.Success)
-            {
-                // ダウンロードしたテクスチャをカードモデルに設定
-                card.imageTexture = ((DownloadHandlerTexture)request.downloadHandler).texture;
-                Debug.Log($"カード '{card.name}' の画像を読み込みました: {card.imageKey}");
-            }
-            else
-            {
-                Debug.LogWarning($"カード '{card.name}' の画像読み込みに失敗しました: {request.error}");
-                AssignDefaultTexture(card);
-            }
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"カード '{card.name}' の画像読み込み中に例外が発生しました: {ex.Message}");
-            AssignDefaultTexture(card);
-        }
     }
 
     /// <summary>

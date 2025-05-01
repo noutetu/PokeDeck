@@ -9,26 +9,10 @@ def safe_int(value):
         return 0
 
 # ----------------------------------------------------------------------
-def parse_cost(cost_str):
-    if pd.isna(cost_str):
-        return {}
-    result = {}
-    for part in str(cost_str).split(','):
-        part = part.strip()
-        if ':' in part:
-            energy_type, amount = part.split(':')
-            try:
-                result[energy_type.strip()] = int(amount.strip())
-            except ValueError:
-                continue
-    return result
-
-# ----------------------------------------------------------------------
 def build_move(row, prefix):
     name = row.get(f"{prefix}Name")
     damage = row.get(f"{prefix}Damage")
     effect = row.get(f"{prefix}Effect")
-    cost = parse_cost(row.get(f"{prefix}Cost"))
 
     # 技名・効果どちらも無ければ技としては無効
     if pd.isna(name) and not isinstance(effect, str):
@@ -37,8 +21,7 @@ def build_move(row, prefix):
     return {
         "name": name if isinstance(name, str) else "",
         "damage": safe_int(damage),
-        "effect": effect if isinstance(effect, str) else "",
-        "cost": cost
+        "effect": effect if isinstance(effect, str) else ""
     }
 
 # ----------------------------------------------------------------------

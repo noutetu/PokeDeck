@@ -25,6 +25,7 @@ public class SearchView : MonoBehaviour
     [SerializeField] private SetCardPackArea cardPackArea;     // カードパックフィルターエリア
     [SerializeField] private SetHPArea hpArea;                 // HPフィルターエリア
     [SerializeField] private SetMaxDamageArea maxDamageArea;   // 最大ダメージフィルターエリア
+    [SerializeField] private SetMaxEnergyArea maxEnergyCostArea; // 最大エネルギーコストフィルターエリア
     
     [Header("結果プレビュー表示UI")]
     [SerializeField] private Transform cardContainer;          // 検索結果表示用コンテナ
@@ -136,6 +137,16 @@ public class SearchView : MonoBehaviour
         {
             Debug.LogWarning("⚠️ SetMaxDamageAreaコンポーネントが設定されていません");
         }
+
+        // 最大エネルギーコストフィルターエリアの登録
+        if (maxEnergyCostArea != null)
+        {
+            // presenter.RegisterMaxEnergyCostArea(maxEnergyCostArea);
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ SetMaxEnergyAreaコンポーネントが設定されていません");
+        }
     }
     
     // ----------------------------------------------------------------------
@@ -143,6 +154,12 @@ public class SearchView : MonoBehaviour
     // ----------------------------------------------------------------------
     public void SetCards(List<CardModel> cards)
     {
+        if (model == null)
+        {
+            // modelがnullの場合は初期化する
+            SetupMVP();
+        }
+        
         if (model != null)
         {
             model.SetCards(cards);

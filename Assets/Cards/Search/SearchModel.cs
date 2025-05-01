@@ -220,7 +220,7 @@ public class SearchModel
     
     // ----------------------------------------------------------------------
     // カードパックフィルターを設定
-    // @param cardPacks 検索するカードパックのセット
+    // @param cardPacks 植物するカードパックのセット
     // ----------------------------------------------------------------------
     public void SetCardPackFilter(HashSet<CardPack> cardPacks)
     {

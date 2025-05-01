@@ -111,8 +111,8 @@ public class DeckView : MonoBehaviour
         if (deckNameInput != null)
             deckNameInput.text = deck.Name;
         
-        // カードをID順に並べ替え
-        deck.SortCardsByID();
+        // カードをカードタイプ順に並べ替え（以前はID順）
+        deck.SortCardsByTypeAndID();
         
         // カードアイテムをクリア
         ClearCardItems();

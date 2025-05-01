@@ -224,10 +224,11 @@ public class AllCardView : MonoBehaviour
     // ----------------------------------------------------------------------
     private void RefreshAll(ReactiveCollection<CardModel> cards)
     {
+        Debug.Log($"カード表示を更新します: {cards.Count}枚");
+
         // 既存のカードを全て削除
         foreach (Transform child in contentParent)
         {
-            // エディットモードとプレイモードで適切な破棄メソッドを使用
             if (Application.isPlaying)
             {
                 Destroy(child.gameObject);
@@ -238,11 +239,13 @@ public class AllCardView : MonoBehaviour
             }
         }
 
-        // 新しいカードを1枚ずつ追加
+        // 新しいカードを追加
         foreach (var card in cards)
         {
             AddCard(card);
         }
+        
+        Debug.Log($"カード表示を完了しました: {cards.Count}枚");
     }
 
     // ----------------------------------------------------------------------
@@ -252,26 +255,49 @@ public class AllCardView : MonoBehaviour
     // ----------------------------------------------------------------------
     private void AddCard(CardModel card)
     {
-        // プレハブの存在チェック
         if (cardPrefab == null)
         {
-            Debug.LogError("❌ cardPrefabがnullだよ！");
+            Debug.LogError("❌ cardPrefabがnullです");
             return;
         }
 
-        // プレハブをインスタンス化（親オブジェクトを指定）
+        // カードプレハブのインスタンスを生成
         var go = Instantiate(cardPrefab, contentParent);
-        var view = go.GetComponent<CardView>();
-
-        // CardViewコンポーネントの存在チェック
-        if (view == null)
+        
+        // CardViewを使わず、直接コンポーネントにアクセス
+        var rawImage = go.GetComponentInChildren<RawImage>();
+        var nameText = go.GetComponentInChildren<TMP_Text>();
+        
+        if (rawImage != null && card != null)
         {
-            Debug.LogError("❌ CardViewがプレハブにアタッチされてないよ！");
-            return;
+            // DeckListItemと同様に直接imageTextureを使用
+            if (card.imageTexture != null)
+            {
+                // 直接CardModelのimageTextureを参照
+                rawImage.texture = card.imageTexture;
+            }
+            else if (ImageCacheManager.Instance != null)
+            {
+                // imageTextureがnullの場合はデフォルト画像を表示
+                rawImage.texture = ImageCacheManager.Instance.GetDefaultTexture();
+            }
         }
-
-        // カードデータを設定
-        view.Setup(card);
+        
+        // カード名の設定
+        if (nameText != null && card != null)
+        {
+            nameText.text = card.name;
+        }
+        
+        // カードオブジェクトにカードデータを紐付け（クリックイベントなどで使用）
+        go.name = $"Card_{card.id}_{card.name}";
+        
+        // CardViewコンポーネントが存在する場合は、データ連携のために設定も行う
+        var cardView = go.GetComponent<CardView>();
+        if (cardView != null)
+        {
+            cardView.Setup(card);
+        }
     }
     
     // ----------------------------------------------------------------------
@@ -358,14 +384,8 @@ public class AllCardView : MonoBehaviour
         switch (currentSortType)
         {
             case SortType.ID:
-                // ID順（数値の場合は数値順、そうでなければ文字列順）
-                cardList.Sort((a, b) => {
-                    if (int.TryParse(a.id, out int idA) && int.TryParse(b.id, out int idB))
-                    {
-                        return idA.CompareTo(idB);
-                    }
-                    return string.Compare(a.id, b.id);
-                });
+                // ID順（整数順）- id型がint型に変更されたため直接比較
+                cardList.Sort((a, b) => a.id.CompareTo(b.id));
                 break;
                 
             case SortType.Name:

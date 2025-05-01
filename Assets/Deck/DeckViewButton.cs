@@ -61,9 +61,19 @@ public class DeckViewButton : MonoBehaviour
     // Inspectorからデッキパネルの参照を更新した場合にDeckManagerにも反映
     private void OnValidate()
     {
+        // OnValidate内ではDeckManager.Instanceを直接呼び出さない
+        // 代わりにプレイモード時のみ遅延して設定する
         if (Application.isPlaying && deckPanel != null)
         {
-            DeckManager.Instance.SetDeckPanel(deckPanel);
+            // 遅延してDeckManagerにパネル参照を設定
+            UnityEngine.Debug.Log("デッキパネル参照が更新されました");
+            
+            // 既存のDeckManagerインスタンスを探す（新しく作成しない）
+            DeckManager existingManager = FindObjectOfType<DeckManager>();
+            if (existingManager != null)
+            {
+                existingManager.SetDeckPanel(deckPanel);
+            }
         }
     }
 }

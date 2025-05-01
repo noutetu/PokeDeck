@@ -3,6 +3,7 @@ using UnityEngine;
 using System.IO;
 using Newtonsoft.Json;
 using System.Linq;
+using Cysharp.Threading.Tasks;  // UniTask用
 
 // ----------------------------------------------------------------------
 // カードデータを一元管理するシングルトンクラス
@@ -15,12 +16,22 @@ public class CardDatabase : MonoBehaviour
     {
         get
         {
+            // すでにインスタンスが存在する場合はそれを返す
+            if (_instance != null)
+                return _instance;
+                
+            // インスタンスがなければシーン内から検索
+            _instance = FindObjectOfType<CardDatabase>();
+            
+            // それでも見つからない場合だけ新規作成
             if (_instance == null)
             {
                 var go = new GameObject("CardDatabase");
                 _instance = go.AddComponent<CardDatabase>();
                 DontDestroyOnLoad(go);
+                Debug.Log("CardDatabaseの新規インスタンスを作成しました");
             }
+            
             return _instance;
         }
     }
@@ -37,6 +48,9 @@ public class CardDatabase : MonoBehaviour
     // 初期化済みフラグ
     private bool isInitialized = false;
     
+    // 初期化完了イベント
+    public static event System.Action OnDatabaseInitialized;
+    
     // Jsonシリアライズ設定
     private readonly JsonSerializerSettings jsonSettings = new JsonSerializerSettings
     {
@@ -45,31 +59,81 @@ public class CardDatabase : MonoBehaviour
         TypeNameHandling = TypeNameHandling.None,
         ContractResolver = new UnityContractResolver()
     };
-    
+
     private void Awake()
     {
+        // シングルトンチェック - 複数のインスタンスが作成された場合は破棄する
         if (_instance != null && _instance != this)
         {
+            Debug.LogWarning($"複数のCardDatabaseインスタンスが検出されました。重複を破棄します: {gameObject.name}");
             Destroy(gameObject);
             return;
         }
         
+        // このインスタンスをシングルトンとして設定
         _instance = this;
         DontDestroyOnLoad(gameObject);
+        
+        Debug.Log($"CardDatabaseのAwakeが呼び出されました: {gameObject.name}");
         
         // 保存されたカードデータを読み込み
         LoadCardDatabase();
         
-        Debug.Log($"✅ CardDatabase初期化完了: {cardCache.Count}枚のカードを読み込みました");
+        // 初期化完了フラグを設定
         isInitialized = true;
+        
+        // 初期化完了イベント発火
+        OnDatabaseInitialized?.Invoke();
+        
+        Debug.Log($"✅ CardDatabase初期化完了: {cardCache.Count}枚のカードを読み込みました");
+    }
+    
+    /// <summary>
+    /// インスタンスを明示的に初期化する（プリロード用）
+    /// </summary>
+    public static void Initialize()
+    {
+        // Instanceにアクセスするだけで初期化される
+        CardDatabase db = Instance;
+        if (!db.isInitialized)
+        {
+            db.LoadCardDatabase();
+            db.isInitialized = true;
+            Debug.Log("CardDatabaseを明示的に初期化しました");
+        }
+    }
+    
+    /// <summary>
+    /// CardDatabaseが複数存在しないか検証するデバッグメソッド
+    /// </summary>
+    public static void VerifySingleInstance()
+    {
+        CardDatabase[] instances = FindObjectsOfType<CardDatabase>();
+        if (instances.Length > 1)
+        {
+            Debug.LogError($"複数のCardDatabaseインスタンスが存在します: {instances.Length}個");
+            
+            foreach (var instance in instances)
+            {
+                Debug.LogError($"- インスタンス: {instance.gameObject.name}, isInitialized: {instance.isInitialized}");
+            }
+        }
+        else if (instances.Length == 1)
+        {
+            Debug.Log("CardDatabaseインスタンスは1つだけ存在します");
+        }
+        else
+        {
+            Debug.LogWarning("CardDatabaseインスタンスが見つかりません");
+        }
     }
     
     /// <summary>
     /// カードをキャッシュに追加する
     /// </summary>
-    public void RegisterCard(CardModel card)
+    public void RegisterCard(CardModel card, bool saveImmediately = false)
     {
-        if (card == null || string.IsNullOrEmpty(card.id))
+        if (card == null)
             return;
             
         // ID→CardModelのマッピングを更新
@@ -89,8 +153,11 @@ public class CardDatabase : MonoBehaviour
             }
         }
         
-        // データベースが変更されたので保存
-        SaveCardDatabase();
+        // データベースが変更されたので保存（オプションが有効な場合のみ）
+        if (saveImmediately)
+        {
+            SaveCardDatabase();
+        }
     }
     
     /// <summary>
@@ -112,34 +179,68 @@ public class CardDatabase : MonoBehaviour
     }
     
     /// <summary>
-    /// IDからカードを取得する
+    /// カードIDからカードデータを取得
     /// </summary>
     public CardModel GetCard(string cardId)
     {
-        if (string.IsNullOrEmpty(cardId)) return null;
-        
         if (cardCache.TryGetValue(cardId, out CardModel card))
         {
             return card;
         }
-        
-        Debug.LogWarning($"カードID:{cardId}がデータベースに見つかりません");
         return null;
     }
     
     /// <summary>
-    /// 名前から同名カードのIDリストを取得
+    /// 文字列IDからカードを取得する（互換性維持用）
+    /// </summary>
+    public CardModel GetCardByLegacyId(string cardIdString)
+    {
+        if (string.IsNullOrEmpty(cardIdString)) return null;
+        
+        // 直接文字列IDでの検索を試みる
+        if (cardCache.TryGetValue(cardIdString, out CardModel card))
+        {
+            return card;
+        }
+        
+        Debug.LogWarning($"カードID文字列:{cardIdString}がデータベースに見つかりません");
+        return null;
+    }
+    
+    /// <summary>
+    /// カード名からカードIDのリストを取得
     /// </summary>
     public List<string> GetCardIdsByName(string cardName)
     {
-        if (string.IsNullOrEmpty(cardName)) return new List<string>();
-        
-        if (nameToIdMap.TryGetValue(cardName, out List<string> ids))
+        List<string> result = new List<string>();
+        foreach (var pair in cardCache)
         {
-            return new List<string>(ids);
+            if (pair.Value.name == cardName)
+            {
+                result.Add(pair.Key);
+            }
+        }
+        return result;
+    }
+    
+    /// <summary>
+    /// 名前から同名カードのID文字列リストを取得（互換性維持用）
+    /// </summary>
+    public List<string> GetCardIdStringsByName(string cardName)
+    {
+        List<string> result = new List<string>();
+        List<string> numericIds = GetCardIdsByName(cardName);
+        
+        foreach (string id in numericIds)
+        {
+            CardModel card = GetCard(id);
+            if (card != null && !string.IsNullOrEmpty(card.id))
+            {
+                result.Add(card.id);
+            }
         }
         
-        return new List<string>();
+        return result;
     }
     
     /// <summary>
@@ -160,7 +261,7 @@ public class CardDatabase : MonoBehaviour
     /// <summary>
     /// カードデータベースをJSONファイルに保存
     /// </summary>
-    private void SaveCardDatabase()
+    public void SaveCardDatabase()
     {
         try
         {
@@ -269,22 +370,19 @@ public class CardDatabase : MonoBehaviour
                         card.ConvertStringDataToEnums();
                         
                         // カードをキャッシュに登録
-                        if (!string.IsNullOrEmpty(card.id))
+                        cardCache[card.id] = card;
+                        
+                        // カード名→IDマッピングを更新
+                        if (!string.IsNullOrEmpty(card.name))
                         {
-                            cardCache[card.id] = card;
-                            
-                            // カード名→IDマッピングを更新
-                            if (!string.IsNullOrEmpty(card.name))
+                            if (!nameToIdMap.ContainsKey(card.name))
                             {
-                                if (!nameToIdMap.ContainsKey(card.name))
-                                {
-                                    nameToIdMap[card.name] = new List<string>();
-                                }
-                                
-                                if (!nameToIdMap[card.name].Contains(card.id))
-                                {
-                                    nameToIdMap[card.name].Add(card.id);
-                                }
+                                nameToIdMap[card.name] = new List<string>();
+                            }
+                            
+                            if (!nameToIdMap[card.name].Contains(card.id))
+                            {
+                                nameToIdMap[card.name].Add(card.id);
                             }
                         }
                     }
@@ -325,11 +423,56 @@ public class CardDatabase : MonoBehaviour
     }
     
     /// <summary>
+    /// カードデータベースの初期化が完了するまで待機するUniTask
+    /// </summary>
+    public static async UniTask WaitForInitializationAsync(float timeoutSeconds = 5f)
+    {
+        if (Instance == null)
+        {
+            Debug.LogWarning("CardDatabase.Instanceがnullです。初期化を待機できません。");
+            return;
+        }
+        
+        if (Instance.isInitialized)
+        {
+            // 既に初期化済み
+            return;
+        }
+        
+        try
+        {
+            // 初期化フラグがtrueになるか、タイムアウトするまで待機
+            using var cts = new System.Threading.CancellationTokenSource();
+            cts.CancelAfterSlim(System.TimeSpan.FromSeconds(timeoutSeconds));
+            
+            await UniTask.WaitUntil(() => Instance.isInitialized, cancellationToken: cts.Token);
+            
+            Debug.Log($"✅ CardDatabase初期化完了を確認しました（UniTask待機）");
+        }
+        catch (System.OperationCanceledException)
+        {
+            Debug.LogWarning($"⚠️ CardDatabase初期化待機がタイムアウトしました ({timeoutSeconds}秒)");
+        }
+    }
+    
+    /// <summary>
     /// アプリケーション終了時に保存
     /// </summary>
     private void OnApplicationQuit()
     {
         SaveCardDatabase();
+    }
+    
+    /// <summary>
+    /// アプリがバックグラウンドに移行する際の処理
+    /// </summary>
+    private void OnApplicationPause(bool pause)
+    {
+        if (pause && cardCache.Count > 0) // バックグラウンドに移行かつデータが存在する場合
+        {
+            Debug.Log("アプリがバックグラウンドに移行: データベースを保存します");
+            SaveCardDatabase();
+        }
     }
 }
 
@@ -341,6 +484,7 @@ public class CardDatabase : MonoBehaviour
 public class SerializableCardModel
 {
     public string id;
+    public string idString; // 互換性維持用の元のID文字列
     public string name;
     public string cardType;
     public string evolutionStage;

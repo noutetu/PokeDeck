@@ -15,6 +15,7 @@ public class SearchPresenter
     private SetCardPackArea cardPackArea;
     private SetHPArea hpArea;
     private SetMaxDamageArea maxDamageArea;
+    private SetMaxEnergyArea maxEnergyCostArea;
     
     // ----------------------------------------------------------------------
     // コンストラクタ
@@ -135,6 +136,22 @@ public class SearchPresenter
             };
         }
     }
+
+    // ----------------------------------------------------------------------
+    // 最大エネルギーコストフィルターエリアを登録
+    // ----------------------------------------------------------------------
+    public void RegisterMaxEnergyCostArea(SetMaxEnergyArea area)
+    {
+        this.maxEnergyCostArea = area;
+        if (maxEnergyCostArea != null)
+        {
+            maxEnergyCostArea.OnFilterChanged += () => {
+                Debug.Log("🔍 最大エネルギーコストフィルター変更を検知");
+                // model.SetMaxEnergyCostFilter(maxEnergyCostArea.GetSelectedEnergyCost(), maxEnergyCostArea.GetSelectedComparisonType());
+                UpdateView();
+            };
+        }
+    }
     
     // ----------------------------------------------------------------------
     // Viewのイベントをバインド
@@ -189,6 +206,12 @@ public class SearchPresenter
         if (maxDamageArea != null)
         {
             maxDamageArea.ApplyFilterToModel(model);
+        }
+
+        // 最大エネルギーコストフィルターの適用
+        if (maxEnergyCostArea != null)
+        {
+            // maxEnergyCostArea.ApplyFilterToModel(model);
         }
         
         // すべてのフィルター条件を適用した後、一度だけフィルタリングを実行
@@ -271,6 +294,17 @@ public class SearchPresenter
         else
         {
             Debug.LogWarning("⚠️ maxDamageArea参照が null のためUIリセットできません");
+        }
+
+        // 最大エネルギーコストフィルターUIもリセット
+        if (maxEnergyCostArea != null)
+        {
+            Debug.Log("🔄 最大エネルギーコストフィルターUIをリセット");
+            maxEnergyCostArea.ResetFilters();
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ maxEnergyCostArea参照が null のためUIリセットできません");
         }
         
         // 将来的に他のフィルターエリアが追加された場合、ここに追加する

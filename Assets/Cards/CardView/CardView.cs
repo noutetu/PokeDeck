@@ -1,10 +1,10 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Networking;
-using System.Collections;
 using TMPro;
 using System.Security.Cryptography;
 using UnityEngine.EventSystems; // UIイベント検出のため追加
+using Cysharp.Threading.Tasks; // UniTask用
 
 // ----------------------------------------------------------------------
 // カード1枚分のUI表示を担当するクラス
@@ -21,6 +21,13 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     // 基本情報表示用コンポーネント
     [SerializeField] private RawImage cardImage;        // カード画像表示用
     [SerializeField] private Button cardButton;         // クリックイベント用ボタン
+    
+    // 画像読み込み状態の管理
+    private bool isImageLoaded = false;
+    private bool isImageLoading = false;
+    
+    // 表示状態チェック用
+    private RectTransform rectTransform;
     
     // ダブルクリック検出用変数
     private float lastClickTime;
@@ -42,6 +49,9 @@ public class CardView : MonoBehaviour, IPointerClickHandler
                 cardButton = gameObject.AddComponent<Button>();
             }
         }
+        
+        // RectTransformを取得
+        rectTransform = GetComponent<RectTransform>();
     }
 
     // ----------------------------------------------------------------------
@@ -51,7 +61,44 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     public void Setup(CardModel data)
     {
         this.data = data;
-        ViewImage();
+        
+        if (data == null)
+        {
+            return;
+        }
+        
+        // CardModelに保存されているテクスチャを直接表示（UniTask不要）
+        if (data.imageTexture != null && cardImage != null)
+        {
+            cardImage.texture = data.imageTexture;
+        }
+        else if (cardImage != null)
+        {
+            // テクスチャがない場合はプレースホルダーを表示
+            SetPlaceholderImage();
+        }
+    }
+    
+    // プレースホルダー画像を設定
+    private void SetPlaceholderImage()
+    {
+        if (ImageCacheManager.Instance != null && ImageCacheManager.Instance.GetDefaultTexture() != null)
+        {
+            cardImage.texture = ImageCacheManager.Instance.GetDefaultTexture();
+        }
+        else
+        {
+            // デフォルトのグレーテクスチャを生成
+            var texture = new Texture2D(2, 2);
+            Color32[] colors = new Color32[4];
+            for (int i = 0; i < 4; i++)
+            {
+                colors[i] = new Color32(200, 200, 200, 255); // ライトグレー
+            }
+            texture.SetPixels32(colors);
+            texture.Apply();
+            cardImage.texture = texture;
+        }
     }
     
     // ----------------------------------------------------------------------
@@ -61,7 +108,15 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     private void ViewImage()
     {
         // 基本情報の設定
-        cardImage.texture = data.imageTexture;
+        if (data.imageTexture != null)
+        {
+            cardImage.texture = data.imageTexture;
+            isImageLoaded = true;
+        }
+        else
+        {
+            SetPlaceholderImage();
+        }
     }
     
     // ----------------------------------------------------------------------
@@ -89,13 +144,23 @@ public class CardView : MonoBehaviour, IPointerClickHandler
         if (data != null && DeckManager.Instance != null)
         {
             // カードデータのデバッグ情報を出力
-            Debug.Log($"⭐ カード追加: name={data.name}, id={data.id}");
+            Debug.Log($"⭐ カード追加: name={data.name}, id={data.id}, idString={data.id}");
+            
+            // データの整合性チェック
+            if (string.IsNullOrEmpty(data.id))
+            {
+                Debug.LogError($"⭐ カードID文字列が空です: name={data.name}, id={data.id}");
+            }
             
             // CardDatabaseに登録してグローバルキャッシュに追加
             if (CardDatabase.Instance != null)
             {
                 CardDatabase.Instance.RegisterCard(data);
                 Debug.Log($"⭐ CardDatabaseに登録: name={data.name}");
+            }
+            else 
+            {
+                Debug.LogError("⭐ CardDatabase.Instanceがnullです - カードをデータベースに登録できません");
             }
             
             // 同名カードが上限に達しているか確認
@@ -114,6 +179,9 @@ public class CardView : MonoBehaviour, IPointerClickHandler
             else
             {
                 Debug.LogWarning("⭐ カード名が空です");
+                // カード名が空の場合、IDを名前として使用
+                data.name = $"ID:{data.id}のカード";
+                Debug.Log($"⭐ カード名を設定: {data.name}");
             }
             
             // 現在のデッキが最大枚数に達しているか確認
@@ -122,6 +190,19 @@ public class CardView : MonoBehaviour, IPointerClickHandler
                 Debug.LogWarning($"デッキが最大枚数({Deck.MAX_CARDS}枚)に達しています");
                 ShowFailureFeedback(ADD_FAILED_TEXT);
                 return;
+            }
+            
+            // カードがCardDatabaseに存在するか確認
+            CardModel dbCard = null;
+            if (CardDatabase.Instance != null)
+            {
+                dbCard = CardDatabase.Instance.GetCard(data.id);
+                if (dbCard == null)
+                {
+                    Debug.LogWarning($"⭐ CardDatabaseにカード(id={data.id})が存在しません。再登録します。");
+                    CardDatabase.Instance.RegisterCard(data);
+                    dbCard = data; // 現在のデータを使用
+                }
             }
             
             // 現在のデッキにカードを追加
@@ -140,7 +221,23 @@ public class CardView : MonoBehaviour, IPointerClickHandler
             else
             {
                 Debug.LogWarning($"カード '{data.name}' をデッキに追加できませんでした");
-                ShowFailureFeedback("追加失敗");
+                // 失敗の詳細理由を特定して表示
+                string failureReason = "追加失敗";
+                
+                if (DeckManager.Instance.CurrentDeck.CardCount >= Deck.MAX_CARDS)
+                {
+                    failureReason = $"デッキ上限（{Deck.MAX_CARDS}枚）";
+                }
+                else if (DeckManager.Instance.CurrentDeck.GetSameNameCardCount(data.name) >= Deck.MAX_SAME_NAME_CARDS)
+                {
+                    failureReason = $"同名上限（{Deck.MAX_SAME_NAME_CARDS}枚）";
+                }
+                else if (dbCard == null)
+                {
+                    failureReason = "カードデータ不正";
+                }
+                
+                ShowFailureFeedback(failureReason);
             }
         }
         else

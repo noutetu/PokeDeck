@@ -13,8 +13,17 @@ public class CardModel
     // ----------------------------------------------------------------------
     // カード基本情報
     // ----------------------------------------------------------------------
-    public string id;                    // カード固有のID
-    public string name;                  // カード名称
+    private string _id;
+    public string id { get => _id; set => _id = value; }
+    private string _name;
+    public string name
+    {
+        get => _name;
+        set
+        {
+            _name = value;
+        }
+    }
     public string cardType;              // カードタイプ（JSON文字列形式）
     public string evolutionStage;        // 進化段階（JSON文字列形式）
     public string pack;                  // カードパック名（JSON文字列形式）
@@ -58,6 +67,8 @@ public class CardModel
     // ----------------------------------------------------------------------
     public void ConvertStringDataToEnums()
     {
+        // idの変換処理を削除（idを文字列のまま使用）
+        
         // カードタイプの変換
         if (!string.IsNullOrEmpty(cardType))
         {
