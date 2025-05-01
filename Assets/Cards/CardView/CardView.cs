@@ -3,94 +3,197 @@ using UnityEngine.UI;
 using UnityEngine.Networking;
 using System.Collections;
 using TMPro;
+using System.Security.Cryptography;
+using UnityEngine.EventSystems; // UIイベント検出のため追加
 
 // ----------------------------------------------------------------------
-// カード1枚分のUI表示（画像のみ）
+// カード1枚分のUI表示を担当するクラス
+// カードモデルのデータをUIコンポーネントに反映し、適切な表示形式を選択する
 // ----------------------------------------------------------------------
-public class CardView : MonoBehaviour
+public class CardView : MonoBehaviour, IPointerClickHandler
 {
-    CardModel data;
+    // カードの表示に使用するデータモデル
+    private CardModel data;
 
-    [SerializeField] private RawImage cardImage;
-    [SerializeField] private TMP_Text nameText;
-    [SerializeField] private TMP_Text hpText;
-    [SerializeField] private TMP_Text retreatCost;
-    [Header("詳細まとめオブジェクト")]
-    [SerializeField] private GameObject details;
-    [Header("Ability")]
-    [SerializeField] private GameObject abilityGroup;
-    [SerializeField] private TMP_Text abilityNameText;
-    [SerializeField] private TMP_Text abilityEffectText;
-    [Header("Move1")]
-    [SerializeField] private GameObject move1Group;
-    [SerializeField] private TMP_Text move1NameText;
-    [SerializeField] private TMP_Text move1DamageText;
-    [SerializeField] private TMP_Text move1EffectText;
-    [Header("Move2")]
-    [SerializeField] private GameObject move2Group;
-    [SerializeField] private TMP_Text move2NameText;
-    [SerializeField] private TMP_Text move2DamageText;
-    [SerializeField] private TMP_Text move2EffectText;
+    // ----------------------------------------------------------------------
+    // UI表示用コンポーネント - Inspector上で設定する
+    // ----------------------------------------------------------------------
+    // 基本情報表示用コンポーネント
+    [SerializeField] private RawImage cardImage;        // カード画像表示用
+    [SerializeField] private Button cardButton;         // クリックイベント用ボタン
+    
+    // ダブルクリック検出用変数
+    private float lastClickTime;
+    private float doubleClickTimeThreshold = 0.3f; // ダブルクリック判定の時間間隔（秒）
+    
+    // フィードバックテキスト表示用定数
+    private const string ADD_SUCCESS_TEXT = "デッキに追加！";
+    private const string ADD_FAILED_TEXT = "デッキが一杯です";
+    private const string SAME_CARD_LIMIT_TEXT = "同名カード上限";
 
+    private void Awake()
+    {
+        // ボタンがなければ追加
+        if (cardButton == null)
+        {
+            cardButton = GetComponent<Button>();
+            if (cardButton == null)
+            {
+                cardButton = gameObject.AddComponent<Button>();
+            }
+        }
+    }
 
+    // ----------------------------------------------------------------------
+    // カードデータを設定し、適切な表示形式でUIを更新する
+    // @param data 表示するカードデータ
+    // ----------------------------------------------------------------------
     public void Setup(CardModel data)
     {
         this.data = data;
-        if (data.cardTypeOnEnum == CardType.EX || data.cardTypeOnEnum == CardType.非EX)
+        ViewImage();
+    }
+    
+    // ----------------------------------------------------------------------
+    // ポケモンカードの表示処理
+    // HP、タイプ、特性、技などポケモン特有の情報を表示
+    // ----------------------------------------------------------------------
+    private void ViewImage()
+    {
+        // 基本情報の設定
+        cardImage.texture = data.imageTexture;
+    }
+    
+    // ----------------------------------------------------------------------
+    // クリックイベント処理 - ダブルクリックを検出してデッキに追加
+    // ----------------------------------------------------------------------
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        float timeSinceLastClick = Time.time - lastClickTime;
+        
+        // ダブルクリック検出
+        if (timeSinceLastClick < doubleClickTimeThreshold)
         {
-            ViewPokemon();
+            // ダブルクリック処理 - デッキに追加
+            AddCardToDeck();
+        }
+        
+        lastClickTime = Time.time;
+    }
+    
+    // ----------------------------------------------------------------------
+    // デッキにカードを追加する処理
+    // ----------------------------------------------------------------------
+    private void AddCardToDeck()
+    {
+        if (data != null && DeckManager.Instance != null)
+        {
+            // カードデータのデバッグ情報を出力
+            Debug.Log($"⭐ カード追加: name={data.name}, id={data.id}");
+            
+            // CardDatabaseに登録してグローバルキャッシュに追加
+            if (CardDatabase.Instance != null)
+            {
+                CardDatabase.Instance.RegisterCard(data);
+                Debug.Log($"⭐ CardDatabaseに登録: name={data.name}");
+            }
+            
+            // 同名カードが上限に達しているか確認
+            if (!string.IsNullOrEmpty(data.name))
+            {
+                int sameNameCount = DeckManager.Instance.CurrentDeck.GetSameNameCardCount(data.name);
+                Debug.Log($"⭐ 同名カード数: {sameNameCount}枚, カード名: {data.name}");
+                
+                if (sameNameCount >= Deck.MAX_SAME_NAME_CARDS)
+                {
+                    Debug.LogWarning($"同名カード「{data.name}」は{Deck.MAX_SAME_NAME_CARDS}枚までしか追加できません");
+                    ShowFailureFeedback($"{SAME_CARD_LIMIT_TEXT}（{Deck.MAX_SAME_NAME_CARDS}枚）");
+                    return;
+                }
+            }
+            else
+            {
+                Debug.LogWarning("⭐ カード名が空です");
+            }
+            
+            // 現在のデッキが最大枚数に達しているか確認
+            if (DeckManager.Instance.CurrentDeck.CardCount >= Deck.MAX_CARDS)
+            {
+                Debug.LogWarning($"デッキが最大枚数({Deck.MAX_CARDS}枚)に達しています");
+                ShowFailureFeedback(ADD_FAILED_TEXT);
+                return;
+            }
+            
+            // 現在のデッキにカードを追加
+            bool success = DeckManager.Instance.CurrentDeck.AddCard(data);
+            
+            if (success)
+            {
+                Debug.Log($"⭐ カード '{data.name}' をデッキに追加しました, id={data.id}");
+                string feedbackMessage = $"{ADD_SUCCESS_TEXT} 「{data.name}」";
+                Debug.Log($"⭐ フィードバックメッセージ: {feedbackMessage}");
+                ShowSuccessFeedback(feedbackMessage);
+                
+                // エネルギー要件のみ更新（デッキは保存しない）
+                DeckManager.Instance.CurrentDeck.UpdateEnergyRequirements();
+            }
+            else
+            {
+                Debug.LogWarning($"カード '{data.name}' をデッキに追加できませんでした");
+                ShowFailureFeedback("追加失敗");
+            }
         }
         else
         {
-            ViewOtherCard();
+            // データまたはDeckManagerがnullの場合
+            if (data == null)
+            {
+                Debug.LogError("⭐ カードデータ(data)がnullです");
+            }
+            if (DeckManager.Instance == null)
+            {
+                Debug.LogError("⭐ DeckManager.Instanceがnullです");
+            }
+            
+            Debug.LogWarning("カードをデッキに追加できません：データが不足しています");
         }
-
-        // detailsの子オブジェクトのレイアウトを再構築する
-        LayoutRebuilder.ForceRebuildLayoutImmediate(details.GetComponent<RectTransform>());
     }
-
-    private void ViewPokemon()
+    
+    // ----------------------------------------------------------------------
+    // 成功フィードバックメッセージを表示
+    // ----------------------------------------------------------------------
+    private void ShowSuccessFeedback(string message)
     {
-        cardImage.texture = data.imageTexture;
-        nameText.text = data.name;
-        hpText.text = "HP: " + data.hp.ToString();
-        retreatCost.text = "逃げ: " + data.retreatCost.ToString();
-        abilityNameText.text = data.abilityName;
-        abilityEffectText.text = data.abilityEffect;
+        Debug.Log($"⭐ ShowSuccessFeedback呼び出し: message='{message}'");
         
-            move1NameText.text = data.moves[0].name;
-            move1DamageText.text = data.moves[0].damage.ToString();
-            move1EffectText.text = data.moves[0].effect;
-        
-        if (data.moves.Count > 1)
+        // FeedbackContainerを使用して画面上部に表示
+        if (FeedbackContainer.Instance != null)
         {
-            move2NameText.text = data.moves[1].name;
-            move2DamageText.text = data.moves[1].damage.ToString();
-            // move2EffectText.text = data.moves[1].effect;
+            Debug.Log($"⭐ FeedbackContainer.Instance.ShowSuccessFeedback呼び出し");
+            FeedbackContainer.Instance.ShowSuccessFeedback(message);
         }
         else
         {
-            move2NameText.text = "";
-            move2DamageText.text = "";
-            move2EffectText.text = "";
+            Debug.LogWarning("⭐ FeedbackContainerが見つかりません。シーン上にFeedbackContainerオブジェクトを配置してください。");
         }
     }
-    // ポケモン以外のカードの表示
-    public void ViewOtherCard()
+    
+    // ----------------------------------------------------------------------
+    // 失敗フィードバックメッセージを表示
+    // ----------------------------------------------------------------------
+    private void ShowFailureFeedback(string message)
     {
-        cardImage.texture = data.imageTexture;
-        nameText.text = data.name;
-        move1EffectText.text = data.moves[0].effect;
-
-        // 画像と名前と効果以外は非表示
-        hpText.gameObject.SetActive(false);
-        retreatCost.gameObject.SetActive(false);
-        abilityNameText.gameObject.SetActive(false);
-        abilityEffectText.gameObject.SetActive(false);
-        move1NameText.gameObject.SetActive(false);
-        move1DamageText.gameObject.SetActive(false);
-        move2NameText.gameObject.SetActive(false);
-        move2DamageText.gameObject.SetActive(false);
-        move2EffectText.gameObject.SetActive(false);
+        Debug.Log($"⭐ ShowFailureFeedback呼び出し: message='{message}'");
+        
+        // FeedbackContainerを使用して画面上部に表示
+        if (FeedbackContainer.Instance != null)
+        {
+            Debug.Log($"⭐ FeedbackContainer.Instance.ShowFailureFeedback呼び出し");
+            FeedbackContainer.Instance.ShowFailureFeedback(message);
+        }
+        else
+        {
+            Debug.LogWarning("⭐ FeedbackContainerが見つかりません。シーン上にFeedbackContainerオブジェクトを配置してください。");
+        }
     }
 }
