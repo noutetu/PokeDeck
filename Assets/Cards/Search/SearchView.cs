@@ -100,9 +100,12 @@ public class SearchView : MonoBehaviour
             Debug.LogWarning("⚠️ SetEvolutionStageAreaコンポーネントが設定されていません");
         }
 
-        // 以下のフィルターエリア登録は無効化
+        // 以下のフィルターエリア登録
+        if (typeArea != null)
+        {
+            presenter.RegisterTypeArea(typeArea);
+        }
         /*
-        if (typeArea != null)           presenter.RegisterTypeArea(typeArea);
         if (cardPackArea != null)       presenter.RegisterCardPackArea(cardPackArea);
         if (hpArea != null)             presenter.RegisterHPArea(hpArea);
         if (maxDamageArea != null)      presenter.RegisterMaxDamageArea(maxDamageArea);
@@ -176,9 +179,9 @@ public class SearchView : MonoBehaviour
             var selectedCardTypes = cardTypeArea != null ? cardTypeArea.GetSelectedCardTypes().ToList() : new List<Enum.CardType>();
             // 進化段階フィルターを取得
             var selectedEvolutionStages = evolutionStageArea != null ? evolutionStageArea.GetSelectedEvolutionStages().ToList() : new List<Enum.EvolutionStage>();
-
+            // ポケモンタイプフィルターを取得
+            var selectedTypes = typeArea != null ? typeArea.GetSelectedTypes().ToList() : new List<Enum.PokemonType>();
             // 他のフィルターはすべて未適用（デフォルト設定）
-            var emptyType = new List<Enum.PokemonType>();
             var emptyPack = new List<Enum.CardPack>();
             int minHP = 0, maxHP = 999;
             int minMaxDamage = 0, maxMaxDamage = 999;
@@ -190,7 +193,7 @@ public class SearchView : MonoBehaviour
                 var results = model.Search(
                     selectedCardTypes,
                     selectedEvolutionStages,
-                    emptyType,
+                    selectedTypes,
                     emptyPack,
                     minHP, maxHP,
                     minMaxDamage, maxMaxDamage,
@@ -221,8 +224,9 @@ public class SearchView : MonoBehaviour
         // カードコンテナの中身をクリア
         ClearCardContainer();
         // フィルターUIをリセット（カードタイプと進化段階）
-        if (cardTypeArea != null) cardTypeArea.ResetFilters();
+        if (cardTypeArea != null)      cardTypeArea.ResetFilters();
         if (evolutionStageArea != null) evolutionStageArea.ResetFilters();
+        if (typeArea != null)          typeArea.ResetFilters();
     }
     
     // ----------------------------------------------------------------------

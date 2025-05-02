@@ -66,20 +66,18 @@ public class SearchPresenter
     }
     
     // ----------------------------------------------------------------------
-    // ポケモンタイプエリアの登録 - 現在はコメントアウトして無効化
+    // ポケモンタイプエリアの登録
     // ----------------------------------------------------------------------
     public void RegisterTypeArea(SetTypeArea area)
     {
         typeArea = area;
         
-        // フィルター変更イベントの購読（自動プレビュー用）
-        /*
+        // フィルター変更イベントの購読
         if (area != null)
         {
             area.OnFilterChanged += OnFilterChanged;
             Debug.Log("✅ SetTypeAreaを登録しました");
         }
-        */
     }
     
     // ----------------------------------------------------------------------
@@ -178,6 +176,11 @@ public class SearchPresenter
         if (evolutionStageArea != null)
         {
             evolutionStageArea.ApplyFilterToModel(model);
+        }
+        // ポケモンタイプフィルターを適用
+        if (typeArea != null)
+        {
+            typeArea.ApplyFilterToModel(model);
         }
         
         // 他のフィルター適用はコメントアウト
