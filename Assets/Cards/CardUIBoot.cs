@@ -31,6 +31,7 @@ public class CardUIBoot : MonoBehaviour
     private UnityEngine.UI.ScrollRect scrollRect;
     private List<CardModel> remainingCards = new List<CardModel>();
     private bool isLoadingBatch = false;
+    private bool ignoreScrollEvent = false; // フィルター適用後のスクロールイベントを抑止
     
     // === 全カードリスト（検索対象） ===
     private List<CardModel> allCards = new List<CardModel>();
@@ -50,6 +51,7 @@ public class CardUIBoot : MonoBehaviour
         await CardDatabase.WaitForInitializationAsync();
         await LoadJsonAndInitializeAsync();
         Debug.Log("① JSONファイル取得・保存が完了しました");
+
 
         // 2. ImageCacheManagerを初期化し、デフォルト画像を設定
         Debug.Log("② 画像の一括プリロードを開始します");
@@ -92,6 +94,7 @@ public class CardUIBoot : MonoBehaviour
         }
         
         Debug.Log("② 画像の一括プリロードが完了しました");
+        
 
         // 3. デッキの復元
         Debug.Log("③ デッキの復元を開始します");
@@ -190,24 +193,35 @@ public class CardUIBoot : MonoBehaviour
     // ----------------------------------------------------------------------
     // フィルタリングされたカードを表示
     // ----------------------------------------------------------------------
-    private async void DisplayFilteredCards(List<CardModel> filteredCards)
+    private void DisplayFilteredCards(List<CardModel> filteredCards)
     {
         int total = filteredCards.Count;
-        
         // 初期表示数を調整
         int displayCount = Mathf.Min(initialCardCount, total);
-        
         Debug.Log($"🔍 フィルタリング結果の表示: 全{total}枚中、初期表示は{displayCount}枚");
-        
-        // 初期表示用カードを取得
+
+        // 初期表示用カードを読み込む
         List<CardModel> initialCards = new List<CardModel>();
         if (displayCount > 0)
         {
             initialCards = filteredCards.GetRange(0, displayCount);
         }
+        presenter.LoadCards(initialCards);
+
+        // 残りのカードを遅延読み込みリストに設定
+        if (total > displayCount)
+        {
+            remainingCards = filteredCards.GetRange(displayCount, total - displayCount);
+        }
+        else
+        {
+            remainingCards.Clear();
+        }
+
         // スクロール位置をリセット
         if (scrollRect != null)
         {
+            ignoreScrollEvent = true;
             scrollRect.normalizedPosition = new Vector2(0, 1);
         }
     }
@@ -240,10 +254,16 @@ public class CardUIBoot : MonoBehaviour
     // ----------------------------------------------------------------------
     private void OnScrollValueChanged(Vector2 position)
     {
+        if (ignoreScrollEvent)
+        {
+            // フィルタ適用時のプログラム操作によるスクロールを無視
+            ignoreScrollEvent = false;
+            return;
+        }
         // 残りのカードがなければ何もしない
         if (remainingCards.Count == 0 || isLoadingBatch)
             return;
-            
+        
         // 縦スクロール位置が閾値を超えたら追加読み込み
         // 1.0が一番上、 0.0が一番下
         if (position.y < (1.0f - scrollThreshold))
@@ -280,38 +300,63 @@ public class CardUIBoot : MonoBehaviour
     {
         Debug.Log("🟢 JSON取得開始");
 
-        // WebRequestを使ってJSONデータを取得
-        using var request = UnityWebRequest.Get(jsonUrl);
-        await request.SendWebRequest();  // 非同期でリクエスト送信
-
-        if (request.result == UnityWebRequest.Result.Success)
+        try
         {
-            Debug.Log("🟢 JSON取得成功");
-            var jsonText = request.downloadHandler.text;
+            using var request = UnityWebRequest.Get(jsonUrl);
+            await request.SendWebRequest();
 
-            // 取得したJSONをAllCardModelにデシリアライズ
-            var loadedModel = JsonConvert.DeserializeObject<AllCardModel>(jsonText);
-
-            Debug.Log("📷 カードデータを設定します");
-
-            // 全カードを保存（検索用）
-            allCards = loadedModel.cards;
-
-            // 重要: CardDatabaseにカードデータをキャッシュとして設定
-            // これにより、SearchModelがnullを返さないようになる
-            CardDatabase.SetCachedCards(loadedModel.cards);
-            Debug.Log($"🔄 CardDatabaseにカードデータを設定しました: {loadedModel.cards.Count}枚");
-            
-            // 検索モデルにカードデータを直接設定（nullエラー対策）
-            if (searchView != null)
+            if (request.result == UnityWebRequest.Result.Success)
             {
-                searchView.SetCards(loadedModel.cards);
+                var jsonText = request.downloadHandler.text;
+
+                // 取得したJSONをAllCardModelにデシリアライズ
+                var loadedModel = JsonConvert.DeserializeObject<AllCardModel>(jsonText);
+
+                Debug.Log("📷 カードデータを設定します");
+
+                // 全カードを保存（検索用）
+                allCards = loadedModel.cards;
+
+                // 重要: CardDatabaseにカードデータをキャッシュとして設定
+                // これにより、SearchModelがnullを返さないようになる
+                CardDatabase.SetCachedCards(loadedModel.cards);
+                Debug.Log($"🔄 CardDatabaseにカードデータを設定しました: {loadedModel.cards.Count}枚");
+                
+                // 検索モデルにカードデータを直接設定（nullエラー対策）
+                if (searchView != null)
+                {
+                    searchView.SetCards(loadedModel.cards);
+                }
             }
-            
+            else
+            {
+                Debug.LogError("❌ JSON読み込み失敗: " + request.error);
+
+                // フォールバック: StreamingAssetsからローカルJSONを読み込む
+                string localPath = Path.Combine(Application.streamingAssetsPath, "cards.json");
+                if (File.Exists(localPath))
+                {
+                    Debug.Log("🔄 ローカルJSON読み込み: " + localPath);
+                    string localJson = File.ReadAllText(localPath);
+                    var loadedModel = JsonConvert.DeserializeObject<AllCardModel>(localJson);
+                    allCards = loadedModel.cards;
+                    CardDatabase.SetCachedCards(loadedModel.cards);
+                    Debug.Log($"🔄 CardDatabaseにローカルJSONデータを設定しました: {loadedModel.cards.Count}枚");
+                    if (searchView != null)
+                    {
+                        searchView.SetCards(loadedModel.cards);
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("⚠️ フォールバック用ローカルJSONが見つかりません: " + localPath);
+                }
+            }
         }
-        else
+        catch (System.Exception ex)
         {
-            Debug.LogError("❌ JSON読み込み失敗: " + request.error);
+            Debug.LogError("❌ JSONロード中に予期せぬエラーが発生しました: " + ex.Message);
+            // ここでは例外を再スローせず初期化を継続します
         }
     }
 

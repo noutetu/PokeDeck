@@ -82,8 +82,24 @@ public class SetTypeArea : MonoBehaviour, IFilterArea
         if (model != null)
         {
             // 現在選択されているポケモンタイプをモデルに適用
-            model.SetPokemonTypeFilter(GetSelectedTypes());
-            Debug.Log($"🔍 ポケモンタイプフィルターをモデルに適用: {selectedTypes.Count}個のタイプ");
+            HashSet<PokemonType> types = GetSelectedTypes();
+            model.SetPokemonTypeFilter(types);
+            
+            // 選択されたタイプを詳細にログ出力
+            if (types.Count > 0)
+            {
+                Debug.Log($"🔍 [SetTypeArea] ポケモンタイプフィルターをモデルに適用: {types.Count}個のタイプ");
+                string typeNames = string.Join(", ", types);
+                Debug.Log($"🔍 [SetTypeArea] 選択されたタイプ: {typeNames}");
+            }
+            else
+            {
+                Debug.Log("🔍 [SetTypeArea] ポケモンタイプフィルターは選択されていません");
+            }
+        }
+        else
+        {
+            Debug.LogError("❌ [SetTypeArea] ApplyFilterToModel: モデルがnullです");
         }
     }
     
@@ -92,7 +108,50 @@ public class SetTypeArea : MonoBehaviour, IFilterArea
     // ----------------------------------------------------------------------
     public HashSet<PokemonType> GetSelectedTypes()
     {
-        return new HashSet<PokemonType>(selectedTypes);
+        // トグルの現在の状態を直接チェックして、選択状態を確実に取得
+        HashSet<PokemonType> result = new HashSet<PokemonType>();
+        
+        // 各トグルの状態を確認
+        CheckAndAddType(grassToggle, PokemonType.草, result);
+        CheckAndAddType(fireToggle, PokemonType.炎, result);
+        CheckAndAddType(waterToggle, PokemonType.水, result);
+        CheckAndAddType(lightningToggle, PokemonType.雷, result);
+        CheckAndAddType(fightingToggle, PokemonType.闘, result);
+        CheckAndAddType(psychicToggle, PokemonType.超, result);
+        CheckAndAddType(darknessToggle, PokemonType.悪, result);
+        CheckAndAddType(steelToggle, PokemonType.鋼, result);
+        CheckAndAddType(dragonToggle, PokemonType.ドラゴン, result);
+        CheckAndAddType(colorlessToggle, PokemonType.無色, result);
+        
+        // selectedTypesとの不一致がないか確認（デバッグ用）
+        if (result.Count != selectedTypes.Count)
+        {
+            Debug.LogWarning($"⚠️ [SetTypeArea] 選択されたタイプの数が一致しません: トグルUI={result.Count}個, 内部状態={selectedTypes.Count}個");
+        }
+        
+        // デバッグログ
+        if (result.Count > 0)
+        {
+            Debug.Log($"🔍 [SetTypeArea] 選択中のポケモンタイプ: {string.Join(", ", result)} (合計{result.Count}個)");
+        }
+        else
+        {
+            Debug.Log("🔍 [SetTypeArea] 選択中のポケモンタイプはありません");
+        }
+        
+        // 内部状態ではなくUI状態に基づいた結果を返す
+        return result;
+    }
+    
+    // ----------------------------------------------------------------------
+    // トグル状態をチェックしてHashSetに追加するヘルパーメソッド
+    // ----------------------------------------------------------------------
+    private void CheckAndAddType(Toggle toggle, PokemonType type, HashSet<PokemonType> set)
+    {
+        if (toggle != null && toggle.isOn)
+        {
+            set.Add(type);
+        }
     }
     
     // ----------------------------------------------------------------------

@@ -473,6 +473,7 @@ public class CardDatabase : MonoBehaviour
             Debug.Log("アプリがバックグラウンドに移行: データベースを保存します");
             SaveCardDatabase();
         }
+
     }
 }
 

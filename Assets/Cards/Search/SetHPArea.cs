@@ -73,12 +73,6 @@ public class SetHPArea : MonoBehaviour, IFilterArea
             hpDropdown.onValueChanged.RemoveAllListeners();
             hpDropdown.onValueChanged.AddListener(OnDropdownValueChanged);
             
-            // デバッグ用にオプション一覧を出力
-            Debug.Log($"ドロップダウンの初期化完了: オプション数={hpDropdown.options.Count}");
-            for (int i = 0; i < hpDropdown.options.Count; i++)
-            {
-                Debug.Log($"オプション[{i}]: {hpDropdown.options[i].text}");
-            }
         }
         else
         {

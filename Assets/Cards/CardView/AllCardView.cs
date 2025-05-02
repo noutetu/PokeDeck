@@ -317,9 +317,51 @@ public class AllCardView : MonoBehaviour
     // ----------------------------------------------------------------------
     public void ApplySearchResults(List<CardModel> searchResults)
     {
-        // ReactiveCollectionに変換して表示更新
-        var reactiveCards = new ReactiveCollection<CardModel>(searchResults);
-        RefreshAll(reactiveCards);
+        Debug.Log($"🔍 [AllCardView] 検索結果を受信しました: {searchResults?.Count ?? 0}枚のカード");
+        
+        // 検索結果の内容をサンプル表示（最初の数枚）
+        if (searchResults != null && searchResults.Count > 0)
+        {
+            Debug.Log("🔍 [AllCardView] 検索結果サンプル (最大3枚):");
+            for (int i = 0; i < Mathf.Min(3, searchResults.Count); i++)
+            {
+                var card = searchResults[i];
+                Debug.Log($"🔍 [AllCardView] カード{i+1}: ID={card.id}, 名前={card.name}, タイプ={card.cardTypeEnum}, HP={card.hp}");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ [AllCardView] 検索結果が0件、またはnullです");
+            if (presenter != null)
+            {
+                // 空の検索結果の場合、表示をクリア
+                presenter.ClearCards();
+                Debug.Log("🧹 [AllCardView] 検索結果が空のため表示をクリアしました");
+            }
+            return;
+        }
+        
+        try
+        {
+            // ReactiveCollectionに変換して表示更新
+            var reactiveCards = new ReactiveCollection<CardModel>(searchResults);
+            
+            if (presenter != null)
+            {
+                // 既存の表示をクリアしてから新しい検索結果を表示
+                presenter.ClearCards();
+                RefreshAll(reactiveCards);
+                Debug.Log("✅ [AllCardView] 検索結果の表示を更新しました");
+            }
+            else
+            {
+                Debug.LogError("❌ [AllCardView] presenterがnullのため検索結果を表示できません");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"❌ [AllCardView] 検索結果の表示中にエラーが発生しました: {ex.Message}");
+        }
     }
     
     // ----------------------------------------------------------------------

@@ -108,7 +108,6 @@ public class ImageCacheManager : MonoBehaviour
             }
             
             // ネットワークから読み込み
-            Debug.Log($"🌐 画像をダウンロードします: {url}");
             using (UnityWebRequest request = UnityWebRequestTexture.GetTexture(url))
             {
                 await request.SendWebRequest();
@@ -183,23 +182,4 @@ public class ImageCacheManager : MonoBehaviour
         }
     }
     
-    // ----------------------------------------------------------------------
-    // キャッシュの内容をログに出力するデバッグメソッド
-    // ----------------------------------------------------------------------
-    public void LogCacheContents()
-    {
-        Debug.Log($"=== ImageCacheManager キャッシュ内容 ===");
-        Debug.Log($"メモリキャッシュ数: {textureCache.Count}件");
-        
-        int index = 0;
-        foreach (var entry in textureCache)
-        {
-            Texture2D texture = entry.Value;
-            string dimensions = texture != null ? $"{texture.width}x{texture.height}" : "null";
-            Debug.Log($"[{index}] URL: {entry.Key}, テクスチャ: {dimensions}");
-            index++;
-        }
-        
-        Debug.Log($"================================");
-    }
 }

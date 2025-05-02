@@ -14,6 +14,7 @@ public class SearchModel
     // ----------------------------------------------------------------------
     private List<CardModel> allCards = new List<CardModel>();
     private List<CardModel> filteredCards = new List<CardModel>();
+    private List<CardModel> cardList = null; // 外部から設定されたカードリスト
     
     // ----------------------------------------------------------------------
     // 検索条件
@@ -679,5 +680,80 @@ public class SearchModel
     public List<CardModel> GetFilteredCards()
     {
         return new List<CardModel>(filteredCards);
+    }
+
+    public List<CardModel> Search(
+        List<CardType> cardTypes,
+        List<EvolutionStage> evolutionStages,
+        List<PokemonType> types,
+        List<CardPack> cardPacks,
+        int minHP,
+        int maxHP,
+        int minMaxDamage,
+        int maxMaxDamage,
+        int minEnergyCost,
+        int maxEnergyCost
+    )
+    {
+        Debug.Log("🔍 [SearchModel] 検索開始");
+        
+        // 検索条件の有無をチェック
+        bool hasCardTypeFilter = cardTypes != null && cardTypes.Count > 0;
+        bool hasEvolutionStageFilter = evolutionStages != null && evolutionStages.Count > 0;
+        bool hasTypeFilter = types != null && types.Count > 0;
+        bool hasCardPackFilter = cardPacks != null && cardPacks.Count > 0;
+        bool hasHPFilter = minHP > 0 || maxHP < 999;
+        bool hasMaxDamageFilter = minMaxDamage > 0 || maxMaxDamage < 999;
+        bool hasEnergyCostFilter = minEnergyCost > 0 || maxEnergyCost < 999;
+        
+        // 適用するフィルター条件をログ出力
+        Debug.Log($"🔍 [SearchModel] フィルター条件: カードタイプ({hasCardTypeFilter}), 進化段階({hasEvolutionStageFilter}), タイプ({hasTypeFilter}), カードパック({hasCardPackFilter}), HP({hasHPFilter}), 最大ダメージ({hasMaxDamageFilter}), エネルギーコスト({hasEnergyCostFilter})");
+        
+        // CardDatabaseまたはcardListからカードを取得
+        List<CardModel> allCards = null;
+        
+        // カードリストが直接設定されている場合はそれを使用
+        if (cardList != null && cardList.Count > 0)
+        {
+            allCards = cardList;
+            Debug.Log($"🔍 [SearchModel] cardListから{allCards.Count}枚のカードを検索対象として使用します");
+        }
+        // それ以外の場合はCardDatabaseから取得
+        else if (CardDatabase.Instance != null)
+        {
+            allCards = CardDatabase.GetAllCards();
+            if (allCards != null)
+            {
+                Debug.Log($"🔍 [SearchModel] CardDatabaseから{allCards.Count}枚のカードを取得しました");
+            }
+            else
+            {
+                Debug.LogError("❌ [SearchModel] CardDatabaseからカードを取得できませんでした");
+                return new List<CardModel>();
+            }
+        }
+        else
+        {
+            Debug.LogError("❌ [SearchModel] カードリストとCardDatabaseの両方が利用できません");
+            return new List<CardModel>();
+        }
+
+        // フィルターの適用
+        var filteredCards = allCards.Where(card => {
+            // フィルター条件がない場合は全カード表示（OR条件）
+            bool matchCardType = !hasCardTypeFilter || cardTypes.Contains(card.cardTypeEnum);
+            bool matchEvolutionStage = !hasEvolutionStageFilter || evolutionStages.Contains(card.evolutionStageEnum);
+            bool matchType = !hasTypeFilter || types.Contains(card.typeEnum);
+            bool matchCardPack = !hasCardPackFilter || cardPacks.Contains(card.packEnum);
+            bool matchHP = card.hp >= minHP && card.hp <= maxHP;
+            bool matchMaxDamage = card.maxDamage >= minMaxDamage && card.maxDamage <= maxMaxDamage;
+
+            // すべての条件にマッチするか（AND条件）
+            return matchCardType && matchEvolutionStage && matchType && matchCardPack && matchHP && matchMaxDamage;
+        }).ToList();
+        
+        Debug.Log($"🔍 [SearchModel] 検索結果: 全{allCards.Count}枚のカードから{filteredCards.Count}枚が条件に一致しました");
+        
+        return filteredCards;
     }
 }

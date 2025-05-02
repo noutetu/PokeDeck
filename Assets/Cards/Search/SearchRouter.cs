@@ -90,12 +90,49 @@ public class SearchRouter : MonoBehaviour
     // 検索結果をカードリストに反映
     // @param results 検索結果のカードリスト
     // ----------------------------------------------------------------------
+    /// <summary>
+    /// 検索結果を適用する
+    /// </summary>
+    /// <param name="results">検索結果のカードリスト</param>
     public void ApplySearchResults(List<CardModel> results)
     {
-        // 検索パネルを非表示
-        HideSearchPanel();
+        Debug.Log($"🔄 [SearchRouter] 検索結果の配信: {results.Count}枚のカード");
         
-        // 検索結果イベントを発火
-        OnSearchResult?.Invoke(results);
+        if (results != null)
+        {
+            // 検索結果の内容をサンプル表示（最初の数枚）
+            if (results.Count > 0)
+            {
+                Debug.Log("🔄 [SearchRouter] 検索結果サンプル:");
+                for (int i = 0; i < Mathf.Min(3, results.Count); i++)
+                {
+                    var card = results[i];
+                    Debug.Log($"🔄 [SearchRouter] カード{i+1}: ID={card.id}, 名前={card.name}, タイプ={card.cardTypeEnum}, HP={card.hp}");
+                }
+            }
+            else
+            {
+                Debug.Log("🔄 [SearchRouter] 検索結果が0件です");
+            }
+            
+            // 購読者がいるかチェック
+            if (OnSearchResult != null)
+            {
+                int subscriberCount = OnSearchResult.GetInvocationList().Length;
+                Debug.Log($"🔄 [SearchRouter] 検索結果イベントの購読者数: {subscriberCount}");
+                
+                // イベント発火
+                OnSearchResult.Invoke(results);
+                Debug.Log("✅ [SearchRouter] 検索結果イベントを発火しました");
+            }
+            else
+            {
+                Debug.LogWarning("⚠️ [SearchRouter] 検索結果イベントの購読者がいません - AllCardViewなどがOnSearchResultイベントを購読していない可能性があります");
+            }
+        }
+        else
+        {
+            Debug.LogError("❌ [SearchRouter] 検索結果がnullです");
+        }
     }
 }

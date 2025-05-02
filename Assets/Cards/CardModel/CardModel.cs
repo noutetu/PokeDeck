@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Enum;
+using System.Data;
 
 // ----------------------------------------------------------------------
 // カードのデータを保持するクラス（Model）
@@ -112,13 +113,13 @@ public class CardModel
         else
         {
         }
+        // Uncomment and implement these lines if needed
+        // weaknessEnum = EnumConverter.ToWeaknessType(weakness);
+        // tagsEnum = EnumConverter.ToCardTags(tags);
+        // tagsEnum = EnumConverter.ToCardTags(tags);
         
-        // 他の変換処理はまだコメントアウトのまま
-        /*
-        weaknessEnum = EnumConverter.ToWeaknessType(weakness);
-        tagsEnum = EnumConverter.ToCardTags(tags);
-        */
     }
+
 }
 
 // ----------------------------------------------------------------------

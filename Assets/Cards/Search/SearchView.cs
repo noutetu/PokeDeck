@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Linq;  // ToList()用
+using Enum; // フィルターエリアで使用する列挙型名前空間
 
 public class SearchView : MonoBehaviour
 {
@@ -78,7 +80,7 @@ public class SearchView : MonoBehaviour
         // プレゼンターの作成とビューへの接続
         presenter = new SearchPresenter(this, model);
         
-        // フィルターエリアの登録
+        // カードタイプフィルターエリアの登録
         if (cardTypeArea != null)
         {
             presenter.RegisterCardTypeArea(cardTypeArea);
@@ -87,7 +89,7 @@ public class SearchView : MonoBehaviour
         {
             Debug.LogWarning("⚠️ SetCardTypeAreaコンポーネントが設定されていません");
         }
-        
+
         // 進化段階フィルターエリアの登録
         if (evolutionStageArea != null)
         {
@@ -97,56 +99,15 @@ public class SearchView : MonoBehaviour
         {
             Debug.LogWarning("⚠️ SetEvolutionStageAreaコンポーネントが設定されていません");
         }
-        
-        // ポケモンタイプフィルターエリアの登録
-        if (typeArea != null)
-        {
-            presenter.RegisterTypeArea(typeArea);
-        }
-        else
-        {
-            Debug.LogWarning("⚠️ SetTypeAreaコンポーネントが設定されていません");
-        }
-        
-        // カードパックフィルターエリアの登録
-        if (cardPackArea != null)
-        {
-            presenter.RegisterCardPackArea(cardPackArea);
-        }
-        else
-        {
-            Debug.LogWarning("⚠️ SetCardPackAreaコンポーネントが設定されていません");
-        }
 
-        // HPフィルターエリアの登録
-        if (hpArea != null)
-        {
-            presenter.RegisterHPArea(hpArea);
-        }
-        else
-        {
-            Debug.LogWarning("⚠️ SetHPAreaコンポーネントが設定されていません");
-        }
-        
-        // 最大ダメージフィルターエリアの登録
-        if (maxDamageArea != null)
-        {
-            presenter.RegisterMaxDamageArea(maxDamageArea);
-        }
-        else
-        {
-            Debug.LogWarning("⚠️ SetMaxDamageAreaコンポーネントが設定されていません");
-        }
-
-        // 最大エネルギーコストフィルターエリアの登録
-        if (maxEnergyCostArea != null)
-        {
-            // presenter.RegisterMaxEnergyCostArea(maxEnergyCostArea);
-        }
-        else
-        {
-            Debug.LogWarning("⚠️ SetMaxEnergyAreaコンポーネントが設定されていません");
-        }
+        // 以下のフィルターエリア登録は無効化
+        /*
+        if (typeArea != null)           presenter.RegisterTypeArea(typeArea);
+        if (cardPackArea != null)       presenter.RegisterCardPackArea(cardPackArea);
+        if (hpArea != null)             presenter.RegisterHPArea(hpArea);
+        if (maxDamageArea != null)      presenter.RegisterMaxDamageArea(maxDamageArea);
+        if (maxEnergyCostArea != null)  presenter.RegisterMaxEnergyCostArea(maxEnergyCostArea);
+        */
     }
     
     // ----------------------------------------------------------------------
@@ -209,7 +170,35 @@ public class SearchView : MonoBehaviour
     {
         if (SearchRouter.Instance != null)
         {
-            SearchRouter.Instance.ApplySearchResults(currentResults);
+            Debug.Log("🔍 [SearchView] ApplySearchResults: カードタイプフィルターのみ適用します");
+
+            // カードタイプフィルターのみ取得
+            var selectedCardTypes = cardTypeArea != null ? cardTypeArea.GetSelectedCardTypes().ToList() : new List<Enum.CardType>();
+            // 進化段階フィルターを取得
+            var selectedEvolutionStages = evolutionStageArea != null ? evolutionStageArea.GetSelectedEvolutionStages().ToList() : new List<Enum.EvolutionStage>();
+
+            // 他のフィルターはすべて未適用（デフォルト設定）
+            var emptyType = new List<Enum.PokemonType>();
+            var emptyPack = new List<Enum.CardPack>();
+            int minHP = 0, maxHP = 999;
+            int minMaxDamage = 0, maxMaxDamage = 999;
+            int minEnergyCost = 0, maxEnergyCost = 999;
+
+            // 検索実行
+            if (model != null)
+            {
+                var results = model.Search(
+                    selectedCardTypes,
+                    selectedEvolutionStages,
+                    emptyType,
+                    emptyPack,
+                    minHP, maxHP,
+                    minMaxDamage, maxMaxDamage,
+                    minEnergyCost, maxEnergyCost
+                );
+                SearchRouter.Instance.ApplySearchResults(results);
+                CloseSearchPanel();
+            }
         }
     }
     
@@ -231,6 +220,9 @@ public class SearchView : MonoBehaviour
     {
         // カードコンテナの中身をクリア
         ClearCardContainer();
+        // フィルターUIをリセット（カードタイプと進化段階）
+        if (cardTypeArea != null) cardTypeArea.ResetFilters();
+        if (evolutionStageArea != null) evolutionStageArea.ResetFilters();
     }
     
     // ----------------------------------------------------------------------

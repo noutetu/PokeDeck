@@ -26,300 +26,264 @@ public class SearchPresenter
         this.view = view;
         this.model = model;
         
-        BindViewEvents();
+        // 検索ボタンクリック時のイベントをバインド
+        if (view != null)
+        {
+            view.OnSearchButtonClicked += ApplyAllFiltersToModel;
+            view.OnClearButtonClicked += ClearAllFilters;
+        }
     }
     
     // ----------------------------------------------------------------------
-    // カードタイプフィルターエリアを登録
+    // カードタイプエリアの登録
     // ----------------------------------------------------------------------
     public void RegisterCardTypeArea(SetCardTypeArea area)
     {
-        this.cardTypeArea = area;
+        cardTypeArea = area;
         
-        // カードタイプフィルターのイベントを登録
-        if (cardTypeArea != null)
+        // フィルター変更イベントの購読（自動プレビュー用）
+        if (area != null)
         {
-            cardTypeArea.OnFilterChanged += () => {
-                Debug.Log("🔍 カードタイプフィルター変更を検知");
-                model.SetCardTypeFilter(cardTypeArea.GetSelectedCardTypes());
-                UpdateView();
-            };
+            // プレビュー検索を無効化するため購読を行わない
+            // area.OnFilterChanged += OnFilterChanged;
+            Debug.Log("✅ SetCardTypeAreaを登録しました");
         }
     }
     
     // ----------------------------------------------------------------------
-    // 進化段階フィルターエリアを登録
+    // 進化段階エリアの登録
     // ----------------------------------------------------------------------
     public void RegisterEvolutionStageArea(SetEvolutionStageArea area)
     {
-        this.evolutionStageArea = area;
+        evolutionStageArea = area;
         
-        // 進化段階フィルターのイベントを登録
-        if (evolutionStageArea != null)
+        // フィルター変更イベントの購読
+        if (area != null)
         {
-            evolutionStageArea.OnFilterChanged += () => {
-                Debug.Log("🔍 進化段階フィルター変更を検知");
-                model.SetEvolutionStageFilter(evolutionStageArea.GetSelectedEvolutionStages());
-                UpdateView();
-            };
+            area.OnFilterChanged += OnFilterChanged;
+            Debug.Log("✅ SetEvolutionStageAreaを登録しました");
         }
     }
     
     // ----------------------------------------------------------------------
-    // ポケモンタイプフィルターエリアを登録
+    // ポケモンタイプエリアの登録 - 現在はコメントアウトして無効化
     // ----------------------------------------------------------------------
     public void RegisterTypeArea(SetTypeArea area)
     {
-        this.typeArea = area;
+        typeArea = area;
         
-        // ポケモンタイプフィルターのイベントを登録
-        if (typeArea != null)
+        // フィルター変更イベントの購読（自動プレビュー用）
+        /*
+        if (area != null)
         {
-            typeArea.OnFilterChanged += () => {
-                Debug.Log("🔍 ポケモンタイプフィルター変更を検知");
-                model.SetPokemonTypeFilter(typeArea.GetSelectedTypes());
-                UpdateView();
-            };
+            area.OnFilterChanged += OnFilterChanged;
+            Debug.Log("✅ SetTypeAreaを登録しました");
         }
+        */
     }
     
     // ----------------------------------------------------------------------
-    // カードパックフィルターエリアを登録
+    // カードパックエリアの登録 - 現在はコメントアウトして無効化
     // ----------------------------------------------------------------------
     public void RegisterCardPackArea(SetCardPackArea area)
     {
-        this.cardPackArea = area;
+        cardPackArea = area;
         
-        // カードパックフィルターのイベントを登録
-        if (cardPackArea != null)
+        // フィルター変更イベントの購読（自動プレビュー用）
+        /*
+        if (area != null)
         {
-            cardPackArea.OnFilterChanged += () => {
-                Debug.Log("🔍 カードパックフィルター変更を検知");
-                model.SetCardPackFilter(cardPackArea.GetSelectedCardPacks());
-                UpdateView();
-            };
+            area.OnFilterChanged += OnFilterChanged;
+            Debug.Log("✅ SetCardPackAreaを登録しました");
         }
+        */
     }
     
     // ----------------------------------------------------------------------
-    // HPフィルターエリアを登録
+    // HPエリアの登録 - 現在はコメントアウトして無効化
     // ----------------------------------------------------------------------
     public void RegisterHPArea(SetHPArea area)
     {
-        this.hpArea = area;
+        hpArea = area;
         
-        // HPフィルターのイベントを登録
-        if (hpArea != null)
+        // フィルター変更イベントの購読（自動プレビュー用）
+        /*
+        if (area != null)
         {
-            hpArea.OnFilterChanged += () => {
-                Debug.Log("🔍 HPフィルター変更を検知");
-                model.SetHPFilter(hpArea.GetSelectedHP(), hpArea.GetSelectedComparisonType());
-                UpdateView();
-            };
+            area.OnFilterChanged += OnFilterChanged;
+            Debug.Log("✅ SetHPAreaを登録しました");
         }
+        */
     }
     
     // ----------------------------------------------------------------------
-    // 最大ダメージフィルターエリアを登録
+    // 最大ダメージエリアの登録 - 現在はコメントアウトして無効化
     // ----------------------------------------------------------------------
     public void RegisterMaxDamageArea(SetMaxDamageArea area)
     {
-        this.maxDamageArea = area;
+        maxDamageArea = area;
         
-        // 最大ダメージフィルターのイベントを登録
-        if (maxDamageArea != null)
+        // フィルター変更イベントの購読（自動プレビュー用）
+        /*
+        if (area != null)
         {
-            maxDamageArea.OnFilterChanged += () => {
-                Debug.Log("🔍 最大ダメージフィルター変更を検知");
-                model.SetMaxDamageFilter(maxDamageArea.GetSelectedDamage(), maxDamageArea.GetSelectedComparisonType());
-                UpdateView();
-            };
+            area.OnFilterChanged += OnFilterChanged;
+            Debug.Log("✅ SetMaxDamageAreaを登録しました");
         }
+        */
     }
-
+    
     // ----------------------------------------------------------------------
-    // 最大エネルギーコストフィルターエリアを登録
+    // 最大エネルギーコストエリアの登録 - 現在はコメントアウトして無効化
     // ----------------------------------------------------------------------
     public void RegisterMaxEnergyCostArea(SetMaxEnergyArea area)
     {
-        this.maxEnergyCostArea = area;
-        if (maxEnergyCostArea != null)
-        {
-            maxEnergyCostArea.OnFilterChanged += () => {
-                Debug.Log("🔍 最大エネルギーコストフィルター変更を検知");
-                // model.SetMaxEnergyCostFilter(maxEnergyCostArea.GetSelectedEnergyCost(), maxEnergyCostArea.GetSelectedComparisonType());
-                UpdateView();
-            };
-        }
-    }
-    
-    // ----------------------------------------------------------------------
-    // Viewのイベントをバインド
-    // Viewからの入力イベントを受け取り、Modelの処理につなげる
-    // ----------------------------------------------------------------------
-    private void BindViewEvents()
-    {
-        view.OnSearchButtonClicked += PerformSearch;
-        view.OnClearButtonClicked += ClearFilters;
-    }
-    
-    // ----------------------------------------------------------------------
-    // 検索を実行
-    // Modelに検索を依頼し、結果をViewに表示する
-    // ----------------------------------------------------------------------
-    private void PerformSearch()
-    {
-        Debug.Log("🔍 検索実行");
+        maxEnergyCostArea = area;
         
-        // 各フィルターエリアの現在の状態をモデルに適用
-        // カードタイプフィルターの適用
+        // フィルター変更イベントの購読（自動プレビュー用）
+        /*
+        if (area != null)
+        {
+            area.OnFilterChanged += OnFilterChanged;
+            Debug.Log("✅ SetMaxEnergyCostAreaを登録しました");
+        }
+        */
+    }
+    
+    // ----------------------------------------------------------------------
+    // フィルター変更時の処理
+    // ----------------------------------------------------------------------
+    private void OnFilterChanged()
+    {
+        // 変更があった場合はすべてのフィルターをモデルに適用
+        ApplyAllFiltersToModel();
+        
+        // プレビュー検索は無効化
+        // PerformPreviewSearch();
+    }
+    
+    // ----------------------------------------------------------------------
+    // すべてのフィルターをモデルに適用
+    // ----------------------------------------------------------------------
+    private void ApplyAllFiltersToModel()
+    {
+        Debug.Log("🔍 検索フィルターをモデルに適用");
+        
+        // カードタイプフィルターを適用
         if (cardTypeArea != null)
         {
             cardTypeArea.ApplyFilterToModel(model);
         }
-        
-        // 進化段階フィルターの適用
+        // 進化段階フィルターを適用
         if (evolutionStageArea != null)
         {
             evolutionStageArea.ApplyFilterToModel(model);
         }
         
-        // ポケモンタイプフィルターの適用
+        // 他のフィルター適用はコメントアウト
+        /*
+        // 進化段階フィルターを適用
+        if (evolutionStageArea != null)
+        {
+            evolutionStageArea.ApplyFilterToModel(model);
+        }
+        
+        // ポケモンタイプフィルターを適用
         if (typeArea != null)
         {
             typeArea.ApplyFilterToModel(model);
         }
         
-        // カードパックフィルターの適用
+        // カードパックフィルターを適用
         if (cardPackArea != null)
         {
             cardPackArea.ApplyFilterToModel(model);
         }
         
-        // HPフィルターの適用
+        // HPフィルターを適用
         if (hpArea != null)
         {
             hpArea.ApplyFilterToModel(model);
         }
         
-        // 最大ダメージフィルターの適用
+        // 最大ダメージフィルターを適用
         if (maxDamageArea != null)
         {
             maxDamageArea.ApplyFilterToModel(model);
         }
-
-        // 最大エネルギーコストフィルターの適用
-        if (maxEnergyCostArea != null)
-        {
-            // maxEnergyCostArea.ApplyFilterToModel(model);
+        
+            maxEnergyCostArea.ApplyFilterToModel(model);
         }
-        
-        // すべてのフィルター条件を適用した後、一度だけフィルタリングを実行
-        model.ApplyFilters();
-        
-        // 検索結果をViewに表示
-        UpdateView();
+        */
     }
     
     // ----------------------------------------------------------------------
-    // フィルターをクリア
-    // Modelのフィルターをリセットし、結果を更新する
+    // プレビュー検索の実行 - 無効化
     // ----------------------------------------------------------------------
-    private void ClearFilters()
+    // private void PerformPreviewSearch()
+    // {
+    //     // プレビュー検索は無効化されています
+    // }
+    
+    // ----------------------------------------------------------------------
+    // すべてのフィルターをクリア
+    // ----------------------------------------------------------------------
+    private void ClearAllFilters()
     {
-        Debug.Log("🔍 検索条件クリア");
-        model.ClearAllFilters();
+        Debug.Log("🧹 すべてのフィルターをリセットします");
         
-        // 各フィルターエリアのUIもリセット
+        // カードタイプフィルターをリセット
         if (cardTypeArea != null)
         {
-            Debug.Log("🔄 カードタイプフィルターUIをリセット");
             cardTypeArea.ResetFilters();
         }
-        else
-        {
-            Debug.LogWarning("⚠️ cardTypeArea参照が null のためUIリセットできません");
-        }
         
-        // 進化段階フィルターUIもリセット
+        // 他のフィルターリセットはコメントアウト
+        /*
+        // 進化段階フィルターをリセット
         if (evolutionStageArea != null)
         {
-            Debug.Log("🔄 進化段階フィルターUIをリセット");
             evolutionStageArea.ResetFilters();
         }
-        else
-        {
-            Debug.LogWarning("⚠️ evolutionStageArea参照が null のためUIリセットできません");
-        }
         
-        // ポケモンタイプフィルターUIもリセット
+        // ポケモンタイプフィルターをリセット
         if (typeArea != null)
         {
-            Debug.Log("🔄 ポケモンタイプフィルターUIをリセット");
             typeArea.ResetFilters();
         }
-        else
-        {
-            Debug.LogWarning("⚠️ typeArea参照が null のためUIリセットできません");
-        }
         
-        // カードパックフィルターUIもリセット
+        // カードパックフィルターをリセット
         if (cardPackArea != null)
         {
-            Debug.Log("🔄 カードパックフィルターUIをリセット");
             cardPackArea.ResetFilters();
         }
-        else
-        {
-            Debug.LogWarning("⚠️ cardPackArea参照が null のためUIリセットできません");
-        }
         
-        // HPフィルターUIもリセット
+        // HPフィルターをリセット
         if (hpArea != null)
         {
-            Debug.Log("🔄 HPフィルターUIをリセット");
             hpArea.ResetFilters();
         }
-        else
-        {
-            Debug.LogWarning("⚠️ hpArea参照が null のためUIリセットできません");
-        }
         
-        // 最大ダメージフィルターUIもリセット
+        // 最大ダメージフィルターをリセット
         if (maxDamageArea != null)
         {
-            Debug.Log("🔄 最大ダメージフィルターUIをリセット");
             maxDamageArea.ResetFilters();
         }
-        else
-        {
-            Debug.LogWarning("⚠️ maxDamageArea参照が null のためUIリセットできません");
-        }
-
-        // 最大エネルギーコストフィルターUIもリセット
+        
+        // 最大エネルギーコストフィルターをリセット
         if (maxEnergyCostArea != null)
         {
-            Debug.Log("🔄 最大エネルギーコストフィルターUIをリセット");
             maxEnergyCostArea.ResetFilters();
         }
-        else
+        */
+        
+        // モデル側のリセット
+        model?.ClearAllFilters();
+        
+        // 検索結果をクリア（空の結果リストを表示）
+        if (view != null)
         {
-            Debug.LogWarning("⚠️ maxEnergyCostArea参照が null のためUIリセットできません");
+            view.DisplaySearchResults(new List<CardModel>());
         }
-        
-        // 将来的に他のフィルターエリアが追加された場合、ここに追加する
-        
-        UpdateView();
-    }
-    
-    // ----------------------------------------------------------------------
-    // Viewを更新
-    // Modelからデータを取得し、Viewに反映する
-    // ----------------------------------------------------------------------
-    private void UpdateView()
-    {
-        List<CardModel> filteredCards = model.GetFilteredCards();
-        Debug.Log($"🔍 検索結果: {filteredCards.Count}件");
-        view.DisplaySearchResults(filteredCards);
     }
 }
