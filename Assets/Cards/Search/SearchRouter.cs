@@ -96,7 +96,6 @@ public class SearchRouter : MonoBehaviour
     /// <param name="results">検索結果のカードリスト</param>
     public void ApplySearchResults(List<CardModel> results)
     {
-        Debug.Log($"🔄 [SearchRouter] 検索結果の配信: {results.Count}枚のカード");
         
         if (results != null)
         {

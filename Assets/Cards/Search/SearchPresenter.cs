@@ -81,20 +81,18 @@ public class SearchPresenter
     }
     
     // ----------------------------------------------------------------------
-    // カードパックエリアの登録 - 現在はコメントアウトして無効化
+    // カードパックエリアの登録
     // ----------------------------------------------------------------------
     public void RegisterCardPackArea(SetCardPackArea area)
     {
         cardPackArea = area;
         
-        // フィルター変更イベントの購読（自動プレビュー用）
-        /*
+        // フィルター変更イベントの購読
         if (area != null)
         {
             area.OnFilterChanged += OnFilterChanged;
             Debug.Log("✅ SetCardPackAreaを登録しました");
         }
-        */
     }
     
     // ----------------------------------------------------------------------
@@ -181,6 +179,11 @@ public class SearchPresenter
         if (typeArea != null)
         {
             typeArea.ApplyFilterToModel(model);
+        }
+        // カードパックフィルターを適用
+        if (cardPackArea != null)
+        {
+            cardPackArea.ApplyFilterToModel(model);
         }
         
         // 他のフィルター適用はコメントアウト

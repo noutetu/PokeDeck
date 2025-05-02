@@ -105,12 +105,23 @@ public class SearchView : MonoBehaviour
         {
             presenter.RegisterTypeArea(typeArea);
         }
-        /*
-        if (cardPackArea != null)       presenter.RegisterCardPackArea(cardPackArea);
-        if (hpArea != null)             presenter.RegisterHPArea(hpArea);
-        if (maxDamageArea != null)      presenter.RegisterMaxDamageArea(maxDamageArea);
-        if (maxEnergyCostArea != null)  presenter.RegisterMaxEnergyCostArea(maxEnergyCostArea);
-        */
+
+        // カードパックフィルターエリアの登録
+        if (cardPackArea != null)
+        {
+            presenter.RegisterCardPackArea(cardPackArea);
+        }
+
+        // HPフィルターエリアの登録
+        if (hpArea != null)
+        {
+            presenter.RegisterHPArea(hpArea);
+        }
+        // 最大ダメージフィルターエリアの登録
+        if (maxDamageArea != null)
+        {
+            presenter.RegisterMaxDamageArea(maxDamageArea);
+        }
     }
     
     // ----------------------------------------------------------------------
@@ -181,11 +192,41 @@ public class SearchView : MonoBehaviour
             var selectedEvolutionStages = evolutionStageArea != null ? evolutionStageArea.GetSelectedEvolutionStages().ToList() : new List<Enum.EvolutionStage>();
             // ポケモンタイプフィルターを取得
             var selectedTypes = typeArea != null ? typeArea.GetSelectedTypes().ToList() : new List<Enum.PokemonType>();
-            // 他のフィルターはすべて未適用（デフォルト設定）
-            var emptyPack = new List<Enum.CardPack>();
-            int minHP = 0, maxHP = 999;
-            int minMaxDamage = 0, maxMaxDamage = 999;
-            int minEnergyCost = 0, maxEnergyCost = 999;
+            // カードパックフィルターを取得
+            var selectedCardPacks = cardPackArea != null ? cardPackArea.GetSelectedCardPacks().ToList() : new List<Enum.CardPack>();
+
+            // HPフィルター用のmin/maxを計算
+            int minHP, maxHP;
+            if (hpArea != null)
+            {
+                var hpVal = hpArea.GetSelectedHP();
+                var cmp = hpArea.GetSelectedComparisonType();
+                switch (cmp)
+                {
+                    case SetHPArea.HPComparisonType.LessOrEqual: minHP = 0; maxHP = hpVal; break;
+                    case SetHPArea.HPComparisonType.Equal:       minHP = hpVal; maxHP = hpVal; break;
+                    case SetHPArea.HPComparisonType.GreaterOrEqual: minHP = hpVal; maxHP = int.MaxValue; break;
+                    default: minHP = 0; maxHP = int.MaxValue; break;
+                }
+            }
+            else { minHP = 0; maxHP = int.MaxValue; }
+            // ダメージフィルター用のmin/maxを計算
+            int minMaxDamage, maxMaxDamage;
+            if (maxDamageArea != null)
+            {
+                var dmg = maxDamageArea.GetSelectedDamage();
+                var cmpD = maxDamageArea.GetSelectedComparisonType();
+                switch (cmpD)
+                {
+                    case SetMaxDamageArea.DamageComparisonType.LessOrEqual: minMaxDamage = 0; maxMaxDamage = dmg; break;
+                    case SetMaxDamageArea.DamageComparisonType.Equal:       minMaxDamage = dmg; maxMaxDamage = dmg; break;
+                    case SetMaxDamageArea.DamageComparisonType.GreaterOrEqual: minMaxDamage = dmg; maxMaxDamage = int.MaxValue; break;
+                    default: minMaxDamage = 0; maxMaxDamage = int.MaxValue; break;
+                }
+            }
+            else { minMaxDamage = 0; maxMaxDamage = int.MaxValue; }
+            // エネルギーフィルターは現在未適用
+            int minEnergyCost = 0, maxEnergyCost = int.MaxValue;
 
             // 検索実行
             if (model != null)
@@ -194,7 +235,7 @@ public class SearchView : MonoBehaviour
                     selectedCardTypes,
                     selectedEvolutionStages,
                     selectedTypes,
-                    emptyPack,
+                    selectedCardPacks,
                     minHP, maxHP,
                     minMaxDamage, maxMaxDamage,
                     minEnergyCost, maxEnergyCost
@@ -227,6 +268,9 @@ public class SearchView : MonoBehaviour
         if (cardTypeArea != null)      cardTypeArea.ResetFilters();
         if (evolutionStageArea != null) evolutionStageArea.ResetFilters();
         if (typeArea != null)          typeArea.ResetFilters();
+        if (cardPackArea != null)      cardPackArea.ResetFilters();
+        if (hpArea != null)            hpArea.ResetFilters();
+        if (maxDamageArea != null)     maxDamageArea.ResetFilters();
     }
     
     // ----------------------------------------------------------------------

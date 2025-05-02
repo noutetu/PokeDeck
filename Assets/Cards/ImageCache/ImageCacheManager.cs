@@ -38,17 +38,30 @@ public class ImageCacheManager : MonoBehaviour
     
     private void Awake()
     {
+        // シーン内の重複を検出して破棄
+        var instances = FindObjectsOfType<ImageCacheManager>();
+        if (instances.Length > 1)
+        {
+            foreach (var inst in instances)
+            {
+                if (inst != this)
+                    Destroy(inst.gameObject);
+            }
+        }
+
         // シングルトンの設定
         if (_instance != null && _instance != this)
         {
             Destroy(gameObject);
             return;
         }
-        
+
         _instance = this;
         DontDestroyOnLoad(gameObject);
-        
-        
+
+        // デフォルトテクスチャを設定
+        _defaultTexture = defaultTexture;
+
         Debug.Log("🖼️ ImageCacheManagerを初期化しました");
     }
     // ----------------------------------------------------------------------

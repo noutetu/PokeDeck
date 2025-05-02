@@ -351,32 +351,8 @@ public class SetHPArea : MonoBehaviour, IFilterArea
         
         // いったんすべてのトグルをオフにする
         SetAllTogglesOff();
-        
-        // 「同じ」トグルを選択状態にする
-        if (equalToggle != null)
-        {
-            // 「同じ」トグルをオンにする
-            equalToggle.SetIsOnWithoutNotify(true);
-            selectedComparisonType = HPComparisonType.Equal;
-            
-            // SimpleToggleColorコンポーネントを更新
-            SimpleToggleColor colorComponent = equalToggle.GetComponent<SimpleToggleColor>();
-            if (colorComponent != null)
-            {
-                colorComponent.UpdateColorState(true);
-            }
-            
-            // TrueShadowToggleInsetコンポーネントを更新
-            TrueShadowToggleInset shadowComponent = equalToggle.GetComponent<TrueShadowToggleInset>();
-            if (shadowComponent != null)
-            {
-                shadowComponent.UpdateInsetState(true);
-            }
-            
-            Debug.Log("🔍 「同じ」トグルをデフォルト選択状態に戻しました");
-        }
-        
-        // トグルを無効化
+        // 比較タイプをNoneにリセットし、トグルを無効化
+        selectedComparisonType = HPComparisonType.None;
         SetTogglesInteractable(false);
         
         Debug.Log("✅ HPフィルターのリセット完了");

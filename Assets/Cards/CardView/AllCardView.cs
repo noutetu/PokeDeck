@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine.UI;
+using System.Text;  // 追加: ひらがな・カタカナ変換用
 
 // ----------------------------------------------------------------------
 // 複数カードを並べて表示するView（横スクロール）
@@ -60,12 +61,6 @@ public class AllCardView : MonoBehaviour
         
         // 並べ替えUI要素の設定
         SetupSortUI();
-        
-        // SearchRouterが存在する場合は、検索結果イベントを購読
-        if (SearchRouter.Instance != null)
-        {
-            SearchRouter.Instance.OnSearchResult += ApplySearchResults;
-        }
     }
 
     // ----------------------------------------------------------------------
@@ -134,6 +129,20 @@ public class AllCardView : MonoBehaviour
         }
     }
 
+    // ひらがな・カタカナを同一視するための文字列正規化
+    private string NormalizeJapanese(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return "";
+        var sb = new StringBuilder(input.Length);
+        foreach (var ch in input)
+        {
+            // 全角カタカナ(U+30A1〜U+30F6)をひらがなに変換
+            if (ch >= '\u30A1' && ch <= '\u30F6') sb.Append((char)(ch - 0x60));
+            else sb.Append(ch);
+        }
+        return sb.ToString().ToLowerInvariant();
+    }
+
     // ----------------------------------------------------------------------
     // テキスト検索を実行
     // @param searchText 検索テキスト
@@ -149,56 +158,48 @@ public class AllCardView : MonoBehaviour
             }
             return;
         }
-        
-        Debug.Log($"テキスト検索実行: '{searchText}'");
-        
-        // CardDatabaseから全カードを取得
+        // 正規化後の検索文字列（ひらがな・カタカナを同一視、小文字化）
+        var searchNorm = NormalizeJapanese(searchText);
+        Debug.Log($"テキスト検索実行(正規化): '{searchNorm}'");
+        // 検索対象は常に全カードデータベースから取得
         var allCards = CardDatabase.GetAllCards();
         if (allCards == null || allCards.Count == 0)
         {
             Debug.LogWarning("検索対象のカードがありません");
             return;
         }
-        
-        // 検索テキストを小文字に変換（大文字小文字区別なし）
-        string searchLower = searchText.ToLower();
-        
-        // フィルタリング
+        // フィルタリング (カード名と技の効果文のみ対象)
         var results = new List<CardModel>();
         foreach (var card in allCards)
         {
-            // カード名の検索
-            if (card.name != null && card.name.ToLower().Contains(searchLower))
+            // カード名マッチ (正規化)
+            var nameNorm = NormalizeJapanese(card.name);
+            if (nameNorm.Contains(searchNorm))
             {
                 results.Add(card);
                 continue;
             }
             
-            // 技の効果のテキスト検索（技が存在する場合）- 技名は検索対象から除外
+            // 技の効果文マッチ (正規化)
             if (card.moves != null)
             {
-                bool found = false;
                 foreach (var move in card.moves)
                 {
-                    // 技の効果テキストのみを検索対象とする（技名は除外）
-                    if (move.effect != null && move.effect.ToLower().Contains(searchLower))
+                    var effectNorm = NormalizeJapanese(move.effect);
+                    if (effectNorm.Contains(searchNorm))
                     {
-                        found = true;
+                        results.Add(card);
                         break;
                     }
-                }
-                
-                if (found)
-                {
-                    results.Add(card);
                 }
             }
         }
         
         Debug.Log($"検索結果: {results.Count}件");
-        
-        // 検索結果を表示
-        ApplySearchResults(results);
+        if (SearchRouter.Instance != null)
+            SearchRouter.Instance.ApplySearchResults(results);
+        else
+            RefreshAll(new ReactiveCollection<CardModel>(results));
     }
 
     // ----------------------------------------------------------------------
@@ -470,12 +471,6 @@ public class AllCardView : MonoBehaviour
     // ----------------------------------------------------------------------
     private void OnDestroy()
     {
-        // イベント購読を解除
-        if (SearchRouter.Instance != null)
-        {
-            SearchRouter.Instance.OnSearchResult -= ApplySearchResults;
-        }
-        
         // ボタンのリスナーを解除
         if (detailButton != null)
         {

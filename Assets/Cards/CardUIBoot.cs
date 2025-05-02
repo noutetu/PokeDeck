@@ -240,6 +240,8 @@ public class CardUIBoot : MonoBehaviour
             {
                 // スクロールイベントにリスナーを登録
                 scrollRect.onValueChanged.AddListener(OnScrollValueChanged);
+                // 初回の誤発火を無視
+                ignoreScrollEvent = true;
                 Debug.Log("スクロールビューを初期化しました");
             }
             else
