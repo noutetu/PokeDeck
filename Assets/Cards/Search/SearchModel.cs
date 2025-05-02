@@ -34,6 +34,22 @@ public class SearchModel
     private int selectedMaxEnergyCost = 0;
     private SetMaxEnergyArea.EnergyComparisonType selectedMaxEnergyCostComparisonType = SetMaxEnergyArea.EnergyComparisonType.None;
 
+    // 連続してフィルターが呼ばれる場合に使用するフラグ
+    private bool isBatchFiltering = false;
+
+    // フィルタリングの一括処理を開始
+    public void BeginBatchFiltering()
+    {
+        isBatchFiltering = true;
+    }
+
+    // フィルタリングの一括処理を終了して適用
+    public void EndBatchFiltering()
+    {
+        isBatchFiltering = false;
+        ApplyFilters();
+    }
+
     // ----------------------------------------------------------------------
     // コンストラクタ
     // ----------------------------------------------------------------------
@@ -189,7 +205,7 @@ public class SearchModel
     public void SetSearchText(string text)
     {
         searchText = text;
-        ApplyFilters();
+        if (!isBatchFiltering) ApplyFilters();
     }
     
     // ----------------------------------------------------------------------
@@ -199,7 +215,7 @@ public class SearchModel
     public void SetCardTypeFilter(HashSet<CardType> cardTypes)
     {
         selectedCardTypes = new HashSet<CardType>(cardTypes);
-        ApplyFilters();
+        if (!isBatchFiltering) ApplyFilters();
     }
     
     // ----------------------------------------------------------------------
@@ -209,7 +225,7 @@ public class SearchModel
     public void SetEvolutionStageFilter(HashSet<EvolutionStage> evolutionStages)
     {
         selectedEvolutionStages = new HashSet<EvolutionStage>(evolutionStages);
-        ApplyFilters();
+        if (!isBatchFiltering) ApplyFilters();
     }
     
     // ----------------------------------------------------------------------
@@ -219,7 +235,7 @@ public class SearchModel
     public void SetPokemonTypeFilter(HashSet<PokemonType> pokemonTypes)
     {
         selectedPokemonTypes = new HashSet<PokemonType>(pokemonTypes);
-        ApplyFilters();
+        if (!isBatchFiltering) ApplyFilters();
     }
     
     // ----------------------------------------------------------------------
@@ -229,7 +245,7 @@ public class SearchModel
     public void SetCardPackFilter(HashSet<CardPack> cardPacks)
     {
         selectedCardPacks = new HashSet<CardPack>(cardPacks);
-        ApplyFilters();
+        if (!isBatchFiltering) ApplyFilters();
     }
     
     // ----------------------------------------------------------------------
@@ -241,7 +257,7 @@ public class SearchModel
     {
         selectedHP = hp;
         selectedHPComparisonType = comparisonType;
-        ApplyFilters();
+        if (!isBatchFiltering) ApplyFilters();
     }
     
     // ----------------------------------------------------------------------
@@ -253,14 +269,14 @@ public class SearchModel
     {
         selectedMaxDamage = damage;
         selectedMaxDamageComparisonType = comparisonType;
-        ApplyFilters();
+        if (!isBatchFiltering) ApplyFilters();
     }
     // 最大エネルギーコストフィルターを設定
     public void SetMaxEnergyCostFilter(int cost, SetMaxEnergyArea.EnergyComparisonType comparisonType)
     {
         selectedMaxEnergyCost = cost;
         selectedMaxEnergyCostComparisonType = comparisonType;
-        ApplyFilters();
+        if (!isBatchFiltering) ApplyFilters();
     }
 
     // ----------------------------------------------------------------------
@@ -693,32 +709,31 @@ public class SearchModel
     // ----------------------------------------------------------------------
     private void ApplyMaxEnergyCostFilter()
     {
-        if (selectedMaxEnergyCostComparisonType == SetMaxEnergyArea.EnergyComparisonType.None)
-            return;
-        Debug.Log($"🔍 最大エネルギーコストフィルター適用: {selectedMaxEnergyCost}コスト, 比較タイプ={selectedMaxEnergyCostComparisonType}");
-        // カードごとの合計エネルギーコストを計算しフィルタリング
-        filteredCards = filteredCards.Where(card =>
+    // EnergyComparisonType.None(指定なし)の場合はスキップ
+    if (selectedMaxEnergyCostComparisonType == SetMaxEnergyArea.EnergyComparisonType.None)
+    {
+        Debug.Log($"🔍 最大エネルギーコストフィルターはスキップします（比較タイプ: {selectedMaxEnergyCostComparisonType}, コスト: {selectedMaxEnergyCost}）");
+        return;
+    }
+
+    Debug.Log($"🔍 最大エネルギーコストフィルター適用: {selectedMaxEnergyCost}コスト, 比較タイプ={selectedMaxEnergyCostComparisonType}");
+    // CardModel.maxEnergyCost を直接比較
+    filteredCards = filteredCards.Where(card =>
+    {
+        int energy = card.maxEnergyCost;
+        switch (selectedMaxEnergyCostComparisonType)
         {
-            // ワザエネルギーを持たないカードは除外
-            if (card.moves == null || !card.moves.Any(move => move.cost != null && move.cost.Count > 0))
+            case SetMaxEnergyArea.EnergyComparisonType.LessOrEqual:
+                return energy <= selectedMaxEnergyCost;
+            case SetMaxEnergyArea.EnergyComparisonType.Equal:
+                return energy == selectedMaxEnergyCost;
+            case SetMaxEnergyArea.EnergyComparisonType.GreaterOrEqual:
+                return energy >= selectedMaxEnergyCost;
+            default:
                 return false;
-            int totalCost = 0;
-            foreach (var move in card.moves)
-                if (move.cost != null)
-                    totalCost += move.cost.Values.Sum();
-            switch (selectedMaxEnergyCostComparisonType)
-            {
-                case SetMaxEnergyArea.EnergyComparisonType.LessOrEqual:
-                    return totalCost <= selectedMaxEnergyCost;
-                case SetMaxEnergyArea.EnergyComparisonType.Equal:
-                    return totalCost == selectedMaxEnergyCost;
-                case SetMaxEnergyArea.EnergyComparisonType.GreaterOrEqual:
-                    return totalCost >= selectedMaxEnergyCost;
-                default:
-                    return false;
-            }
-        }).ToList();
-        Debug.Log($"🔍 最大エネルギーコストフィルター結果: {filteredCards.Count}件");
+        }
+    }).ToList();
+    Debug.Log($"🔍 最大エネルギーコストフィルター結果: {filteredCards.Count}件");
     }
 
     // ----------------------------------------------------------------------
@@ -745,22 +760,24 @@ public class SearchModel
     {
         Debug.Log("🔍 [SearchModel] 検索開始");
         
-        // 検索条件の有無をチェック
+        // 検索条件の有無を適切にチェック
         bool hasCardTypeFilter = cardTypes != null && cardTypes.Count > 0;
         bool hasEvolutionStageFilter = evolutionStages != null && evolutionStages.Count > 0;
         bool hasTypeFilter = types != null && types.Count > 0;
         bool hasCardPackFilter = cardPacks != null && cardPacks.Count > 0;
-        bool hasHPFilter = minHP > 0 || maxHP < 999;
-        bool hasMaxDamageFilter = minMaxDamage > 0 || maxMaxDamage < 999;
-        bool hasEnergyCostFilter = minEnergyCost > 0 || maxEnergyCost < 999;
+        
+        // HP, ダメージ, エネルギーは「指定なし」として0と最大値が設定されるため、
+        // 実際に設定された範囲のみをフィルターとして扱う
+        bool hasHPFilter = minHP > 30 || maxHP < 200; // HPの範囲は約30-200
+        bool hasMaxDamageFilter = minMaxDamage > 0 || maxMaxDamage < 200; // 最大ダメージ範囲は約0-200
+        bool hasEnergyCostFilter = minEnergyCost > 0 || maxEnergyCost < 5; // エネルギーコスト範囲は約0-5
         
         // 適用するフィルター条件をログ出力
         Debug.Log($"🔍 [SearchModel] フィルター条件: カードタイプ({hasCardTypeFilter}), 進化段階({hasEvolutionStageFilter}), タイプ({hasTypeFilter}), カードパック({hasCardPackFilter}), HP({hasHPFilter}), 最大ダメージ({hasMaxDamageFilter}), エネルギーコスト({hasEnergyCostFilter})");
-        
-        // CardDatabaseまたはcardListからカードを取得
-        List<CardModel> allCards = null;
+        Debug.Log($"🔍 [SearchModel] フィルター値: HP({minHP}-{maxHP}), 最大ダメージ({minMaxDamage}-{maxMaxDamage}), エネルギーコスト({minEnergyCost}-{maxEnergyCost})");
         
         // カードリストが直接設定されている場合はそれを使用
+        List<CardModel> allCards = null;
         if (cardList != null && cardList.Count > 0)
         {
             allCards = cardList;
@@ -788,16 +805,18 @@ public class SearchModel
 
         // フィルターの適用
         var filteredCards = allCards.Where(card => {
-            // フィルター条件がない場合は全カード表示（OR条件）
+            // フィルター条件がない場合は全カード表示（OR条件ではなくAND条件で、フィルターがなければtrue）
             bool matchCardType = !hasCardTypeFilter || cardTypes.Contains(card.cardTypeEnum);
             bool matchEvolutionStage = !hasEvolutionStageFilter || evolutionStages.Contains(card.evolutionStageEnum);
             bool matchType = !hasTypeFilter || types.Contains(card.typeEnum);
             bool matchCardPack = !hasCardPackFilter || cardPacks.Contains(card.packEnum);
-            bool matchHP = card.hp >= minHP && card.hp <= maxHP;
-            bool matchMaxDamage = card.maxDamage >= minMaxDamage && card.maxDamage <= maxMaxDamage;
+            bool matchHP = !hasHPFilter || (card.hp >= minHP && card.hp <= maxHP);
+            bool matchMaxDamage = !hasMaxDamageFilter || (card.maxDamage >= minMaxDamage && card.maxDamage <= maxMaxDamage);
+            bool matchEnergyCost = !hasEnergyCostFilter || (card.maxEnergyCost >= minEnergyCost && card.maxEnergyCost <= maxEnergyCost);
 
             // すべての条件にマッチするか（AND条件）
-            return matchCardType && matchEvolutionStage && matchType && matchCardPack && matchHP && matchMaxDamage;
+            return matchCardType && matchEvolutionStage && matchType && matchCardPack 
+                && matchHP && matchMaxDamage && matchEnergyCost;
         }).ToList();
         
         Debug.Log($"🔍 [SearchModel] 検索結果: 全{allCards.Count}枚のカードから{filteredCards.Count}枚が条件に一致しました");

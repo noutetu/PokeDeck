@@ -417,16 +417,16 @@ public class SetMaxDamageArea : MonoBehaviour, IFilterArea
     {
         if (model != null)
         {
-            // ドロップダウンが「指定なし」の場合は、ComparisonTypeがNoneになっているはず
+            // ドロップダウンが「指定なし」または比較タイプがNoneの場合はフィルタリングをスキップ
             if (damageDropdown.value == 0 || selectedComparisonType == DamageComparisonType.None)
             {
-                // 「指定なし」の場合、明示的にNoneとしてモデルに設定
+                Debug.Log($"🔍 最大ダメージフィルターは無効なのでスキップします（ドロップダウン値={damageDropdown.value}, 比較タイプ={selectedComparisonType}）");
+                // フィルター未選択状態を設定（無効化）
                 model.SetMaxDamageFilter(0, DamageComparisonType.None);
-                Debug.Log("🔍 最大ダメージフィルター: 「指定なし」をモデルに適用");
             }
             else
             {
-                // 通常の条件設定（数値が選択されている場合）
+                // 現在選択されているダメージ条件をモデルに適用
                 model.SetMaxDamageFilter(selectedDamage, selectedComparisonType);
                 Debug.Log($"🔍 最大ダメージフィルターをモデルに適用: ダメージ={selectedDamage}, 比較タイプ={selectedComparisonType}");
             }

@@ -114,10 +114,6 @@ public class CardModel
         else
         {
         }
-        Debug.Log($"カードパックの変換: {pack} → {packEnum}");
-        Debug.Log($"カードタイプの変換: {cardType} → {cardTypeEnum}");
-        Debug.Log($"進化段階の変換: {evolutionStage} → {evolutionStageEnum}");
-        Debug.Log($"ポケモンタイプの変換: {type} → {typeEnum}");
         // Uncomment and implement these lines if needed
         // weaknessEnum = EnumConverter.ToWeaknessType(weakness);
         // tagsEnum = EnumConverter.ToCardTags(tags);

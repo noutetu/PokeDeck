@@ -16,12 +16,6 @@ public class ImageCacheManager : MonoBehaviour
     {
         get
         {
-            if (_instance == null)
-            {
-                var go = new GameObject("ImageCacheManager");
-                _instance = go.AddComponent<ImageCacheManager>();
-                DontDestroyOnLoad(go);
-            }
             return _instance;
         }
     }
@@ -38,31 +32,18 @@ public class ImageCacheManager : MonoBehaviour
     
     private void Awake()
     {
-        // シーン内の重複を検出して破棄
-        var instances = FindObjectsOfType<ImageCacheManager>();
-        if (instances.Length > 1)
+        if (_instance == null)
         {
-            foreach (var inst in instances)
-            {
-                if (inst != this)
-                    Destroy(inst.gameObject);
-            }
+            _instance = this;
+            DontDestroyOnLoad(gameObject);
+            _defaultTexture = defaultTexture;
+            Debug.Log("🖼️ ImageCacheManagerを初期化しました");
         }
-
-        // シングルトンの設定
-        if (_instance != null && _instance != this)
+        else if (_instance != this)
         {
             Destroy(gameObject);
             return;
         }
-
-        _instance = this;
-        DontDestroyOnLoad(gameObject);
-
-        // デフォルトテクスチャを設定
-        _defaultTexture = defaultTexture;
-
-        Debug.Log("🖼️ ImageCacheManagerを初期化しました");
     }
     // ----------------------------------------------------------------------
     // URLからテクスチャを読み込み、キャッシュする

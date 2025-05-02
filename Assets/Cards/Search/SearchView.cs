@@ -55,6 +55,16 @@ public class SearchView : MonoBehaviour
         InitializeUI();
         SetupListeners();
         SetupMVP();
+        
+        // 起動時にすべてのフィルターをリセット
+        ResetUI();
+        
+        // モデルの状態も初期化（クリアボタンはUIのみリセットするため）
+        if (model != null)
+        {
+            model.ClearAllFilters();
+            Debug.Log("✅ [SearchView] 初期起動時にすべてのフィルターをリセットしました");
+        }
     }
 
     // ----------------------------------------------------------------------
@@ -289,6 +299,7 @@ public class SearchView : MonoBehaviour
         if (cardPackArea != null)      cardPackArea.ResetFilters();
         if (hpArea != null)            hpArea.ResetFilters();
         if (maxDamageArea != null)     maxDamageArea.ResetFilters();
+        if (maxEnergyCostArea != null) maxEnergyCostArea.ResetFilters();
     }
     
     // ----------------------------------------------------------------------

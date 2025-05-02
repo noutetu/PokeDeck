@@ -51,48 +51,54 @@ public class SearchPresenter
     }
     
     // ----------------------------------------------------------------------
-    // 進化段階エリアの登録
+    // 進化段階エリアの登録 - 現在はコメントアウトして無効化
     // ----------------------------------------------------------------------
     public void RegisterEvolutionStageArea(SetEvolutionStageArea area)
     {
         evolutionStageArea = area;
         
-        // フィルター変更イベントの購読
+        // フィルター変更イベントの購読（自動プレビュー用）
+        /*
         if (area != null)
         {
             area.OnFilterChanged += OnFilterChanged;
             Debug.Log("✅ SetEvolutionStageAreaを登録しました");
         }
+        */
     }
     
     // ----------------------------------------------------------------------
-    // ポケモンタイプエリアの登録
+    // ポケモンタイプエリアの登録 - 現在はコメントアウトして無効化
     // ----------------------------------------------------------------------
     public void RegisterTypeArea(SetTypeArea area)
     {
         typeArea = area;
         
-        // フィルター変更イベントの購読
+        // フィルター変更イベントの購読（自動プレビュー用）
+        /*
         if (area != null)
         {
             area.OnFilterChanged += OnFilterChanged;
             Debug.Log("✅ SetTypeAreaを登録しました");
         }
+        */
     }
     
     // ----------------------------------------------------------------------
-    // カードパックエリアの登録
+    // カードパックエリアの登録 - 現在はコメントアウトして無効化
     // ----------------------------------------------------------------------
     public void RegisterCardPackArea(SetCardPackArea area)
     {
         cardPackArea = area;
         
-        // フィルター変更イベントの購読
+        // フィルター変更イベントの購読（自動プレビュー用）
+        /*
         if (area != null)
         {
             area.OnFilterChanged += OnFilterChanged;
             Debug.Log("✅ SetCardPackAreaを登録しました");
         }
+        */
     }
     
     // ----------------------------------------------------------------------
@@ -165,62 +171,40 @@ public class SearchPresenter
     {
         Debug.Log("🔍 検索フィルターをモデルに適用");
         
-        // カードタイプフィルターを適用
-        if (cardTypeArea != null)
+        if (model != null)
         {
-            cardTypeArea.ApplyFilterToModel(model);
+            // バッチフィルタリングを開始して、個別のフィルター適用時のログ出力や重複処理を防ぐ
+            model.BeginBatchFiltering();
+            
+            // 各フィルターエリアの設定をモデルに適用
+            if (cardTypeArea != null)
+                cardTypeArea.ApplyFilterToModel(model);
+    
+            if (evolutionStageArea != null)
+                evolutionStageArea.ApplyFilterToModel(model);
+    
+            if (typeArea != null)
+                typeArea.ApplyFilterToModel(model);
+    
+            if (cardPackArea != null)
+                cardPackArea.ApplyFilterToModel(model);
+    
+            if (hpArea != null)
+                hpArea.ApplyFilterToModel(model);
+    
+            if (maxDamageArea != null)
+                maxDamageArea.ApplyFilterToModel(model);
+    
+            if (maxEnergyCostArea != null)
+                maxEnergyCostArea.ApplyFilterToModel(model);
+            
+            // バッチフィルタリングを終了してフィルター処理を実行（ログは1回だけ出力される）
+            model.EndBatchFiltering();
         }
-        // 進化段階フィルターを適用
-        if (evolutionStageArea != null)
+        else
         {
-            evolutionStageArea.ApplyFilterToModel(model);
+            Debug.LogError("❌ SearchModelがnullです");
         }
-        // ポケモンタイプフィルターを適用
-        if (typeArea != null)
-        {
-            typeArea.ApplyFilterToModel(model);
-        }
-        // カードパックフィルターを適用
-        if (cardPackArea != null)
-        {
-            cardPackArea.ApplyFilterToModel(model);
-        }
-        
-        // 他のフィルター適用はコメントアウト
-        /*
-        // 進化段階フィルターを適用
-        if (evolutionStageArea != null)
-        {
-            evolutionStageArea.ApplyFilterToModel(model);
-        }
-        
-        // ポケモンタイプフィルターを適用
-        if (typeArea != null)
-        {
-            typeArea.ApplyFilterToModel(model);
-        }
-        
-        // カードパックフィルターを適用
-        if (cardPackArea != null)
-        {
-            cardPackArea.ApplyFilterToModel(model);
-        }
-        
-        // HPフィルターを適用
-        if (hpArea != null)
-        {
-            hpArea.ApplyFilterToModel(model);
-        }
-        
-        // 最大ダメージフィルターを適用
-        if (maxDamageArea != null)
-        {
-            maxDamageArea.ApplyFilterToModel(model);
-        }
-        
-            maxEnergyCostArea.ApplyFilterToModel(model);
-        }
-        */
     }
     
     // ----------------------------------------------------------------------

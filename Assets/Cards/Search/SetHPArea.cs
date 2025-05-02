@@ -330,7 +330,8 @@ public class SetHPArea : MonoBehaviour, IFilterArea
     // ----------------------------------------------------------------------
     public bool HasActiveFilters()
     {
-        return selectedHP > 0 && selectedComparisonType != HPComparisonType.None;
+        // ドロップダウンが「指定なし」以外で、比較タイプがNoneでない場合は有効
+        return hpDropdown.value > 0 && selectedComparisonType != HPComparisonType.None;
     }
     
     // ----------------------------------------------------------------------
@@ -395,9 +396,19 @@ public class SetHPArea : MonoBehaviour, IFilterArea
     {
         if (model != null)
         {
-            // 現在選択されているHP条件をモデルに適用
-            model.SetHPFilter(selectedHP, selectedComparisonType);
-            Debug.Log($"🔍 HPフィルターをモデルに適用: HP={selectedHP}, 比較タイプ={selectedComparisonType}");
+            // ドロップダウンが「指定なし」または比較タイプがNoneの場合はフィルタリングをスキップ
+            if (hpDropdown.value == 0 || selectedComparisonType == HPComparisonType.None)
+            {
+                Debug.Log($"🔍 HPフィルターは無効なのでスキップします（ドロップダウン値={hpDropdown.value}, 比較タイプ={selectedComparisonType}）");
+                // フィルター未選択状態を設定（無効化）
+                model.SetHPFilter(0, HPComparisonType.None);
+            }
+            else
+            {
+                // 現在選択されているHP条件をモデルに適用
+                model.SetHPFilter(selectedHP, selectedComparisonType);
+                Debug.Log($"🔍 HPフィルターをモデルに適用: HP={selectedHP}, 比較タイプ={selectedComparisonType}");
+            }
         }
     }
     

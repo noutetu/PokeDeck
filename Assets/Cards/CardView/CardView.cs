@@ -12,6 +12,7 @@ using Cysharp.Threading.Tasks; // UniTask用
 // ----------------------------------------------------------------------
 public class CardView : MonoBehaviour, IPointerClickHandler
 {
+    [SerializeField] private TextMeshProUGUI loadingText; // ロード中ステータス表示用
     // カードの表示に使用するデータモデル
     private CardModel data;
 
@@ -71,14 +72,39 @@ public class CardView : MonoBehaviour, IPointerClickHandler
         if (data.imageTexture != null && cardImage != null)
         {
             cardImage.texture = data.imageTexture;
+            loadingText?.gameObject.SetActive(false);
         }
         else if (cardImage != null)
         {
             // テクスチャがない場合はプレースホルダーを表示
             SetPlaceholderImage();
+            // 読み込みステータスを表示
+            if (loadingText != null)
+            {
+                loadingText.text = "読み込み中...";
+                loadingText.gameObject.SetActive(true);
+            }
+            // 画像ロード開始
+            LoadImageAsync();
         }
     }
-    
+
+    // 画像を非同期で読み込み、完了後ステータスを非表示化
+    private async void LoadImageAsync()
+    {
+        if (data == null || isImageLoading) return;
+        isImageLoading = true;
+        Texture2D tex = await ImageCacheManager.Instance.GetCardTextureAsync(data);
+        data.imageTexture = tex;
+        if (cardImage != null)
+            cardImage.texture = tex;
+        isImageLoaded = true;
+        isImageLoading = false;
+        // ロード完了後ステータス非表示
+        if (loadingText != null)
+            loadingText.gameObject.SetActive(false);
+    }
+
     // プレースホルダー画像を設定
     private void SetPlaceholderImage()
     {
