@@ -122,6 +122,11 @@ public class SearchView : MonoBehaviour
         {
             presenter.RegisterMaxDamageArea(maxDamageArea);
         }
+        // 最大エネルギーコストフィルターエリアの登録
+        if (maxEnergyCostArea != null)
+        {
+            presenter.RegisterMaxEnergyCostArea(maxEnergyCostArea);
+        }
     }
     
     // ----------------------------------------------------------------------
@@ -225,8 +230,21 @@ public class SearchView : MonoBehaviour
                 }
             }
             else { minMaxDamage = 0; maxMaxDamage = int.MaxValue; }
-            // エネルギーフィルターは現在未適用
-            int minEnergyCost = 0, maxEnergyCost = int.MaxValue;
+            // エネルギーフィルターの範囲を計算
+            int minEnergyCost, maxEnergyCost;
+            if (maxEnergyCostArea != null)
+            {
+                var cost = maxEnergyCostArea.GetSelectedEnergyCost();
+                var cmp = maxEnergyCostArea.GetSelectedComparisonType();
+                switch (cmp)
+                {
+                    case SetMaxEnergyArea.EnergyComparisonType.LessOrEqual: minEnergyCost = 0; maxEnergyCost = cost; break;
+                    case SetMaxEnergyArea.EnergyComparisonType.Equal:       minEnergyCost = cost; maxEnergyCost = cost; break;
+                    case SetMaxEnergyArea.EnergyComparisonType.GreaterOrEqual: minEnergyCost = cost; maxEnergyCost = int.MaxValue; break;
+                    default:                                               minEnergyCost = 0; maxEnergyCost = int.MaxValue; break;
+                }
+            }
+            else { minEnergyCost = 0; maxEnergyCost = int.MaxValue; }
 
             // 検索実行
             if (model != null)

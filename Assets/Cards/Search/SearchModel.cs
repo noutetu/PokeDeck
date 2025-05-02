@@ -30,6 +30,9 @@ public class SearchModel
     // 最大ダメージ関連のフィルター条件を追加
     private int selectedMaxDamage = 0;
     private SetMaxDamageArea.DamageComparisonType selectedMaxDamageComparisonType = SetMaxDamageArea.DamageComparisonType.None;
+    // 最大エネルギーコスト関連のフィルター条件を追加
+    private int selectedMaxEnergyCost = 0;
+    private SetMaxEnergyArea.EnergyComparisonType selectedMaxEnergyCostComparisonType = SetMaxEnergyArea.EnergyComparisonType.None;
 
     // ----------------------------------------------------------------------
     // コンストラクタ
@@ -252,7 +255,14 @@ public class SearchModel
         selectedMaxDamageComparisonType = comparisonType;
         ApplyFilters();
     }
-    
+    // 最大エネルギーコストフィルターを設定
+    public void SetMaxEnergyCostFilter(int cost, SetMaxEnergyArea.EnergyComparisonType comparisonType)
+    {
+        selectedMaxEnergyCost = cost;
+        selectedMaxEnergyCostComparisonType = comparisonType;
+        ApplyFilters();
+    }
+
     // ----------------------------------------------------------------------
     // すべてのフィルターをクリア
     // ----------------------------------------------------------------------
@@ -264,6 +274,9 @@ public class SearchModel
         selectedPokemonTypes.Clear();
         selectedCardPacks.Clear();
         filteredCards = new List<CardModel>(allCards);
+        // エネルギーコストフィルターもリセット
+        selectedMaxEnergyCost = 0;
+        selectedMaxEnergyCostComparisonType = SetMaxEnergyArea.EnergyComparisonType.None;
     }
     
     // ----------------------------------------------------------------------
@@ -294,6 +307,9 @@ public class SearchModel
         
         // 最大ダメージフィルター適用
         ApplyMaxDamageFilter();
+        
+        // 最大エネルギーコストフィルター適用
+        ApplyMaxEnergyCostFilter();
         
         Debug.Log($"🔍 全フィルター適用後のカード数: {filteredCards.Count}件");
     }
@@ -672,7 +688,39 @@ public class SearchModel
             Debug.Log($"  🔍 {kv.Key}ダメージ: {kv.Value}枚");
         }
     }
-    
+    // ----------------------------------------------------------------------
+    // 最大エネルギーコストフィルターの適用
+    // ----------------------------------------------------------------------
+    private void ApplyMaxEnergyCostFilter()
+    {
+        if (selectedMaxEnergyCostComparisonType == SetMaxEnergyArea.EnergyComparisonType.None)
+            return;
+        Debug.Log($"🔍 最大エネルギーコストフィルター適用: {selectedMaxEnergyCost}コスト, 比較タイプ={selectedMaxEnergyCostComparisonType}");
+        // カードごとの合計エネルギーコストを計算しフィルタリング
+        filteredCards = filteredCards.Where(card =>
+        {
+            // ワザエネルギーを持たないカードは除外
+            if (card.moves == null || !card.moves.Any(move => move.cost != null && move.cost.Count > 0))
+                return false;
+            int totalCost = 0;
+            foreach (var move in card.moves)
+                if (move.cost != null)
+                    totalCost += move.cost.Values.Sum();
+            switch (selectedMaxEnergyCostComparisonType)
+            {
+                case SetMaxEnergyArea.EnergyComparisonType.LessOrEqual:
+                    return totalCost <= selectedMaxEnergyCost;
+                case SetMaxEnergyArea.EnergyComparisonType.Equal:
+                    return totalCost == selectedMaxEnergyCost;
+                case SetMaxEnergyArea.EnergyComparisonType.GreaterOrEqual:
+                    return totalCost >= selectedMaxEnergyCost;
+                default:
+                    return false;
+            }
+        }).ToList();
+        Debug.Log($"🔍 最大エネルギーコストフィルター結果: {filteredCards.Count}件");
+    }
+
     // ----------------------------------------------------------------------
     // 現在のフィルタリング結果を取得
     // @return フィルタリングされたカードリスト

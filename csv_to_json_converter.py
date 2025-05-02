@@ -44,6 +44,7 @@ def convert_csv_to_json(csv_path, output_path):
             "abilityEffect": row["Ability"] if isinstance(row.get("Ability"), str) else "",
             "moves": [],
             "maxDamage": safe_int(row.get("MaxDamage")),
+            "maxMoveEnergy": safe_int(row.get("MaxEnergyCost")),
             "tags": row["Tags"].split(',') if isinstance(row["Tags"], str) else [],
             "imageKey": row["ImageKey"] if isinstance(row["ImageKey"], str) else ""
         }

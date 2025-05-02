@@ -9,7 +9,7 @@ using Enum;
 // 最大エネルギーコストのフィルタリングを担当するPresenter
 // 「以下」「同じ」「以上」のトグルと最大エネルギーコストドロップダウンを管理
 // ----------------------------------------------------------------------
-public class SetMaxEnergyArea : MonoBehaviour
+public class SetMaxEnergyArea : MonoBehaviour, IFilterArea
 {
     public enum EnergyComparisonType
     {
@@ -437,31 +437,21 @@ public class SetMaxEnergyArea : MonoBehaviour
     // ----------------------------------------------------------------------
     // OKボタンが押されたときに現在のフィルターをモデルに適用する
     // ----------------------------------------------------------------------
-    // public void ApplyFilterToModel(SearchModel model)
-    // {
-    //     if (model != null)
-    //     {
-    //         // ドロップダウンが「指定なし」の場合は、ComparisonTypeがNoneになっているはず
-    //         if (energyCostDropdown.value == 0 || selectedComparisonType == EnergyComparisonType.None)
-    //         {
-    //             // 「指定なし」の場合、明示的にNoneとしてモデルに設定
-    //             model.SetMaxEnergyCostFilter(0, EnergyComparisonType.None);
-    //             Debug.Log("🔍 エネルギーコストフィルター: 「指定なし」をモデルに適用");
-    //         }
-    //         else
-    //         {
-    //             // 通常の条件設定（数値が選択されている場合）
-    //             model.SetMaxEnergyCostFilter(selectedEnergyCost, selectedComparisonType);
-    //             Debug.Log($"🔍 エネルギーコストフィルターをモデルに適用: コスト={selectedEnergyCost}, 比較タイプ={selectedComparisonType}");
-    //         }
-    //     }
-    // }
+    public void ApplyFilterToModel(SearchModel model)
+    {
+        if (model != null)
+        {
+            model.SetMaxEnergyCostFilter(selectedEnergyCost, selectedComparisonType);
+            Debug.Log($"🔍 エネルギーコストフィルターをモデルに適用: コスト={selectedEnergyCost}, 比較タイプ={selectedComparisonType}");
+        }
+    }
 
     // ----------------------------------------------------------------------
     // OnDestroy時にイベントをクリア
     // ----------------------------------------------------------------------
     private void OnDestroy()
     {
+        // IFilterAreaのOnFilterChangedはインターフェースで定義済み
         if (lessOrEqualToggle != null) lessOrEqualToggle.onValueChanged.RemoveAllListeners();
         if (equalToggle != null) equalToggle.onValueChanged.RemoveAllListeners();
         if (greaterOrEqualToggle != null) greaterOrEqualToggle.onValueChanged.RemoveAllListeners();

@@ -289,6 +289,8 @@ public class CardDatabase : MonoBehaviour
                     type = card.type,
                     weakness = card.weakness,
                     retreatCost = card.retreatCost,
+                    // 最大エネルギーコストを追加
+                    maxMoveEnergy = card.maxEnergyCost,
                     abilityName = card.abilityName,
                     abilityEffect = card.abilityEffect,
                     moves = card.moves,
@@ -357,6 +359,7 @@ public class CardDatabase : MonoBehaviour
                             type = serializableCard.type,
                             weakness = serializableCard.weakness,
                             retreatCost = serializableCard.retreatCost,
+                            maxEnergyCost = serializableCard.maxMoveEnergy,
                             abilityName = serializableCard.abilityName,
                             abilityEffect = serializableCard.abilityEffect,
                             moves = serializableCard.moves,
@@ -494,6 +497,8 @@ public class SerializableCardModel
     public string type;
     public string weakness;
     public int retreatCost;
+    // 最大エネルギーコスト
+    public int maxMoveEnergy;
     public string abilityName;
     public string abilityEffect;
     public List<MoveData> moves;

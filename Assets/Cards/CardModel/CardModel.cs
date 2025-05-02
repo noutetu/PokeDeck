@@ -36,6 +36,7 @@ public class CardModel
     public string type;                  // ポケモンのタイプ（JSON文字列形式）
     public string weakness;              // 弱点属性（JSON文字列形式）
     public int retreatCost;              // 逃げるためのエネルギーコスト
+    public int maxEnergyCost;            // 最大エネルギーコスト
     
     // ----------------------------------------------------------------------
     // 技・特性情報
@@ -113,6 +114,10 @@ public class CardModel
         else
         {
         }
+        Debug.Log($"カードパックの変換: {pack} → {packEnum}");
+        Debug.Log($"カードタイプの変換: {cardType} → {cardTypeEnum}");
+        Debug.Log($"進化段階の変換: {evolutionStage} → {evolutionStageEnum}");
+        Debug.Log($"ポケモンタイプの変換: {type} → {typeEnum}");
         // Uncomment and implement these lines if needed
         // weaknessEnum = EnumConverter.ToWeaknessType(weakness);
         // tagsEnum = EnumConverter.ToCardTags(tags);
