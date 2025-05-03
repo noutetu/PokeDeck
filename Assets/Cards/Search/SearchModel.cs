@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Enum;
+using System;
 
 public class SearchModel
 {
@@ -709,31 +710,70 @@ public class SearchModel
     // ----------------------------------------------------------------------
     private void ApplyMaxEnergyCostFilter()
     {
-    // EnergyComparisonType.None(指定なし)の場合はスキップ
-    if (selectedMaxEnergyCostComparisonType == SetMaxEnergyArea.EnergyComparisonType.None)
-    {
-        Debug.Log($"🔍 最大エネルギーコストフィルターはスキップします（比較タイプ: {selectedMaxEnergyCostComparisonType}, コスト: {selectedMaxEnergyCost}）");
-        return;
-    }
-
-    Debug.Log($"🔍 最大エネルギーコストフィルター適用: {selectedMaxEnergyCost}コスト, 比較タイプ={selectedMaxEnergyCostComparisonType}");
-    // CardModel.maxEnergyCost を直接比較
-    filteredCards = filteredCards.Where(card =>
-    {
-        int energy = card.maxEnergyCost;
-        switch (selectedMaxEnergyCostComparisonType)
+        // EnergyComparisonType.None(指定なし)の場合はスキップ
+        if (selectedMaxEnergyCostComparisonType == SetMaxEnergyArea.EnergyComparisonType.None)
         {
-            case SetMaxEnergyArea.EnergyComparisonType.LessOrEqual:
-                return energy <= selectedMaxEnergyCost;
-            case SetMaxEnergyArea.EnergyComparisonType.Equal:
-                return energy == selectedMaxEnergyCost;
-            case SetMaxEnergyArea.EnergyComparisonType.GreaterOrEqual:
-                return energy >= selectedMaxEnergyCost;
-            default:
-                return false;
+            Debug.Log($"🔍 最大エネルギーコストフィルターはスキップします（比較タイプ: {selectedMaxEnergyCostComparisonType}, コスト: {selectedMaxEnergyCost}）");
+            return;
         }
-    }).ToList();
-    Debug.Log($"🔍 最大エネルギーコストフィルター結果: {filteredCards.Count}件");
+
+        // フィルタリング前のカード数をログ出力
+        int beforeCount = filteredCards.Count;
+        Debug.Log($"🔍 最大エネルギーコストフィルター適用前: {beforeCount}枚のカード");
+
+        // フィルタリング条件をログ出力
+        Debug.Log($"🔍 最大エネルギーコストフィルター条件: {selectedMaxEnergyCost}コスト, 比較タイプ={selectedMaxEnergyCostComparisonType}");
+        
+        // サンプルカードの値をログ出力（最大5枚）
+        if (filteredCards.Count > 0)
+        {
+            Debug.Log("🔍 エネルギーコスト値のサンプル（最大5枚）:");
+            for (int i = 0; i < Math.Min(5, filteredCards.Count); i++)
+            {
+                var card = filteredCards[i];
+                Debug.Log($"🔍 サンプルカード {i+1}: 「{card.name}」(ID:{card.id}) maxEnergyCost={card.maxEnergyCost}");
+            }
+        }
+
+        // CardModel.maxEnergyCost を直接比較
+        filteredCards = filteredCards.Where(card =>
+        {
+            int energy = card.maxEnergyCost;
+            bool matches = false;
+
+            switch (selectedMaxEnergyCostComparisonType)
+            {
+                case SetMaxEnergyArea.EnergyComparisonType.LessOrEqual:
+                    matches = energy <= selectedMaxEnergyCost;
+                    break;
+                case SetMaxEnergyArea.EnergyComparisonType.Equal:
+                    matches = energy == selectedMaxEnergyCost;
+                    break;
+                case SetMaxEnergyArea.EnergyComparisonType.GreaterOrEqual:
+                    matches = energy >= selectedMaxEnergyCost;
+                    break;
+                default:
+                    matches = true; // フィルタリングしない
+                    break;
+            }
+
+            return matches;
+        }).ToList();
+
+        // フィルタリング後の結果をログ出力
+        int afterCount = filteredCards.Count;
+        Debug.Log($"🔍 最大エネルギーコストフィルター結果: {afterCount}枚（{beforeCount - afterCount}枚除外）");
+        
+        // フィルタリング後の例をログ出力
+        if (filteredCards.Count > 0)
+        {
+            Debug.Log("🔍 フィルタリング後のサンプル（最大3枚）:");
+            for (int i = 0; i < Math.Min(3, filteredCards.Count); i++)
+            {
+                var card = filteredCards[i];
+                Debug.Log($"🔍 カード {i+1}: 「{card.name}」(ID:{card.id}) maxEnergyCost={card.maxEnergyCost}");
+            }
+        }
     }
 
     // ----------------------------------------------------------------------
