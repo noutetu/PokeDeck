@@ -63,7 +63,6 @@ public class TrueShadowToggleInset : MonoBehaviour
     public void UpdateInsetState(bool isOn)
     {
         ApplyInsetState(isOn);
-        Debug.Log($"🌟 トグル影状態を強制更新: {(isOn ? "凹み" : "通常")}");
     }
     
     private void OnDestroy()

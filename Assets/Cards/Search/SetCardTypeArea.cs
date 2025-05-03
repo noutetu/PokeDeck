@@ -143,7 +143,6 @@ public class SetCardTypeArea : MonoBehaviour, IFilterArea
             shadowComponent.UpdateInsetState(false);
         }
         
-        Debug.Log($"🔄 トグル '{toggle.name}' の状態、色、影をリセットしました");
     }
     
     // ----------------------------------------------------------------------

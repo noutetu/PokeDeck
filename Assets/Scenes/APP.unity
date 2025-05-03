@@ -2718,6 +2718,17 @@ MonoBehaviour:
   baked: 0
   modifiedFromInspector: 0
   bakedShadows: []
+--- !u!114 &171150457 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1629649400099004684, guid: 0fe7976c33e1cb9448d8dee81275b367, type: 3}
+  m_PrefabInstance: {fileID: 1863048775}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 171150453}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d0b652f32a2cc243917e4028fa0f046, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &175352820
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9623,6 +9634,7 @@ MonoBehaviour:
   hpArea: {fileID: 8623269898460873421}
   maxDamageArea: {fileID: 1619363890}
   maxEnergyCostArea: {fileID: 1871452922}
+  retreatCostArea: {fileID: 1196233649}
   cardContainer: {fileID: 1572700422}
   cardPrefab: {fileID: 4933937038025258301, guid: cd08304ccf2094076a3577f58d14bac3, type: 3}
   scrollRect: {fileID: 894813092}
@@ -15518,6 +15530,7 @@ GameObject:
   - component: {fileID: 1196233647}
   - component: {fileID: 1196233646}
   - component: {fileID: 1196233645}
+  - component: {fileID: 1196233649}
   m_Layer: 5
   m_Name: "\u9003\u3052\u30A8\u30CD\u30A8\u30EA\u30A2"
   m_TagString: Untagged
@@ -15647,6 +15660,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1196233643}
   m_CullTransparentMesh: 1
+--- !u!114 &1196233649
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1196233643}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 765a02049474843f79dc019ec06ead6e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lessOrEqualToggle: {fileID: 1217424287}
+  equalToggle: {fileID: 601571771}
+  greaterOrEqualToggle: {fileID: 318725331}
+  retreatCostDropdown: {fileID: 171150457}
 --- !u!1 &1203506802
 GameObject:
   m_ObjectHideFlags: 0

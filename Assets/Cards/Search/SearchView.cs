@@ -28,6 +28,7 @@ public class SearchView : MonoBehaviour
     [SerializeField] private SetHPArea hpArea;                 // HPフィルターエリア
     [SerializeField] private SetMaxDamageArea maxDamageArea;   // 最大ダメージフィルターエリア
     [SerializeField] private SetMaxEnergyArea maxEnergyCostArea; // 最大エネルギーコストフィルターエリア
+    [SerializeField] private SetRetreatCostArea retreatCostArea; // 逃げるコストフィルターエリア
     
     [Header("結果プレビュー表示UI")]
     [SerializeField] private Transform cardContainer;          // 検索結果表示用コンテナ
@@ -136,6 +137,15 @@ public class SearchView : MonoBehaviour
         if (maxEnergyCostArea != null)
         {
             presenter.RegisterMaxEnergyCostArea(maxEnergyCostArea);
+        }
+        // 逃げるコストフィルターエリアの登録
+        if (retreatCostArea != null)
+        {
+            presenter.RegisterRetreatCostArea(retreatCostArea);
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ SetRetreatCostAreaコンポーネントが設定されていません");
         }
     }
     
@@ -256,6 +266,22 @@ public class SearchView : MonoBehaviour
             }
             else { minEnergyCost = 0; maxEnergyCost = int.MaxValue; }
 
+            // 逃げるコストフィルターの範囲を計算
+            int minRetreatCost, maxRetreatCost;
+            if (retreatCostArea != null)
+            {
+                var cost = retreatCostArea.GetSelectedRetreatCost();
+                var cmp = retreatCostArea.GetSelectedComparisonType();
+                switch (cmp)
+                {
+                    case SetRetreatCostArea.RetreatComparisonType.LessOrEqual: minRetreatCost = 0; maxRetreatCost = cost; break;
+                    case SetRetreatCostArea.RetreatComparisonType.Equal: minRetreatCost = cost; maxRetreatCost = cost; break;
+                    case SetRetreatCostArea.RetreatComparisonType.GreaterOrEqual: minRetreatCost = cost; maxRetreatCost = int.MaxValue; break;
+                    default: minRetreatCost = 0; maxRetreatCost = int.MaxValue; break;
+                }
+            }
+            else { minRetreatCost = 0; maxRetreatCost = int.MaxValue; }
+
             // 検索実行
             if (model != null)
             {
@@ -266,7 +292,8 @@ public class SearchView : MonoBehaviour
                     selectedCardPacks,
                     minHP, maxHP,
                     minMaxDamage, maxMaxDamage,
-                    minEnergyCost, maxEnergyCost
+                    minEnergyCost, maxEnergyCost,
+                    minRetreatCost, maxRetreatCost
                 );
                 SearchRouter.Instance.ApplySearchResults(results);
                 CloseSearchPanel();
@@ -300,6 +327,7 @@ public class SearchView : MonoBehaviour
         if (hpArea != null)            hpArea.ResetFilters();
         if (maxDamageArea != null)     maxDamageArea.ResetFilters();
         if (maxEnergyCostArea != null) maxEnergyCostArea.ResetFilters();
+        if (retreatCostArea != null)   retreatCostArea.ResetFilters();
     }
     
     // ----------------------------------------------------------------------

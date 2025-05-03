@@ -90,7 +90,6 @@ public class CardUIBoot : MonoBehaviour
             // バッチの画像読み込みを並行実行して完了を待機
             await UniTask.WhenAll(batchTasks);
             processedCount += currentBatchSize;
-            Debug.Log($"② バッチ画像読み込み進捗: {processedCount}/{allCards.Count}枚");
             
             // 既存のフィードバックメッセージを更新（新しいメッセージを作成せず）
             FeedbackContainer.Instance.UpdateFeedbackMessage($"画像プリロード: {processedCount}/{allCards.Count}枚");

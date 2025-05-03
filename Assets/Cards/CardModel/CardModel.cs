@@ -120,7 +120,6 @@ public class CardModel
         // tagsEnum = EnumConverter.ToCardTags(tags);
         
         // JSONから読み込まれたmaxEnergyCostをそのまま使用
-        Debug.Log($"カード「{name}」(ID:{id}) の最大エネルギーコスト: {maxEnergyCost}");
     }
 }
 

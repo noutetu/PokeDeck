@@ -34,6 +34,9 @@ public class SearchModel
     // 最大エネルギーコスト関連のフィルター条件を追加
     private int selectedMaxEnergyCost = 0;
     private SetMaxEnergyArea.EnergyComparisonType selectedMaxEnergyCostComparisonType = SetMaxEnergyArea.EnergyComparisonType.None;
+    // 逃げるコストフィルター用のフィールドを追加
+    private int selectedRetreatCost = 0;
+    private SetRetreatCostArea.RetreatComparisonType selectedRetreatCostComparisonType = SetRetreatCostArea.RetreatComparisonType.None;
 
     // 連続してフィルターが呼ばれる場合に使用するフラグ
     private bool isBatchFiltering = false;
@@ -279,6 +282,17 @@ public class SearchModel
         selectedMaxEnergyCostComparisonType = comparisonType;
         if (!isBatchFiltering) ApplyFilters();
     }
+    // ----------------------------------------------------------------------
+    // 逃げるコストフィルターを設定
+    // @param cost 検索する逃げるコスト値
+    // @param comparisonType 比較タイプ（以下、同じ、以上のいずれか）
+    // ----------------------------------------------------------------------
+    public void SetRetreatCostFilter(int cost, SetRetreatCostArea.RetreatComparisonType comparisonType)
+    {
+        selectedRetreatCost = cost;
+        selectedRetreatCostComparisonType = comparisonType;
+        if (!isBatchFiltering) ApplyFilters();
+    }
 
     // ----------------------------------------------------------------------
     // すべてのフィルターをクリア
@@ -291,9 +305,22 @@ public class SearchModel
         selectedPokemonTypes.Clear();
         selectedCardPacks.Clear();
         filteredCards = new List<CardModel>(allCards);
-        // エネルギーコストフィルターもリセット
+        
+        // HPフィルターをリセット
+        selectedHP = 0;
+        selectedHPComparisonType = SetHPArea.HPComparisonType.None;
+        
+        // 最大ダメージフィルターをリセット
+        selectedMaxDamage = 0;
+        selectedMaxDamageComparisonType = SetMaxDamageArea.DamageComparisonType.None;
+        
+        // エネルギーコストフィルターをリセット
         selectedMaxEnergyCost = 0;
         selectedMaxEnergyCostComparisonType = SetMaxEnergyArea.EnergyComparisonType.None;
+        
+        // 逃げるコストフィルターをリセット
+        selectedRetreatCost = 0;
+        selectedRetreatCostComparisonType = SetRetreatCostArea.RetreatComparisonType.None;
     }
     
     // ----------------------------------------------------------------------
@@ -327,6 +354,9 @@ public class SearchModel
         
         // 最大エネルギーコストフィルター適用
         ApplyMaxEnergyCostFilter();
+        
+        // 逃げるコストフィルター適用
+        ApplyRetreatCostFilter();
         
         Debug.Log($"🔍 全フィルター適用後のカード数: {filteredCards.Count}件");
     }
@@ -777,6 +807,118 @@ public class SearchModel
     }
 
     // ----------------------------------------------------------------------
+    // 逃げるコストフィルターの適用
+    // ----------------------------------------------------------------------
+    private void ApplyRetreatCostFilter()
+    {
+        // RetreatComparisonType.None(指定なし)の場合はスキップ
+        if (selectedRetreatCostComparisonType == SetRetreatCostArea.RetreatComparisonType.None)
+        {
+            Debug.Log($"🔍 逃げるコストフィルターはスキップします（比較タイプ: {selectedRetreatCostComparisonType}, コスト: {selectedRetreatCost}）");
+            return;
+        }
+
+        // フィルタリング前のカード数をログ出力
+        int beforeCount = filteredCards.Count;
+        Debug.Log($"🔍 逃げるコストフィルター適用前: {beforeCount}枚のカード");
+
+        // フィルタリング条件をログ出力
+        Debug.Log($"🔍 逃げるコストフィルター条件: {selectedRetreatCost}コスト, 比較タイプ={selectedRetreatCostComparisonType}");
+        
+        // サンプルカードの値をログ出力（最大5枚）
+        if (filteredCards.Count > 0)
+        {
+            Debug.Log("🔍 逃げるコスト値のサンプル（最大5枚）:");
+            for (int i = 0; i < Math.Min(5, filteredCards.Count); i++)
+            {
+                var card = filteredCards[i];
+                Debug.Log($"🔍 サンプルカード {i+1}: 「{card.name}」(ID:{card.id}) retreatCost={card.retreatCost}, カードタイプ={card.cardTypeEnum}");
+            }
+        }
+
+        // ポケモンカードだけをフィルタリング対象とする（非EXまたはEXのみ）
+        filteredCards = filteredCards.Where(card =>
+        {
+            // ポケモンカードでない場合は常に表示（フィルタリング対象外）
+            if (card.cardTypeEnum != CardType.非EX && card.cardTypeEnum != CardType.EX)
+            {
+                return true;
+            }
+
+            int retreatCost = card.retreatCost;
+            bool matches = false;
+
+            switch (selectedRetreatCostComparisonType)
+            {
+                case SetRetreatCostArea.RetreatComparisonType.LessOrEqual:
+                    matches = retreatCost <= selectedRetreatCost;
+                    break;
+                case SetRetreatCostArea.RetreatComparisonType.Equal:
+                    matches = retreatCost == selectedRetreatCost;
+                    break;
+                case SetRetreatCostArea.RetreatComparisonType.GreaterOrEqual:
+                    matches = retreatCost >= selectedRetreatCost;
+                    break;
+                default:
+                    matches = true; // フィルタリングしない
+                    break;
+            }
+
+            return matches;
+        }).ToList();
+
+        // フィルタリング後の結果をログ出力
+        int afterCount = filteredCards.Count;
+        Debug.Log($"🔍 逃げるコストフィルター結果: {afterCount}枚（{beforeCount - afterCount}枚除外）");
+        
+        // フィルタリング後のカードタイプ分布をログ出力
+        Dictionary<CardType, int> cardTypeDistribution = new Dictionary<CardType, int>();
+        Dictionary<int, int> retreatCostDistribution = new Dictionary<int, int>();
+        foreach (var card in filteredCards)
+        {
+            // カードタイプの集計
+            if (!cardTypeDistribution.ContainsKey(card.cardTypeEnum))
+            {
+                cardTypeDistribution[card.cardTypeEnum] = 0;
+            }
+            cardTypeDistribution[card.cardTypeEnum]++;
+            
+            // ポケモンカードの逃げるコスト分布を集計
+            if (card.cardTypeEnum == CardType.非EX || card.cardTypeEnum == CardType.EX)
+            {
+                if (!retreatCostDistribution.ContainsKey(card.retreatCost))
+                {
+                    retreatCostDistribution[card.retreatCost] = 0;
+                }
+                retreatCostDistribution[card.retreatCost]++;
+            }
+        }
+        
+        Debug.Log("🔍 フィルタリング後のカードタイプ分布:");
+        foreach (var kv in cardTypeDistribution)
+        {
+            Debug.Log($"  🔍 {kv.Key}: {kv.Value}枚");
+        }
+        
+        Debug.Log("🔍 フィルタリング後のポケモンカードの逃げるコスト分布:");
+        foreach (var kv in retreatCostDistribution.OrderBy(kv => kv.Key))
+        {
+            Debug.Log($"  🔍 コスト{kv.Key}: {kv.Value}枚");
+        }
+        
+        // フィルタリング後の例をログ出力
+        if (filteredCards.Count > 0)
+        {
+            Debug.Log("🔍 フィルタリング後のサンプル（最大3枚）:");
+            for (int i = 0; i < Math.Min(3, filteredCards.Count); i++)
+            {
+                var card = filteredCards[i];
+                Debug.Log($"🔍 カード {i+1}: 「{card.name}」(ID:{card.id}) retreatCost={card.retreatCost}, カードタイプ={card.cardTypeEnum}");
+            }
+        }
+    }
+
+    // ----------------------------------------------------------------------
     // 現在のフィルタリング結果を取得
     // @return フィルタリングされたカードリスト
     // ----------------------------------------------------------------------
@@ -795,7 +937,9 @@ public class SearchModel
         int minMaxDamage,
         int maxMaxDamage,
         int minEnergyCost,
-        int maxEnergyCost
+        int maxEnergyCost,
+        int minRetreatCost,
+        int maxRetreatCost
     )
     {
         Debug.Log("🔍 [SearchModel] 検索開始");
@@ -806,15 +950,25 @@ public class SearchModel
         bool hasTypeFilter = types != null && types.Count > 0;
         bool hasCardPackFilter = cardPacks != null && cardPacks.Count > 0;
         
-        // HP, ダメージ, エネルギーは「指定なし」として0と最大値が設定されるため、
-        // 実際に設定された範囲のみをフィルターとして扱う
-        bool hasHPFilter = minHP > 30 || maxHP < 200; // HPの範囲は約30-200
-        bool hasMaxDamageFilter = minMaxDamage > 0 || maxMaxDamage < 200; // 最大ダメージ範囲は約0-200
-        bool hasEnergyCostFilter = minEnergyCost > 0 || maxEnergyCost < 5; // エネルギーコスト範囲は約0-5
+        // システムのデフォルト値定義
+        const int minDefaultHP = 30;        // 最小HP（デフォルト）
+        const int maxDefaultHP = 200;       // 最大HP（デフォルト）
+        const int minDefaultDamage = 0;     // 最小最大ダメージ（デフォルト）
+        const int maxDefaultDamage = 200;   // 最大最大ダメージ（デフォルト）
+        const int minDefaultEnergyCost = 0; // 最小エネルギーコスト（デフォルト）
+        const int maxDefaultEnergyCost = 5; // 最大エネルギーコスト（デフォルト）
+        const int minDefaultRetreatCost = 0;// 最小逃げるコスト（デフォルト）
+        const int maxDefaultRetreatCost = 4;// 最大逃げるコスト（デフォルト）
+        
+        // フィルターが明示的に設定されている場合のみtrue（デフォルト値と異なる場合）
+        bool hasHPFilter = minHP > minDefaultHP || maxHP < maxDefaultHP;
+        bool hasMaxDamageFilter = minMaxDamage > minDefaultDamage || maxMaxDamage < maxDefaultDamage;
+        bool hasEnergyCostFilter = minEnergyCost > minDefaultEnergyCost || maxEnergyCost < maxDefaultEnergyCost;
+        bool hasRetreatCostFilter = minRetreatCost > minDefaultRetreatCost || maxRetreatCost < maxDefaultRetreatCost;
         
         // 適用するフィルター条件をログ出力
-        Debug.Log($"🔍 [SearchModel] フィルター条件: カードタイプ({hasCardTypeFilter}), 進化段階({hasEvolutionStageFilter}), タイプ({hasTypeFilter}), カードパック({hasCardPackFilter}), HP({hasHPFilter}), 最大ダメージ({hasMaxDamageFilter}), エネルギーコスト({hasEnergyCostFilter})");
-        Debug.Log($"🔍 [SearchModel] フィルター値: HP({minHP}-{maxHP}), 最大ダメージ({minMaxDamage}-{maxMaxDamage}), エネルギーコスト({minEnergyCost}-{maxEnergyCost})");
+        Debug.Log($"🔍 [SearchModel] フィルター条件: カードタイプ({hasCardTypeFilter}), 進化段階({hasEvolutionStageFilter}), タイプ({hasTypeFilter}), カードパック({hasCardPackFilter}), HP({hasHPFilter}), 最大ダメージ({hasMaxDamageFilter}), エネルギーコスト({hasEnergyCostFilter}), 逃げるコスト({hasRetreatCostFilter})");
+        Debug.Log($"🔍 [SearchModel] フィルター値: HP({minHP}-{maxHP}), 最大ダメージ({minMaxDamage}-{maxMaxDamage}), エネルギーコスト({minEnergyCost}-{maxEnergyCost}), 逃げるコスト({minRetreatCost}-{maxRetreatCost})");
         
         // カードリストが直接設定されている場合はそれを使用
         List<CardModel> allCards = null;
@@ -845,18 +999,21 @@ public class SearchModel
 
         // フィルターの適用
         var filteredCards = allCards.Where(card => {
-            // フィルター条件がない場合は全カード表示（OR条件ではなくAND条件で、フィルターがなければtrue）
+            // フィルター条件がない場合は全カード表示（条件は AND 条件で、フィルターがなければ自動的に true）
             bool matchCardType = !hasCardTypeFilter || cardTypes.Contains(card.cardTypeEnum);
             bool matchEvolutionStage = !hasEvolutionStageFilter || evolutionStages.Contains(card.evolutionStageEnum);
             bool matchType = !hasTypeFilter || types.Contains(card.typeEnum);
             bool matchCardPack = !hasCardPackFilter || cardPacks.Contains(card.packEnum);
+            
+            // 数値フィルターの条件判定を修正
             bool matchHP = !hasHPFilter || (card.hp >= minHP && card.hp <= maxHP);
             bool matchMaxDamage = !hasMaxDamageFilter || (card.maxDamage >= minMaxDamage && card.maxDamage <= maxMaxDamage);
             bool matchEnergyCost = !hasEnergyCostFilter || (card.maxEnergyCost >= minEnergyCost && card.maxEnergyCost <= maxEnergyCost);
+            bool matchRetreatCost = !hasRetreatCostFilter || (card.retreatCost >= minRetreatCost && card.retreatCost <= maxRetreatCost);
 
             // すべての条件にマッチするか（AND条件）
             return matchCardType && matchEvolutionStage && matchType && matchCardPack 
-                && matchHP && matchMaxDamage && matchEnergyCost;
+                && matchHP && matchMaxDamage && matchEnergyCost && matchRetreatCost;
         }).ToList();
         
         Debug.Log($"🔍 [SearchModel] 検索結果: 全{allCards.Count}枚のカードから{filteredCards.Count}枚が条件に一致しました");

@@ -39,7 +39,6 @@ public class SimpleToggleColor : MonoBehaviour
         if (targetGraphic != null)
         {
             targetGraphic.color = isOn ? onColor : offColor;
-            Debug.Log($"🎨 トグルの色を強制更新: {(isOn ? "オン" : "オフ")}");
         }
     }
 

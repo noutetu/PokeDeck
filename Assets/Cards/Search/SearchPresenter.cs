@@ -16,6 +16,7 @@ public class SearchPresenter
     private SetHPArea hpArea;
     private SetMaxDamageArea maxDamageArea;
     private SetMaxEnergyArea maxEnergyCostArea;
+    [SerializeField] private SetRetreatCostArea retreatCostArea;  // 逃げるコストフィルターエリア
     
     // ----------------------------------------------------------------------
     // コンストラクタ
@@ -153,6 +154,23 @@ public class SearchPresenter
     }
     
     // ----------------------------------------------------------------------
+    // 逃げるコストエリアの登録
+    // ----------------------------------------------------------------------
+    public void RegisterRetreatCostArea(SetRetreatCostArea area)
+    {
+        retreatCostArea = area;
+        
+        // フィルター変更イベントの購読（自動プレビュー用）
+        /*
+        if (area != null)
+        {
+            area.OnFilterChanged += OnFilterChanged;
+            Debug.Log("✅ SetRetreatCostAreaを登録しました");
+        }
+        */
+    }
+    
+    // ----------------------------------------------------------------------
     // フィルター変更時の処理
     // ----------------------------------------------------------------------
     private void OnFilterChanged()
@@ -197,6 +215,10 @@ public class SearchPresenter
     
             if (maxEnergyCostArea != null)
                 maxEnergyCostArea.ApplyFilterToModel(model);
+                
+            // 逃げるコストフィルターを適用
+            if (retreatCostArea != null)
+                retreatCostArea.ApplyFilterToModel(model);
             
             // バッチフィルタリングを終了してフィルター処理を実行（ログは1回だけ出力される）
             model.EndBatchFiltering();
@@ -228,8 +250,6 @@ public class SearchPresenter
             cardTypeArea.ResetFilters();
         }
         
-        // 他のフィルターリセットはコメントアウト
-        /*
         // 進化段階フィルターをリセット
         if (evolutionStageArea != null)
         {
@@ -265,7 +285,12 @@ public class SearchPresenter
         {
             maxEnergyCostArea.ResetFilters();
         }
-        */
+        
+        // 逃げるコストフィルターをリセット
+        if (retreatCostArea != null)
+        {
+            retreatCostArea.ResetFilters();
+        }
         
         // モデル側のリセット
         model?.ClearAllFilters();
