@@ -59,6 +59,9 @@ public class CardUIBoot : MonoBehaviour
         // カード一覧をロード（すべて）
         var allCards = CardDatabase.GetAllCards();
         
+        // 進捗フィードバックを表示（初回のみ作成し、以降は更新）
+        FeedbackContainer.Instance.ShowProgressFeedback($"画像プリロード: 0/{allCards.Count}枚");
+        
         // 並行して画像を読み込むためのタスクリストを作成
         var loadTasks = new List<UniTask>();
         int batchSize = 20; // バッチサイズ（同時読み込み数）
@@ -89,10 +92,15 @@ public class CardUIBoot : MonoBehaviour
             processedCount += currentBatchSize;
             Debug.Log($"② バッチ画像読み込み進捗: {processedCount}/{allCards.Count}枚");
             
+            // 既存のフィードバックメッセージを更新（新しいメッセージを作成せず）
+            FeedbackContainer.Instance.UpdateFeedbackMessage($"画像プリロード: {processedCount}/{allCards.Count}枚");
+            
             // UIが応答し続けるために1フレーム待機
             await UniTask.Yield();
         }
         
+        // プリロード完了を表示
+        FeedbackContainer.Instance.CompleteProgressFeedback("画像プリロード完了", 2.0f);
         Debug.Log("② 画像の一括プリロードが完了しました");
         
 

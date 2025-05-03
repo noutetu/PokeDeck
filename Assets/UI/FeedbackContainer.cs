@@ -45,10 +45,13 @@ public class FeedbackContainer : MonoBehaviour
     }
     
     // ----------------------------------------------------------------------
-    // 成功フィードバックメッセージを表示
+    // 成功フィードバックメッセージを表示（時間指定可）
     // ----------------------------------------------------------------------
-    public void ShowSuccessFeedback(string message)
+    public void ShowSuccessFeedback(string message, float duration = -1f)
     {
+        // 表示時間が指定されていない場合はデフォルト値を使用
+        float showDuration = duration > 0f ? duration : displayDuration;
+        
         // 既存のフィードバックを非表示
         HideCurrentFeedback();
         
@@ -56,7 +59,7 @@ public class FeedbackContainer : MonoBehaviour
         if (successPrefab != null)
         {
             currentFeedbackInstance = Instantiate(successPrefab, transform);
-            SetupFeedbackInstance(currentFeedbackInstance, message);
+            SetupFeedbackInstance(currentFeedbackInstance, message, showDuration);
         }
         else
         {
@@ -65,10 +68,13 @@ public class FeedbackContainer : MonoBehaviour
     }
     
     // ----------------------------------------------------------------------
-    // 失敗フィードバックメッセージを表示
+    // 失敗フィードバックメッセージを表示（時間指定可）
     // ----------------------------------------------------------------------
-    public void ShowFailureFeedback(string message)
+    public void ShowFailureFeedback(string message, float duration = -1f)
     {
+        // 表示時間が指定されていない場合はデフォルト値を使用
+        float showDuration = duration > 0f ? duration : displayDuration;
+        
         // 既存のフィードバックを非表示
         HideCurrentFeedback();
         
@@ -76,7 +82,7 @@ public class FeedbackContainer : MonoBehaviour
         if (failurePrefab != null)
         {
             currentFeedbackInstance = Instantiate(failurePrefab, transform);
-            SetupFeedbackInstance(currentFeedbackInstance, message);
+            SetupFeedbackInstance(currentFeedbackInstance, message, showDuration);
         }
         else
         {
@@ -87,7 +93,7 @@ public class FeedbackContainer : MonoBehaviour
     // ----------------------------------------------------------------------
     // フィードバックインスタンスの初期設定
     // ----------------------------------------------------------------------
-    private void SetupFeedbackInstance(GameObject instance, string message)
+    private void SetupFeedbackInstance(GameObject instance, string message, float duration)
     {
         if (instance == null) return;
         
@@ -122,12 +128,12 @@ public class FeedbackContainer : MonoBehaviour
         
         if (useAnimation)
         {
-            PlayShowAnimation(instance);
+            PlayShowAnimation(instance, duration);
         }
         else
         {
             // アニメーションなしの場合は単純に一定時間後に非表示
-            hideCoroutine = StartCoroutine(HideFeedbackAfterDelay(displayDuration));
+            hideCoroutine = StartCoroutine(HideFeedbackAfterDelay(duration));
         }
     }
     
@@ -161,7 +167,7 @@ public class FeedbackContainer : MonoBehaviour
     // ----------------------------------------------------------------------
     // 表示アニメーションを再生
     // ----------------------------------------------------------------------
-    private void PlayShowAnimation(GameObject instance)
+    private void PlayShowAnimation(GameObject instance, float duration)
     {
         RectTransform rectTransform = instance.GetComponent<RectTransform>();
         CanvasGroup canvasGroup = instance.GetComponent<CanvasGroup>();
@@ -188,7 +194,7 @@ public class FeedbackContainer : MonoBehaviour
                                     .SetEase(appearEase));
         
         // 表示時間の待機
-        currentAnimation.AppendInterval(displayDuration - animationDuration);
+        currentAnimation.AppendInterval(duration - animationDuration);
         
         // 消失アニメーション（上に消えていく）
         currentAnimation.Append(DOTween.To(() => canvasGroup.alpha, x => canvasGroup.alpha = x, 0f, animationDuration * 0.5f));
@@ -252,6 +258,116 @@ public class FeedbackContainer : MonoBehaviour
             {
                 rectTransform.anchoredPosition = positionOffset;
             }
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // 既存のフィードバックメッセージを更新する（消えずに内容を変更）
+    // ----------------------------------------------------------------------
+    public void UpdateFeedbackMessage(string newMessage)
+    {
+        if (currentFeedbackInstance == null) 
+        {
+            // インスタンスがなければ新規表示
+            ShowSuccessFeedback(newMessage);
+            return;
+        }
+        
+        // 現在表示中のフィードバックのテキストを更新
+        TextMeshProUGUI feedbackText = currentFeedbackInstance.GetComponentInChildren<TextMeshProUGUI>();
+        if (feedbackText != null)
+        {
+            feedbackText.text = newMessage;
+        }
+        
+        // アニメーション中なら中断
+        if (currentAnimation != null)
+        {
+            currentAnimation.Kill(false); // 現在のアニメーションを終了（消さない）
+            currentAnimation = null;
+        }
+        
+        // コルーチンをリセット（非表示タイマーを延長）
+        if (hideCoroutine != null)
+        {
+            StopCoroutine(hideCoroutine);
+        }
+        
+        // 新しい表示時間を設定（デフォルト時間）
+        hideCoroutine = StartCoroutine(HideFeedbackAfterDelay(displayDuration));
+    }
+    
+    // ----------------------------------------------------------------------
+    // プログレスフィードバック表示（更新可能な長時間表示）
+    // ----------------------------------------------------------------------
+    public void ShowProgressFeedback(string message)
+    {
+        // 既存のフィードバックを非表示
+        HideCurrentFeedback();
+        
+        // 成功用のプレハブがある場合はそれを使用
+        if (successPrefab != null)
+        {
+            currentFeedbackInstance = Instantiate(successPrefab, transform);
+            
+            // 位置を調整
+            RectTransform rectTransform = currentFeedbackInstance.GetComponent<RectTransform>();
+            if (rectTransform != null)
+            {
+                rectTransform.anchorMin = new Vector2(0.5f, 1f);
+                rectTransform.anchorMax = new Vector2(0.5f, 1f);
+                rectTransform.pivot = new Vector2(0.5f, 1f);
+                rectTransform.anchoredPosition = positionOffset;
+            }
+            
+            // CanvasGroupの追加（アニメーション用）
+            CanvasGroup canvasGroup = currentFeedbackInstance.GetComponent<CanvasGroup>();
+            if (canvasGroup == null)
+            {
+                canvasGroup = currentFeedbackInstance.AddComponent<CanvasGroup>();
+            }
+            
+            // アニメーション無しで表示
+            canvasGroup.alpha = 1f;
+            
+            // テキストコンポーネントを取得して更新
+            TextMeshProUGUI feedbackText = currentFeedbackInstance.GetComponentInChildren<TextMeshProUGUI>();
+            if (feedbackText != null)
+            {
+                feedbackText.text = message;
+            }
+            
+            // フィードバックを表示（タイマーなし - UpdateFeedbackMessageで更新する）
+            currentFeedbackInstance.SetActive(true);
+        }
+        else
+        {
+            Debug.LogError("FeedbackContainer: プレハブが設定されていません");
+        }
+    }
+    
+    // ----------------------------------------------------------------------
+    // プログレスフィードバックの完了
+    // ----------------------------------------------------------------------
+    public void CompleteProgressFeedback(string completeMessage = null, float duration = -1f)
+    {
+        if (currentFeedbackInstance != null)
+        {
+            // 完了メッセージがあれば更新
+            if (!string.IsNullOrEmpty(completeMessage))
+            {
+                TextMeshProUGUI feedbackText = currentFeedbackInstance.GetComponentInChildren<TextMeshProUGUI>();
+                if (feedbackText != null)
+                {
+                    feedbackText.text = completeMessage;
+                }
+            }
+            
+            // 表示時間が指定されていない場合はデフォルト値を使用
+            float showDuration = duration > 0f ? duration : displayDuration;
+            
+            // 消える前に少し表示
+            hideCoroutine = StartCoroutine(HideFeedbackAfterDelay(showDuration));
         }
     }
 }
