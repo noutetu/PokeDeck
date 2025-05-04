@@ -26,6 +26,7 @@ public class CardUIBoot : MonoBehaviour
     [SerializeField] private int initialCardCount = 40;   // 初期表示するカード数
     [SerializeField] private int lazyLoadBatchSize = 20;  // 遅延読み込み時のバッチサイズ
     [SerializeField] private float scrollThreshold = 0.8f; // スクロール位置がこの値を超えたら追加読み込み
+    int batchSize = 13; // バッチサイズ（同時読み込み数）
     
     // === スクロール検知用 ===
     private UnityEngine.UI.ScrollRect scrollRect;
@@ -60,11 +61,11 @@ public class CardUIBoot : MonoBehaviour
         var allCards = CardDatabase.GetAllCards();
         
         // 進捗フィードバックを表示（初回のみ作成し、以降は更新）
-        FeedbackContainer.Instance.ShowProgressFeedback($"画像プリロード: 0/{allCards.Count}枚");
+        FeedbackContainer.Instance.ShowProgressFeedback($"画像ロード: 0/{allCards.Count}枚");
         
         // 並行して画像を読み込むためのタスクリストを作成
         var loadTasks = new List<UniTask>();
-        int batchSize = 20; // バッチサイズ（同時読み込み数）
+        
         int processedCount = 0;
         
         // バッチ単位で画像を読み込み
@@ -92,14 +93,16 @@ public class CardUIBoot : MonoBehaviour
             processedCount += currentBatchSize;
             
             // 既存のフィードバックメッセージを更新（新しいメッセージを作成せず）
-            FeedbackContainer.Instance.UpdateFeedbackMessage($"画像プリロード: {processedCount}/{allCards.Count}枚");
+            FeedbackContainer.Instance.UpdateFeedbackMessage($"画像ロード: {processedCount}/{allCards.Count}枚");
             
             // UIが応答し続けるために1フレーム待機
             await UniTask.Yield();
         }
         
         // プリロード完了を表示
-        FeedbackContainer.Instance.CompleteProgressFeedback("画像プリロード完了", 2.0f);
+        FeedbackContainer.Instance.CompleteProgressFeedback("画像ロード完了", 2.0f);
+        // 画像読み込み完了時に統計情報をログに出力
+        ImageCacheManager.Instance.LogCacheStatistics();
         Debug.Log("② 画像の一括プリロードが完了しました");
         
 

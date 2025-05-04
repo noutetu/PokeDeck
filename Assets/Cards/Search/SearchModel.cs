@@ -836,75 +836,32 @@ public class SearchModel
             }
         }
 
-        // ポケモンカードだけをフィルタリング対象とする（非EXまたはEXのみ）
+        // 逃げるコストフィルター適用
         filteredCards = filteredCards.Where(card =>
         {
-            // ポケモンカードでない場合は常に表示（フィルタリング対象外）
+            // ポケモンカードのみを対象とする
             if (card.cardTypeEnum != CardType.非EX && card.cardTypeEnum != CardType.EX)
             {
-                return true;
+                return false; // ポケモンカードでなければフィルター対象外
             }
-
-            int retreatCost = card.retreatCost;
-            bool matches = false;
-
+            
+            // 各比較タイプに応じたフィルタリング
             switch (selectedRetreatCostComparisonType)
             {
                 case SetRetreatCostArea.RetreatComparisonType.LessOrEqual:
-                    matches = retreatCost <= selectedRetreatCost;
-                    break;
+                    return card.retreatCost <= selectedRetreatCost;
                 case SetRetreatCostArea.RetreatComparisonType.Equal:
-                    matches = retreatCost == selectedRetreatCost;
-                    break;
+                    return card.retreatCost == selectedRetreatCost;
                 case SetRetreatCostArea.RetreatComparisonType.GreaterOrEqual:
-                    matches = retreatCost >= selectedRetreatCost;
-                    break;
+                    return card.retreatCost >= selectedRetreatCost;
                 default:
-                    matches = true; // フィルタリングしない
-                    break;
+                    return true; // フィルタリングしない
             }
-
-            return matches;
         }).ToList();
 
         // フィルタリング後の結果をログ出力
         int afterCount = filteredCards.Count;
         Debug.Log($"🔍 逃げるコストフィルター結果: {afterCount}枚（{beforeCount - afterCount}枚除外）");
-        
-        // フィルタリング後のカードタイプ分布をログ出力
-        Dictionary<CardType, int> cardTypeDistribution = new Dictionary<CardType, int>();
-        Dictionary<int, int> retreatCostDistribution = new Dictionary<int, int>();
-        foreach (var card in filteredCards)
-        {
-            // カードタイプの集計
-            if (!cardTypeDistribution.ContainsKey(card.cardTypeEnum))
-            {
-                cardTypeDistribution[card.cardTypeEnum] = 0;
-            }
-            cardTypeDistribution[card.cardTypeEnum]++;
-            
-            // ポケモンカードの逃げるコスト分布を集計
-            if (card.cardTypeEnum == CardType.非EX || card.cardTypeEnum == CardType.EX)
-            {
-                if (!retreatCostDistribution.ContainsKey(card.retreatCost))
-                {
-                    retreatCostDistribution[card.retreatCost] = 0;
-                }
-                retreatCostDistribution[card.retreatCost]++;
-            }
-        }
-        
-        Debug.Log("🔍 フィルタリング後のカードタイプ分布:");
-        foreach (var kv in cardTypeDistribution)
-        {
-            Debug.Log($"  🔍 {kv.Key}: {kv.Value}枚");
-        }
-        
-        Debug.Log("🔍 フィルタリング後のポケモンカードの逃げるコスト分布:");
-        foreach (var kv in retreatCostDistribution.OrderBy(kv => kv.Key))
-        {
-            Debug.Log($"  🔍 コスト{kv.Key}: {kv.Value}枚");
-        }
         
         // フィルタリング後の例をログ出力
         if (filteredCards.Count > 0)
@@ -915,6 +872,22 @@ public class SearchModel
                 var card = filteredCards[i];
                 Debug.Log($"🔍 カード {i+1}: 「{card.name}」(ID:{card.id}) retreatCost={card.retreatCost}, カードタイプ={card.cardTypeEnum}");
             }
+        }
+        
+        // カードタイプ分布も出力
+        Dictionary<CardType, int> cardTypeDistribution = new Dictionary<CardType, int>();
+        foreach (var card in filteredCards)
+        {
+            if (!cardTypeDistribution.ContainsKey(card.cardTypeEnum))
+            {
+                cardTypeDistribution[card.cardTypeEnum] = 0;
+            }
+            cardTypeDistribution[card.cardTypeEnum]++;
+        }
+        Debug.Log("🔍 逃げるコストフィルター後のカードタイプ分布:");
+        foreach (var kv in cardTypeDistribution)
+        {
+            Debug.Log($"  🔍 {kv.Key}: {kv.Value}枚");
         }
     }
 
