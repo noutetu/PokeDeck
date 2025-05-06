@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine.UI;
 using System.Text;  // 追加: ひらがな・カタカナ変換用
+using System.Linq;  // LINQ拡張メソッド用
 
 // ----------------------------------------------------------------------
 // 複数カードを並べて表示するView（横スクロール）
@@ -20,7 +21,8 @@ public class AllCardView : MonoBehaviour
     [SerializeField] private Transform contentParent; // カードを配置する親オブジェクト（スクロールビューのコンテンツ領域）
     [SerializeField] private TMP_InputField searchInputField; // テキスト検索用の入力フィールド
     [SerializeField] private Button detailButton;     // 検索パネルを表示するボタン
-    
+    [SerializeField] private SimpleVirtualScroll virtualScroll; // スクロールビューのコンポーネント
+
     // 並べ替え用のUI要素
     [SerializeField] private TMP_Dropdown sortDropdown; // 並べ替え選択用ドロップダウン
     [SerializeField] private Button sortButton;       // 並べ替え実行ボタン
@@ -32,7 +34,7 @@ public class AllCardView : MonoBehaviour
     private string currentSearchText = "";
     private float searchDelay = 0.1f; // 検索遅延時間（秒）
     private float lastSearchTime = 0f; // 最後に検索を実行した時間
-    
+
     // 並べ替えの種類を定義する列挙型
     public enum SortType
     {
@@ -42,25 +44,57 @@ public class AllCardView : MonoBehaviour
         HP,          // HP順（高い順）
         MaxDamage    // 最大ダメージ順（高い順）
     }
-    
+
     private SortType currentSortType = SortType.ID; // 現在の並べ替え方法
-    
+
     // ----------------------------------------------------------------------
     // Initialize UI
     // ----------------------------------------------------------------------
     private void Start()
     {
+        // まず既存のカードをすべて削除して確実にクリーンな状態にする
+        Debug.Log("AllCardView: 起動時に既存のカードをクリーンアップします");
+        foreach (Transform child in contentParent)
+        {
+            if (Application.isPlaying)
+            {
+                Destroy(child.gameObject);
+            }
+        }
+        
         // Detail ボタンがある場合は、クリックイベントを設定
         if (detailButton != null)
         {
             detailButton.onClick.AddListener(OpenSearchPanel);
         }
-        
+
         // 検索入力フィールドの設定
         SetupSearchInputField();
-        
+
         // 並べ替えUI要素の設定
         SetupSortUI();
+        
+        // SimpleVirtualScrollが設定されているか確認
+        if (virtualScroll == null)
+        {
+            // エディタで設定されていない場合は、同じGameObjectについているコンポーネントを探す
+            virtualScroll = GetComponent<SimpleVirtualScroll>();
+            if (virtualScroll != null)
+            {
+                Debug.Log("仮想スクロールを自動検出しました");
+            }
+        }
+    }// カードデータが更新されたときに呼ばれるメソッド
+     // 例えば、既存のReactivePropertyからのカード取得メソッド内
+    private void UpdateCardList(List<CardModel> newCards)
+    {
+        // 既存のカード表示処理
+
+        // SimpleVirtualScrollが利用可能ならカードを設定
+        if (virtualScroll != null)
+        {
+            virtualScroll.SetCards(newCards);
+        }
     }
 
     // ----------------------------------------------------------------------
@@ -76,34 +110,37 @@ public class AllCardView : MonoBehaviour
 
         // 検索入力フィールドの初期化
         searchInputField.text = "";
-        
+
         // テキスト変更時のイベント
-        searchInputField.onValueChanged.AddListener((text) => {
+        searchInputField.onValueChanged.AddListener((text) =>
+        {
             // テキスト変更を即座に保存
             currentSearchText = text;
             // 検索をリクエスト
             RequestSearch();
         });
-        
+
         // Enterキーを押したときの処理
-        searchInputField.onEndEdit.AddListener((text) => {
+        searchInputField.onEndEdit.AddListener((text) =>
+        {
             // 入力完了時に確実に検索実行
             PerformTextSearch(text);
         });
-        
+
         // 検索ボタンの設定
         var searchIcon = searchInputField.transform.Find("Search Button");
         if (searchIcon != null && searchIcon.GetComponent<Button>() != null)
         {
             searchIcon.GetComponent<Button>().onClick.RemoveAllListeners();
-            searchIcon.GetComponent<Button>().onClick.AddListener(() => {
+            searchIcon.GetComponent<Button>().onClick.AddListener(() =>
+            {
                 PerformTextSearch(searchInputField.text);
             });
         }
-        
+
         Debug.Log("🔍 InputFieldのリスナー設定完了");
     }
-    
+
     // ----------------------------------------------------------------------
     // 検索リクエスト - 次のフレームで検索を実行するようマーク
     // ----------------------------------------------------------------------
@@ -112,7 +149,7 @@ public class AllCardView : MonoBehaviour
         // 次回のUpdateで検索が実行されるように、最終検索時間をリセット
         lastSearchTime = 0;
     }
-    
+
     // ----------------------------------------------------------------------
     // 更新処理（フレーム毎）- 入力の遅延対策
     // ----------------------------------------------------------------------
@@ -179,7 +216,7 @@ public class AllCardView : MonoBehaviour
                 results.Add(card);
                 continue;
             }
-            
+
             // 技の効果文マッチ (正規化)
             if (card.moves != null)
             {
@@ -194,7 +231,7 @@ public class AllCardView : MonoBehaviour
                 }
             }
         }
-        
+
         Debug.Log($"検索結果: {results.Count}件");
         if (SearchRouter.Instance != null)
             SearchRouter.Instance.ApplySearchResults(results);
@@ -210,12 +247,29 @@ public class AllCardView : MonoBehaviour
     public void BindPresenter(AllCardPresenter presenter)
     {
         this.presenter = presenter;
-        
+
         // Presenterの読み込み完了イベントを購読
         // カードデータが更新されたら表示を更新する
         presenter.OnLoadComplete
-            .Subscribe(_ => RefreshAll(presenter.DisplayedCards))
+            .Subscribe(_ => {
+                RefreshAll(presenter.DisplayedCards);
+                InitializeVirtualScroll(); // 仮想スクロールも初期化
+            })
             .AddTo(this); // このコンポーネントが破棄されたら自動的に購読解除
+    }
+
+    // ----------------------------------------------------------------------
+    // 仮想スクロールの初期化
+    // ----------------------------------------------------------------------
+    private void InitializeVirtualScroll()
+    {
+        if (virtualScroll != null && presenter != null && presenter.DisplayedCards != null)
+        {
+            // PresnterのReactiveCollectionをリストに変換して渡す
+            List<CardModel> currentCards = new List<CardModel>(presenter.DisplayedCards);
+            virtualScroll.SetCards(currentCards);
+            Debug.Log($"仮想スクロール初期化: {currentCards.Count}枚のカード");
+        }
     }
 
     // ----------------------------------------------------------------------
@@ -227,6 +281,16 @@ public class AllCardView : MonoBehaviour
     {
         Debug.Log($"カード表示を更新します: {cards.Count}枚");
 
+        // 仮想スクロールが設定されている場合は、そちらを使用
+        if (virtualScroll != null)
+        {
+            Debug.Log($"仮想スクロールを使用してカードを表示: {cards.Count}枚");
+            List<CardModel> cardList = cards.ToList();
+            virtualScroll.SetCards(cardList);
+            return; // 仮想スクロールを使用する場合は、以降の処理をスキップ
+        }
+
+        // 以下は仮想スクロールを使用しない場合の従来の表示処理
         // 既存のカードを全て削除
         foreach (Transform child in contentParent)
         {
@@ -245,7 +309,7 @@ public class AllCardView : MonoBehaviour
         {
             AddCard(card);
         }
-        
+
         Debug.Log($"カード表示を完了しました: {cards.Count}枚");
     }
 
@@ -264,11 +328,11 @@ public class AllCardView : MonoBehaviour
 
         // カードプレハブのインスタンスを生成
         var go = Instantiate(cardPrefab, contentParent);
-        
+
         // CardViewを使わず、直接コンポーネントにアクセス
         var rawImage = go.GetComponentInChildren<RawImage>();
         var nameText = go.GetComponentInChildren<TMP_Text>();
-        
+
         if (rawImage != null && card != null)
         {
             // DeckListItemと同様に直接imageTextureを使用
@@ -283,16 +347,16 @@ public class AllCardView : MonoBehaviour
                 rawImage.texture = ImageCacheManager.Instance.GetDefaultTexture();
             }
         }
-        
+
         // カード名の設定
         if (nameText != null && card != null)
         {
             nameText.text = card.name;
         }
-        
+
         // カードオブジェクトにカードデータを紐付け（クリックイベントなどで使用）
         go.name = $"Card_{card.id}_{card.name}";
-        
+
         // CardViewコンポーネントが存在する場合は、データ連携のために設定も行う
         var cardView = go.GetComponent<CardView>();
         if (cardView != null)
@@ -300,7 +364,7 @@ public class AllCardView : MonoBehaviour
             cardView.Setup(card);
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // 検索パネルを開く
     // ----------------------------------------------------------------------
@@ -311,7 +375,7 @@ public class AllCardView : MonoBehaviour
             SearchRouter.Instance.ShowSearchPanel();
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // 検索結果をカードリストに適用する
     // @param searchResults 検索結果のカードデータリスト
@@ -319,7 +383,7 @@ public class AllCardView : MonoBehaviour
     public void ApplySearchResults(List<CardModel> searchResults)
     {
         Debug.Log($"🔍 [AllCardView] 検索結果を受信しました: {searchResults?.Count ?? 0}枚のカード");
-        
+
         // 検索結果の内容をサンプル表示（最初の数枚）
         if (searchResults != null && searchResults.Count > 0)
         {
@@ -327,7 +391,7 @@ public class AllCardView : MonoBehaviour
             for (int i = 0; i < Mathf.Min(3, searchResults.Count); i++)
             {
                 var card = searchResults[i];
-                Debug.Log($"🔍 [AllCardView] カード{i+1}: ID={card.id}, 名前={card.name}, タイプ={card.cardTypeEnum}, HP={card.hp}");
+                Debug.Log($"🔍 [AllCardView] カード{i + 1}: ID={card.id}, 名前={card.name}, タイプ={card.cardTypeEnum}, HP={card.hp}");
             }
         }
         else
@@ -341,16 +405,18 @@ public class AllCardView : MonoBehaviour
             }
             return;
         }
-        
+
         try
         {
             // ReactiveCollectionに変換して表示更新
             var reactiveCards = new ReactiveCollection<CardModel>(searchResults);
-            
+
             if (presenter != null)
             {
                 // 既存の表示をクリアしてから新しい検索結果を表示
                 presenter.ClearCards();
+                
+                // RefreshAllを使用して表示を更新（仮想スクロールを含む）
                 RefreshAll(reactiveCards);
                 Debug.Log("✅ [AllCardView] 検索結果の表示を更新しました");
             }
@@ -364,7 +430,7 @@ public class AllCardView : MonoBehaviour
             Debug.LogError($"❌ [AllCardView] 検索結果の表示中にエラーが発生しました: {ex.Message}");
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // 並べ替えUI要素のセットアップ
     // ----------------------------------------------------------------------
@@ -379,7 +445,7 @@ public class AllCardView : MonoBehaviour
 
         // ドロップダウンの選択肢をクリア
         sortDropdown.ClearOptions();
-        
+
         // 並べ替え選択肢の追加
         List<string> options = new List<string>
         {
@@ -389,26 +455,27 @@ public class AllCardView : MonoBehaviour
             "HP順（高い順）",
             "最大ダメージ順（高い順）"
         };
-        
+
         sortDropdown.AddOptions(options);
-        
+
         // デフォルト選択値を設定
         sortDropdown.value = (int)currentSortType;
-        
+
         // 選択変更時のイベント
-        sortDropdown.onValueChanged.AddListener((index) => {
+        sortDropdown.onValueChanged.AddListener((index) =>
+        {
             currentSortType = (SortType)index;
         });
-        
+
         // 並べ替えボタンのイベント
         if (sortButton != null)
         {
             sortButton.onClick.AddListener(ApplySort);
         }
-        
+
         Debug.Log("🔄 並べ替えUIの設定完了");
     }
-    
+
     // ----------------------------------------------------------------------
     // 現在選択されている方法でカードを並べ替え
     // ----------------------------------------------------------------------
@@ -419,10 +486,10 @@ public class AllCardView : MonoBehaviour
         {
             return;
         }
-        
+
         // 現在表示中のカードをリストにコピー
         var cardList = new List<CardModel>(presenter.DisplayedCards);
-        
+
         // 選択された方法で並べ替え
         switch (currentSortType)
         {
@@ -430,42 +497,72 @@ public class AllCardView : MonoBehaviour
                 // ID順（整数順）- id型がint型に変更されたため直接比較
                 cardList.Sort((a, b) => a.id.CompareTo(b.id));
                 break;
-                
+
             case SortType.Name:
                 // 名前順（昇順）
                 cardList.Sort((a, b) => string.Compare(a.name, b.name));
                 break;
-                
+
             case SortType.Type:
                 // タイプ順
-                cardList.Sort((a, b) => {
+                cardList.Sort((a, b) =>
+                {
                     // まずポケモンタイプで並べ替え
                     int typeCompare = a.typeEnum.CompareTo(b.typeEnum);
                     if (typeCompare != 0) return typeCompare;
-                    
+
                     // タイプが同じなら名前で並べ替え
                     return string.Compare(a.name, b.name);
                 });
                 break;
-                
+
             case SortType.HP:
                 // HP順（降順）
                 cardList.Sort((a, b) => b.hp.CompareTo(a.hp));
                 break;
-                
+
             case SortType.MaxDamage:
                 // 最大ダメージ順（降順）
                 cardList.Sort((a, b) => b.maxDamage.CompareTo(a.maxDamage));
                 break;
         }
-        
+
         Debug.Log($"🔄 カードを {currentSortType} で並べ替えました");
-        
-        // 並べ替えた結果を表示
+
+        // 並べ替えた結果を表示（RefreshAllを使用）
         var reactiveCards = new ReactiveCollection<CardModel>(cardList);
         RefreshAll(reactiveCards);
     }
-    
+
+    // ----------------------------------------------------------------------
+    // 現在表示されているカードの最初の10枚をログに出力する
+    // ----------------------------------------------------------------------
+    public void LogFirstTenCards()
+    {
+        Debug.Log("===== 表示中のカード (最初の10枚) =====");
+
+        if (presenter == null || presenter.DisplayedCards == null || presenter.DisplayedCards.Count == 0)
+        {
+            Debug.Log("表示中のカードはありません。");
+            return;
+        }
+
+        int count = Mathf.Min(10, presenter.DisplayedCards.Count);
+
+        for (int i = 0; i < count; i++)
+        {
+            var card = presenter.DisplayedCards[i];
+            Debug.Log($"[{i + 1}] ID: {card.id}, 名前: {card.name}, タイプ: {card.typeEnum}, HP: {card.hp}");
+        }
+
+        if (presenter.DisplayedCards.Count > 10)
+        {
+            Debug.Log($"...他 {presenter.DisplayedCards.Count - 10} 枚のカードが表示されています");
+        }
+
+        Debug.Log("=====================================");
+    }
+
     // ----------------------------------------------------------------------
     // コンポーネント破棄時の処理
     // ----------------------------------------------------------------------
@@ -476,13 +573,13 @@ public class AllCardView : MonoBehaviour
         {
             detailButton.onClick.RemoveListener(OpenSearchPanel);
         }
-        
+
         // 検索入力フィールドのリスナーを解除
         if (searchInputField != null)
         {
             searchInputField.onEndEdit.RemoveAllListeners();
             searchInputField.onValueChanged.RemoveAllListeners();
-            
+
             var searchIcon = searchInputField.transform.Find("Search Button");
             if (searchIcon != null && searchIcon.GetComponent<Button>() != null)
             {

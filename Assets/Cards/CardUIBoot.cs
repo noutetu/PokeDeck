@@ -23,7 +23,7 @@ public class CardUIBoot : MonoBehaviour
     [SerializeField] private SearchView searchView;     // 検索View（オプション）
     
     // === 遅延読み込み関連 ===
-    [SerializeField] private int initialCardCount = 40;   // 初期表示するカード数
+    [SerializeField] private int initialCardCount = 100;   // 初期表示するカード数
     [SerializeField] private int lazyLoadBatchSize = 20;  // 遅延読み込み時のバッチサイズ
     [SerializeField] private float scrollThreshold = 0.8f; // スクロール位置がこの値を超えたら追加読み込み
     int batchSize = 13; // バッチサイズ（同時読み込み数）

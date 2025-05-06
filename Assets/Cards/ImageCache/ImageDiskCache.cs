@@ -453,14 +453,6 @@ public int GetFileCount()
                 }
             }
             
-            if (success)
-            {
-                Debug.Log($"💾 キャッシュメタデータを保存しました: {metadataRoot.Metadata.Count}個のエントリ");
-            }
-            else
-            {
-                Debug.LogError($"💾 メタデータ保存に{maxRetries}回失敗しました");
-            }
         }
         catch (Exception ex)
         {

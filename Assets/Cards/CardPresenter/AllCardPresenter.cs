@@ -2,6 +2,8 @@ using UnityEngine;
 using UniRx;
 using System.Collections.Generic;
 using System.Linq;
+using System;
+using System.Threading.Tasks;
 
 // ----------------------------------------------------------------------
 // Presenter：データをViewに渡す役割
@@ -19,6 +21,12 @@ public class AllCardPresenter
     
     // 読み込み完了イベント（Viewが購読してカード表示を更新する）
     public Subject<Unit> OnLoadComplete { get; } = new Subject<Unit>();
+
+    // カード追加時のイベント通知（追加の場合はスクロール位置を保持）
+    private Subject<Unit> onCardsAppended = new Subject<Unit>();
+
+    // カード追加時のイベント（購読用）
+    public IObservable<Unit> OnCardsAppended => onCardsAppended;
 
     // ----------------------------------------------------------------------
     // コンストラクタ - モデルの注入とアイコン初期化
@@ -77,7 +85,7 @@ public class AllCardPresenter
     // 既存のデータを保持したまま、新しいデータを追加する
     // @param newCards 追加するカードのリスト
     // ----------------------------------------------------------------------
-    public void AddCards(List<CardModel> newCards)
+    public async Task AddCards(List<CardModel> newCards)
     {
         // 重複を避けるための処理
         var existingIds = new HashSet<string>(DisplayedCards.Select(c => c.id));
@@ -112,10 +120,15 @@ public class AllCardPresenter
             DisplayedCards.Add(card);
         }
         
+        // 追加完了を通知（スクロール位置を保持するモード）
+        onCardsAppended.OnNext(Unit.Default);
+        
         // 読み込み完了イベントを発行（Viewが購読して表示を更新）
         OnLoadComplete.OnNext(Unit.Default);
         
         Debug.Log($"✅ AllCardPresenter: 新しく{uniqueNewCards.Count}枚のカードを追加しました（合計: {DisplayedCards.Count}枚）");
+
+        await Task.CompletedTask;
     }
     
     // ----------------------------------------------------------------------

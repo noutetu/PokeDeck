@@ -38,7 +38,7 @@ public class ImageCacheManager : MonoBehaviour
     
 
     // メモリ管理設定
-    [SerializeField] private int maxMemoryCacheCount = 100; // 最大100テクスチャをメモリに保持
+    [SerializeField] private int maxMemoryCacheCount = 1000; // 最大100テクスチャをメモリに保持
 
     // 読み込み中のURLを追跡するためのセット
     private HashSet<string> loadingUrls = new HashSet<string>();

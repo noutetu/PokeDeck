@@ -177,6 +177,94 @@ public class CardDatabase : MonoBehaviour
         // データベースが変更されたので保存
         Instance.SaveCardDatabase();
     }
+
+    /// <summary>
+    /// デバッグ用：全てのカードキャッシュを削除してリロードする
+    /// </summary>
+    public void ClearCacheAndReload()
+    {
+        Debug.Log("🧹 カードデータベースのキャッシュをクリアして再読み込みします...");
+        
+        try
+        {
+            // メモリキャッシュをクリア
+            cardCache.Clear();
+            nameToIdMap.Clear();
+            
+            Debug.Log("✅ メモリキャッシュをクリアしました");
+            
+            // データベースを再読み込み
+            LoadCardDatabase();
+            
+            // 初期化完了フラグを更新
+            isInitialized = true;
+            
+            // 初期化完了イベントを発火
+            OnDatabaseInitialized?.Invoke();
+            
+            Debug.Log($"✅ CardDatabase再読み込み完了: {cardCache.Count}枚のカード");
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"💾 キャッシュクリア中にエラーが発生しました: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// デバッグ用：保存されたカードデータファイルを削除する
+    /// </summary>
+    public bool ClearCardDataFile()
+    {
+        try
+        {
+            if (File.Exists(SavePath))
+            {
+                // ファイルを削除
+                File.Delete(SavePath);
+                Debug.Log($"✅ カードデータファイルを削除しました: {SavePath}");
+                return true;
+            }
+            else
+            {
+                Debug.Log("削除するカードデータファイルが見つかりませんでした");
+                return false;
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"❌ カードデータファイル削除中にエラーが発生しました: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// デバッグ用：完全にキャッシュをリセット（メモリ＆ファイル）
+    /// </summary>
+    public void FullReset()
+    {
+        Debug.Log("🔄 カードデータベースの完全リセットを開始...");
+        
+        try
+        {
+            // ファイルキャッシュを削除
+            bool fileDeleted = ClearCardDataFile();
+            
+            // メモリキャッシュをクリア
+            cardCache.Clear();
+            nameToIdMap.Clear();
+            
+            Debug.Log($"✅ カードデータベースの完全リセット完了 (ファイル削除: {(fileDeleted ? "成功" : "不要")})");
+            
+            // 初期化フラグをリセット
+            isInitialized = false;
+            
+            // データの再読み込みは行わない（空の状態を維持）
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"❌ カードデータベースのリセット中にエラーが発生しました: {ex.Message}");
+        }
+    }
     
     /// <summary>
     /// カードIDからカードデータを取得

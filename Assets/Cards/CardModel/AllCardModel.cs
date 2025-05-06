@@ -16,4 +16,3 @@ public class AllCardModel
     } 
     public List<CardModel> GetAllCards() => cards;
 }
-
