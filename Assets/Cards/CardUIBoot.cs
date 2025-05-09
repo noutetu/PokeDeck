@@ -174,10 +174,10 @@ public class CardUIBoot : MonoBehaviour
     // ----------------------------------------------------------------------
     private void SubscribeToSearchEvents()
     {
-        if (SearchRouter.Instance != null)
+        if (SearchNavigator.Instance != null)
         {
             // 検索結果が適用されたときに呼ばれるイベントハンドラを登録
-            SearchRouter.Instance.OnSearchResult += HandleSearchResult;
+            SearchNavigator.Instance.OnSearchResult += HandleSearchResult;
             Debug.Log("検索結果イベントの購読を開始しました");
         }
         else
@@ -289,9 +289,9 @@ public class CardUIBoot : MonoBehaviour
     private void InitializeSearchRouter()
     {
         // SearchRouterのインスタンスにパネル参照を設定
-        if (SearchRouter.Instance != null)
+        if (SearchNavigator.Instance != null)
         {
-            SearchRouter.Instance.SetPanels(searchPanel, cardListPanel);
+            SearchNavigator.Instance.SetPanels(searchPanel, cardListPanel);
             
             // 初期状態では検索パネルを非表示に
             if (searchPanel != null)
@@ -404,7 +404,7 @@ public class CardUIBoot : MonoBehaviour
                 var subBatch = nextBatch.GetRange(i, count);
                 
                 // サブバッチを表示
-                presenter.AddCards(subBatch);
+                await presenter.AddCardsAsync(subBatch);
                 
                 // UIが更新される時間を確保（1フレーム待機）
                 await UniTask.Yield(PlayerLoopTiming.Update);
@@ -427,9 +427,9 @@ public class CardUIBoot : MonoBehaviour
     private void OnDestroy()
     {
         // SearchRouterイベントの購読解除
-        if (SearchRouter.Instance != null)
+        if (SearchNavigator.Instance != null)
         {
-            SearchRouter.Instance.OnSearchResult -= HandleSearchResult;
+            SearchNavigator.Instance.OnSearchResult -= HandleSearchResult;
         }
     }
 }

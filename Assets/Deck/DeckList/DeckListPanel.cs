@@ -78,7 +78,7 @@ public class DeckListPanel : MonoBehaviour
     /// <summary>
     /// デッキアイテムを生成
     /// </summary>
-    private void CreateDeckItem(Deck deck)
+    private void CreateDeckItem(DeckModel deck)
     {
         if (deckDetailPrefab == null || contentContainer == null)
             return;

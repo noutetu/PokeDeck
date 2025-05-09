@@ -16,7 +16,7 @@ public class DeckListItem : MonoBehaviour
     // デッキ選択イベント
     public UnityEvent OnDeckSelected = new UnityEvent();
     
-    private Deck currentDeck;
+    private DeckModel currentDeck;
     
     private void Start()
     {
@@ -45,7 +45,7 @@ public class DeckListItem : MonoBehaviour
     /// <summary>
     /// デッキ情報を設定
     /// </summary>
-    public void SetDeckInfo(Deck deck)
+    public void SetDeckInfo(DeckModel deck)
     {
         currentDeck = deck;
         
@@ -97,7 +97,7 @@ public class DeckListItem : MonoBehaviour
     /// <summary>
     /// 最も体力の高いポケモンをアイコンに設定
     /// </summary>
-    private void SetHighestHPPokemonAsIcon(Deck deck)
+    private void SetHighestHPPokemonAsIcon(DeckModel deck)
     {
         if (cardImage == null || deck == null)
             return;

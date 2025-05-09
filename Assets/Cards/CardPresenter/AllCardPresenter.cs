@@ -85,7 +85,7 @@ public class AllCardPresenter
     // 既存のデータを保持したまま、新しいデータを追加する
     // @param newCards 追加するカードのリスト
     // ----------------------------------------------------------------------
-    public async Task AddCards(List<CardModel> newCards)
+    public async Task AddCardsAsync(List<CardModel> newCards)
     {
         // 重複を避けるための処理
         var existingIds = new HashSet<string>(DisplayedCards.Select(c => c.id));

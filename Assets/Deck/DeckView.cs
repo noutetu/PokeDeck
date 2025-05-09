@@ -27,7 +27,7 @@ public class DeckView : MonoBehaviour
     private List<GameObject> energyItems = new List<GameObject>();
 
     // 現在表示中のデッキ
-    private Deck currentDeck;
+    private DeckModel currentDeck;
     
     // イベント初期化フラグ
     private bool eventsInitialized = false;
@@ -103,7 +103,7 @@ public class DeckView : MonoBehaviour
     /// デッキをUIに表示
     /// </summary>
     /// <param name="deck">表示するデッキ</param>
-    public void DisplayDeck(Deck deck)
+    public void DisplayDeck(DeckModel deck)
     {
         currentDeck = deck;
         

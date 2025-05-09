@@ -10,7 +10,7 @@ using Newtonsoft.Json;
 // 20枚のカード、デッキ名、必要エネルギーリストを持つ
 // ----------------------------------------------------------------------
 [Serializable]
-public class Deck 
+public class DeckModel 
 {
     // デッキの名前
     [SerializeField] private string _name = "";

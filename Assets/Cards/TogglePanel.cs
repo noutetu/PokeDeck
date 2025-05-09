@@ -7,6 +7,10 @@ public class TogglePanel : MonoBehaviour
 
     public void Toggle()
     {
+        if (target == null)
+        {
+            return;
+        }
         target.SetActive(!target.activeSelf);
     }
 }

@@ -6,21 +6,21 @@ using UnityEngine;
 // 検索関連のパネル表示/非表示を管理するシングルトンクラス
 // パネル間のナビゲーションや検索結果の伝達を担当
 // ----------------------------------------------------------------------
-public class SearchRouter : MonoBehaviour
+public class SearchNavigator : MonoBehaviour
 {
     // ----------------------------------------------------------------------
     // シングルトンパターンの実装
     // ----------------------------------------------------------------------
-    private static SearchRouter _instance;
+    private static SearchNavigator _instance;
     
-    public static SearchRouter Instance
+    public static SearchNavigator Instance
     {
         get
         {
             if (_instance == null)
             {
                 GameObject routerObj = new GameObject("SearchRouter");
-                _instance = routerObj.AddComponent<SearchRouter>();
+                _instance = routerObj.AddComponent<SearchNavigator>();
                 DontDestroyOnLoad(routerObj);
             }
             

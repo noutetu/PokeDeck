@@ -195,10 +195,10 @@ public class CardView : MonoBehaviour, IPointerClickHandler
                 int sameNameCount = DeckManager.Instance.CurrentDeck.GetSameNameCardCount(data.name);
                 Debug.Log($"⭐ 同名カード数: {sameNameCount}枚, カード名: {data.name}");
                 
-                if (sameNameCount >= Deck.MAX_SAME_NAME_CARDS)
+                if (sameNameCount >= DeckModel.MAX_SAME_NAME_CARDS)
                 {
-                    Debug.LogWarning($"同名カード「{data.name}」は{Deck.MAX_SAME_NAME_CARDS}枚までしか追加できません");
-                    ShowFailureFeedback($"{SAME_CARD_LIMIT_TEXT}（{Deck.MAX_SAME_NAME_CARDS}枚）");
+                    Debug.LogWarning($"同名カード「{data.name}」は{DeckModel.MAX_SAME_NAME_CARDS}枚までしか追加できません");
+                    ShowFailureFeedback($"{SAME_CARD_LIMIT_TEXT}（{DeckModel.MAX_SAME_NAME_CARDS}枚）");
                     return;
                 }
             }
@@ -211,9 +211,9 @@ public class CardView : MonoBehaviour, IPointerClickHandler
             }
             
             // 現在のデッキが最大枚数に達しているか確認
-            if (DeckManager.Instance.CurrentDeck.CardCount >= Deck.MAX_CARDS)
+            if (DeckManager.Instance.CurrentDeck.CardCount >= DeckModel.MAX_CARDS)
             {
-                Debug.LogWarning($"デッキが最大枚数({Deck.MAX_CARDS}枚)に達しています");
+                Debug.LogWarning($"デッキが最大枚数({DeckModel.MAX_CARDS}枚)に達しています");
                 ShowFailureFeedback(ADD_FAILED_TEXT);
                 return;
             }
@@ -250,13 +250,13 @@ public class CardView : MonoBehaviour, IPointerClickHandler
                 // 失敗の詳細理由を特定して表示
                 string failureReason = "追加失敗";
                 
-                if (DeckManager.Instance.CurrentDeck.CardCount >= Deck.MAX_CARDS)
+                if (DeckManager.Instance.CurrentDeck.CardCount >= DeckModel.MAX_CARDS)
                 {
-                    failureReason = $"デッキ上限（{Deck.MAX_CARDS}枚）";
+                    failureReason = $"デッキ上限（{DeckModel.MAX_CARDS}枚）";
                 }
-                else if (DeckManager.Instance.CurrentDeck.GetSameNameCardCount(data.name) >= Deck.MAX_SAME_NAME_CARDS)
+                else if (DeckManager.Instance.CurrentDeck.GetSameNameCardCount(data.name) >= DeckModel.MAX_SAME_NAME_CARDS)
                 {
-                    failureReason = $"同名上限（{Deck.MAX_SAME_NAME_CARDS}枚）";
+                    failureReason = $"同名上限（{DeckModel.MAX_SAME_NAME_CARDS}枚）";
                 }
                 else if (dbCard == null)
                 {

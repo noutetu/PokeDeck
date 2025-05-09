@@ -207,7 +207,7 @@ public class SearchView : MonoBehaviour
     // ----------------------------------------------------------------------
     public void ApplySearchResults()
     {
-        if (SearchRouter.Instance != null)
+        if (SearchNavigator.Instance != null)
         {
             Debug.Log("🔍 [SearchView] ApplySearchResults: カードタイプフィルターのみ適用します");
 
@@ -295,7 +295,7 @@ public class SearchView : MonoBehaviour
                     minEnergyCost, maxEnergyCost,
                     minRetreatCost, maxRetreatCost
                 );
-                SearchRouter.Instance.ApplySearchResults(results);
+                SearchNavigator.Instance.ApplySearchResults(results);
                 CloseSearchPanel();
             }
         }
@@ -306,9 +306,9 @@ public class SearchView : MonoBehaviour
     // ----------------------------------------------------------------------
     private void CloseSearchPanel()
     {
-        if (SearchRouter.Instance != null)
+        if (SearchNavigator.Instance != null)
         {
-            SearchRouter.Instance.HideSearchPanel();
+            SearchNavigator.Instance.HideSearchPanel();
         }
     }
     

@@ -2,9 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using Newtonsoft.Json;
-using System.Collections;
 using Cysharp.Threading.Tasks; // UniTask用
-using UnityEngine.Networking; // UnityWebRequest用
 
 // ----------------------------------------------------------------------
 // デッキの保存・読み込みを管理するクラス
@@ -27,12 +25,12 @@ public class DeckManager : MonoBehaviour
     }
 
     // 現在選択中のデッキ
-    private Deck _currentDeck;
-    public Deck CurrentDeck => _currentDeck;
+    private DeckModel _currentDeck;
+    public DeckModel CurrentDeck => _currentDeck;
     
     // 保存されているデッキリスト
-    private List<Deck> _savedDecks = new List<Deck>();
-    public IReadOnlyList<Deck> SavedDecks => _savedDecks.AsReadOnly();
+    private List<DeckModel> _savedDecks = new List<DeckModel>();
+    public IReadOnlyList<DeckModel> SavedDecks => _savedDecks.AsReadOnly();
 
     // デッキデータの保存パス
     private string SavePath => Path.Combine(Application.persistentDataPath, "decks.json");
@@ -92,7 +90,7 @@ public class DeckManager : MonoBehaviour
             LoadDecks();
             
             // 常に新しいデッキを作成
-            _currentDeck = new Deck { Name = "新規デッキ" };
+            _currentDeck = new DeckModel { Name = "新規デッキ" };
             Debug.Log("📝 DeckManager: 新規デッキを作成しました");
             
             // 既存のデッキが存在する場合はカード参照を復元
@@ -123,9 +121,9 @@ public class DeckManager : MonoBehaviour
     /// </summary>
     /// <param name="name">新しいデッキの名前</param>
     /// <returns>作成したデッキ</returns>
-    public Deck CreateNewDeck(string name = "")
+    public DeckModel CreateNewDeck(string name = "")
     {
-        _currentDeck = new Deck { Name = name };
+        _currentDeck = new DeckModel { Name = name };
         return _currentDeck;
     }
 
@@ -182,10 +180,10 @@ public class DeckManager : MonoBehaviour
     /// <summary>
     /// 保存用のシンプルなデッキ構造を作成
     /// </summary>
-    private Deck CreateSaveDeck(Deck sourceDeck)
+    private DeckModel CreateSaveDeck(DeckModel sourceDeck)
     {
         // 新しいデッキオブジェクトを作成
-        Deck saveDeck = new Deck
+        DeckModel saveDeck = new DeckModel
         {
             Name = sourceDeck.Name
         };
@@ -227,7 +225,7 @@ public class DeckManager : MonoBehaviour
                 if (_savedDecks.Count > 0)
                     _currentDeck = _savedDecks[0];
                 else
-                    _currentDeck = new Deck();
+                    _currentDeck = new DeckModel();
             }
             return true;
         }
@@ -323,11 +321,11 @@ public class DeckManager : MonoBehaviour
                 if (simplifiedDecks != null && simplifiedDecks.Count > 0)
                 {
                     // 簡易版が成功したら、正式なDeckオブジェクトに変換
-                    _savedDecks = new List<Deck>();
+                    _savedDecks = new List<DeckModel>();
                     
                     foreach (var simpleDeck in simplifiedDecks)
                     {
-                        Deck newDeck = new Deck { Name = simpleDeck.Name };
+                        DeckModel newDeck = new DeckModel { Name = simpleDeck.Name };
                         
                         // カードIDを追加（カードモデル情報はRestoreCardReferencesで復元）
                         foreach (string cardId in simpleDeck.CardIds)
@@ -344,7 +342,7 @@ public class DeckManager : MonoBehaviour
                 else
                 {
                     // 簡易形式が読み込めなかった場合は新規作成
-                    _savedDecks = new List<Deck>();
+                    _savedDecks = new List<DeckModel>();
                     Debug.LogWarning("デッキデータを読み込めませんでした。新規作成します。");
                 }
                 
@@ -357,12 +355,12 @@ public class DeckManager : MonoBehaviour
             catch (System.Exception e)
             {
                 Debug.LogError($"デッキデータの読み込み中にエラーが発生しました: {e.Message}");
-                _savedDecks = new List<Deck>();
+                _savedDecks = new List<DeckModel>();
             }
         }
         else
         {
-            _savedDecks = new List<Deck>();
+            _savedDecks = new List<DeckModel>();
             Debug.Log("デッキデータが見つかりません。新規作成します。");
         }
     }
@@ -535,7 +533,7 @@ public class DeckManager : MonoBehaviour
     /// 特定のデッキのカード参照を復元
     /// </summary>
     /// <param name="deck">復元対象のデッキ</param>
-    private void RestoreDeckCardReferences(Deck deck)
+    private void RestoreDeckCardReferences(DeckModel deck)
     {
         if (deck == null) return;
 

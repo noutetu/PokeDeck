@@ -233,8 +233,8 @@ public class AllCardView : MonoBehaviour
         }
 
         Debug.Log($"検索結果: {results.Count}件");
-        if (SearchRouter.Instance != null)
-            SearchRouter.Instance.ApplySearchResults(results);
+        if (SearchNavigator.Instance != null)
+            SearchNavigator.Instance.ApplySearchResults(results);
         else
             RefreshAll(new ReactiveCollection<CardModel>(results));
     }
@@ -370,9 +370,9 @@ public class AllCardView : MonoBehaviour
     // ----------------------------------------------------------------------
     private void OpenSearchPanel()
     {
-        if (SearchRouter.Instance != null)
+        if (SearchNavigator.Instance != null)
         {
-            SearchRouter.Instance.ShowSearchPanel();
+            SearchNavigator.Instance.ShowSearchPanel();
         }
     }
 

@@ -225,13 +225,6 @@ public class SimpleVirtualScroll : MonoBehaviour
     /// </summary>
     private void OnScroll(Vector2 normalizedPosition)
     {
-        // スクロール位置のデバッグ出力
-        if (Time.frameCount % 120 == 0)
-        {
-            Debug.Log($"スクロール情報: 位置Y={content.anchoredPosition.y}, " +
-                      $"コンテンツ高さ={content.sizeDelta.y}, ビューポート高さ={viewportHeight}");
-        }
-        
         UpdateVisibleCards();
     }
     
@@ -345,12 +338,6 @@ public class SimpleVirtualScroll : MonoBehaviour
                     Debug.LogError($"カード表示でエラー発生: {e.Message}");
                 }
             }
-        }
-        
-        // デバッグ情報のログ頻度を減らす（重要な変更の時だけ）
-        if (Time.frameCount % 30 == 0)
-        {
-            Debug.Log($"表示カード数: {activeCards.Count}, 範囲: {startIndex}-{endIndex}, 行: {startRow}-{endRow}");
         }
     }
     
