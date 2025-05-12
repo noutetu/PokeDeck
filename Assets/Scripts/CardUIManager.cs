@@ -42,6 +42,9 @@ public class CardUIManager : MonoBehaviour
     private List<CardModel> remainingCards = new List<CardModel>();
     private bool isLoadingBatch = false;
     private bool ignoreScrollEvent = false; // フィルター適用後のスクロールイベントを抑止
+    private Vector2 lastPosition = Vector2.zero; // 前回のスクロール位置
+    private float lastScrollTime = 0f; // 最後にスクロールした時間
+    private float scrollCooldown = 0.1f; // スクロール処理の最小間隔（秒）
 
     // ----------------------------------------------------------------------
     // 全カードリスト（検索対象）
@@ -68,61 +71,12 @@ public class CardUIManager : MonoBehaviour
             await CardDatabase.WaitForInitializationAsync();
             await LoadJsonAndInitializeAsync();
 
-            // -------------------------------------------------
-            // 2. ImageCacheManagerを初期化し、デフォルト画像を設定
-            // -------------------------------------------------
             // カード一覧をロード（すべて）
             var allCards = CardDatabase.GetAllCards();
 
-            // 進捗フィードバックを表示（初回のみ作成し、以降は更新）
-            FeedbackContainer.Instance.ShowProgressFeedback($"画像ロード: 0/{allCards.Count}枚");
-
-            // 並行して画像を読み込むためのタスクリストを作成
-            var loadTasks = new List<UniTask>();
-
-            int processedCount = 0;
-
-            // バッチ単位で画像を読み込み
-            for (int i = 0; i < allCards.Count; i += batchSize)
-            {
-                // 現在のバッチのサイズを計算（最後のバッチは少なくなる可能性がある）
-                int currentBatchSize = Mathf.Min(batchSize, allCards.Count - i);
-                var batchTasks = new List<UniTask>();
-
-                // バッチ内のカードの画像を並行して読み込む
-                for (int j = 0; j < currentBatchSize; j++)
-                {
-                    if (i + j < allCards.Count)
-                    {
-                        var card = allCards[i + j];
-                        if (!string.IsNullOrEmpty(card.imageKey))
-                        {
-                            batchTasks.Add(ImageCacheManager.Instance.LoadTextureAsync(card.imageKey, card));
-                        }
-                    }
-                }
-
-                // バッチの画像読み込みを並行実行して完了を待機
-                await UniTask.WhenAll(batchTasks);
-                processedCount += currentBatchSize;
-
-                // 既存のフィードバックメッセージを更新（新しいメッセージを作成せず）
-                FeedbackContainer.Instance.UpdateFeedbackMessage($"画像ロード: {processedCount}/{allCards.Count}枚");
-
-                // UIが応答し続けるために1フレーム待機
-                await UniTask.Yield();
-            }
-
-            // プリロード完了を表示
-            FeedbackContainer.Instance.CompleteProgressFeedback("画像ロード完了", 2.0f);
-            // 画像読み込み完了時に統計情報をログに出力
-            // ImageCacheManager.Instance.LogCacheStatistics();
-
             // -------------------------------------------------
-            // 3. カード一覧にカードプレハブと画像を生成
+            // 2. MVRPパターンを初期化
             // -------------------------------------------------
-
-            // MVRPパターンを初期化
             if (allCardView != null)
             {
                 // モデル・プレゼンターの作成
@@ -131,7 +85,6 @@ public class CardUIManager : MonoBehaviour
 
                 // プレゼンターとビューの接続
                 allCardView.BindPresenter(presenter);
-
 
                 if (allCards != null && allCards.Count > 0)
                 {
@@ -144,6 +97,48 @@ public class CardUIManager : MonoBehaviour
                     {
                         remainingCards = allCards.GetRange(displayCount, allCards.Count - displayCount);
                     }
+
+                    // -------------------------------------------------
+                    // 3. 初期表示のカードのみ画像をロード
+                    // -------------------------------------------------
+                    // 進捗フィードバックを表示
+                    FeedbackContainer.Instance.ShowProgressFeedback($"画像ロード: 0/{initialCards.Count}枚");
+
+                    int processedCount = 0;
+
+                    // 初期表示カードの画像のみバッチ単位でロード
+                    for (int i = 0; i < initialCards.Count; i += batchSize)
+                    {
+                        // 現在のバッチのサイズを計算
+                        int currentBatchSize = Mathf.Min(batchSize, initialCards.Count - i);
+                        var batchTasks = new List<UniTask>();
+
+                        // バッチ内のカードの画像を並行して読み込む
+                        for (int j = 0; j < currentBatchSize; j++)
+                        {
+                            if (i + j < initialCards.Count)
+                            {
+                                var card = initialCards[i + j];
+                                if (!string.IsNullOrEmpty(card.imageKey))
+                                {
+                                    batchTasks.Add(ImageCacheManager.Instance.LoadTextureAsync(card.imageKey, card));
+                                }
+                            }
+                        }
+
+                        // バッチの画像読み込みを並行実行して完了を待機
+                        await UniTask.WhenAll(batchTasks);
+                        processedCount += currentBatchSize;
+
+                        // 既存のフィードバックメッセージを更新
+                        FeedbackContainer.Instance.UpdateFeedbackMessage($"画像ロード: {processedCount}/{initialCards.Count}枚");
+
+                        // UIが応答し続けるために1フレーム待機
+                        await UniTask.Yield();
+                    }
+
+                    // 初期ロード完了を表示
+                    FeedbackContainer.Instance.CompleteProgressFeedback("初期画像ロード完了", 1.0f);
 
                     // 初期カードをロード
                     presenter.LoadCards(initialCards);
@@ -168,7 +163,6 @@ public class CardUIManager : MonoBehaviour
 
             // SearchRouterの初期化
             InitializeSearchRouter();
-
         }
         catch (System.Exception ex)
         {
@@ -278,9 +272,35 @@ public class CardUIManager : MonoBehaviour
             ignoreScrollEvent = false;
             return;
         }
+        
+        // スクロール頻度を制限（パフォーマンス最適化）
+        float currentTime = Time.time;
+        if (currentTime - lastScrollTime < scrollCooldown)
+        {
+            return; // 前回のスクロールからの経過時間が短い場合はスキップ
+        }
+        lastScrollTime = currentTime;
+        
         // 残りのカードがなければ何もしない
         if (remainingCards.Count == 0 || isLoadingBatch)
             return;
+            
+        // スクロール方向を検出
+        float scrollDirection = position.y - lastPosition.y;
+        lastPosition = position;
+        
+        // スクロール速度が速い場合は多めにロード
+        float scrollSpeed = Mathf.Abs(scrollDirection);
+        if (scrollSpeed > 0.05f)
+        {
+            // 高速スクロール時は大きなバッチサイズを使用
+            lazyLoadBatchSize = Mathf.Clamp(lazyLoadBatchSize + 5, 5, 30);
+        }
+        else
+        {
+            // 低速スクロール時は小さなバッチサイズを使用
+            lazyLoadBatchSize = Mathf.Clamp(lazyLoadBatchSize - 1, 5, 30);
+        }
 
         // 縦スクロール位置が閾値を超えたら追加読み込み
         // 1.0が一番上、 0.0が一番下
@@ -289,6 +309,7 @@ public class CardUIManager : MonoBehaviour
             LoadNextBatchAsync().Forget();
         }
     }
+
     // ----------------------------------------------------------------------
     // SearchNavigatorの初期化
     // ----------------------------------------------------------------------
@@ -406,6 +427,22 @@ public class CardUIManager : MonoBehaviour
 
                 // サブバッチを抽出
                 var subBatch = nextBatch.GetRange(i, count);
+                
+                // サブバッチの画像をプリロード
+                var loadTasks = new List<UniTask>();
+                foreach (var card in subBatch)
+                {
+                    if (!string.IsNullOrEmpty(card.imageKey) && card.imageTexture == null)
+                    {
+                        loadTasks.Add(ImageCacheManager.Instance.LoadTextureAsync(card.imageKey, card));
+                    }
+                }
+                
+                // 画像読み込みを待機
+                if (loadTasks.Count > 0)
+                {
+                    await UniTask.WhenAll(loadTasks);
+                }
 
                 // サブバッチを表示
                 await presenter.AddCardsAsync(subBatch);
@@ -425,6 +462,7 @@ public class CardUIManager : MonoBehaviour
             isLoadingBatch = false;
         }
     }
+
     // ----------------------------------------------------------------------
     // コンポーネント破棄時のクリーンアップ
     // ----------------------------------------------------------------------

@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Enum;
-using System.Data;
 
 // ----------------------------------------------------------------------
 // カードのデータを保持するクラス（Model）
@@ -14,20 +13,18 @@ public class CardModel
     // ----------------------------------------------------------------------
     // カード基本情報
     // ----------------------------------------------------------------------
-    private string _id;
-    public string id { get => _id; set => _id = value; }
-    private string _name;
-    public string name { get => _name; set => _name = value; }
-    public string cardType;              // カードタイプ（JSON文字列形式）
-    public string evolutionStage;        // 進化段階（JSON文字列形式）
-    public string pack;                  // カードパック名（JSON文字列形式）
+    public string id;
+    public string name;
+    public string cardType;              // カードタイプ（EXやサポート、グッズなど）
+    public string evolutionStage;        // 進化段階（たね、1進化、2進化）
+    public string pack;                  // カードパック名（最強の遺伝子,幻の島、、、、）
     
     // ----------------------------------------------------------------------
     // ポケモン固有の情報
     // ----------------------------------------------------------------------
     public int hp;                       // HPポイント値
-    public string type;                  // ポケモンのタイプ（JSON文字列形式）
-    public string weakness;              // 弱点属性（JSON文字列形式）
+    public string type;                  // ポケモンのタイプ（炎や水など）
+    public string weakness;              // 弱点属性（炎や水など）
     public int retreatCost;              // 逃げるためのエネルギーコスト
     public int maxEnergyCost;            // 最大わざエネルギーコスト
     
@@ -36,12 +33,12 @@ public class CardModel
     // ----------------------------------------------------------------------
     public string abilityName;           // 特性名
     public string abilityEffect;         // 特性効果の説明文
-    public List<MoveData> moves;         // 技データのリスト
+    public List<MoveData> moves;         // わざ名やわざ効果といったわざ情報のリスト
     
     // ----------------------------------------------------------------------
     // メタデータ・表示データ
     // ----------------------------------------------------------------------
-    public List<string> tags;            // カードの分類タグ（JSON文字列形式）
+    public List<string> tags;            // カードの分類タグリスト（回復やドローなど）
     public int maxDamage;                // カードが与える最大ダメージ
     public string imageKey;              // カード画像のURL/キー
     public Texture2D imageTexture;       // ロードされたカード画像テクスチャ

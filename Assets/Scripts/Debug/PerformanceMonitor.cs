@@ -277,42 +277,84 @@ public class PerformanceMonitor : MonoBehaviour
     }
     
     // ----------------------------------------------------------------------
-    // カードの統計情報を更新
+    // カードの統計情報を更新（仮想スクロール対応版）
     // ----------------------------------------------------------------------
     private void UpdateCardStats()
     {
-        // カードプレゼンターから情報取得
-        if (cardPresenter != null)
+        try
         {
-            displayedCardCount = cardPresenter.DisplayedCards?.Count ?? 0;
+            // 初期値設定
+            int actualDisplayedCount = 0;
+            int dataModelCardCount = 0;
             
-            // カードBoot情報の取得
-            var cardBoot = FindObjectOfType<CardUIManager>();
-            if (cardBoot != null)
+            // カードプレゼンターから検索/フィルタ後の総カード数を取得
+            if (cardPresenter != null)
             {
-                // remainingCardsフィールドにアクセス
-                System.Reflection.FieldInfo fieldInfo = 
-                    typeof(CardUIManager).GetField("remainingCards", 
-                    System.Reflection.BindingFlags.NonPublic | 
-                    System.Reflection.BindingFlags.Instance);
+                // データモデル上の表示対象となるカード総数
+                dataModelCardCount = cardPresenter.DisplayedCards?.Count ?? 0;
                 
-                if (fieldInfo != null)
+                // 実際に画面表示されているカード数を取得
+                var virtualScroll = FindObjectOfType<SimpleVirtualScroll>();
+                if (virtualScroll != null)
                 {
-                    var remainingCards = fieldInfo.GetValue(cardBoot) as System.Collections.Generic.List<CardModel>;
-                    int remainingCount = remainingCards?.Count ?? 0;
-                    totalCardCount = displayedCardCount + remainingCount;
+                    // リフレクションでアクティブカードの辞書を取得
+                    System.Reflection.FieldInfo activeCardsField = 
+                        typeof(SimpleVirtualScroll).GetField("activeCards", 
+                        System.Reflection.BindingFlags.NonPublic | 
+                        System.Reflection.BindingFlags.Instance);
+                    
+                    if (activeCardsField != null)
+                    {
+                        var activeCards = activeCardsField.GetValue(virtualScroll) as Dictionary<int, RectTransform>;
+                        actualDisplayedCount = activeCards?.Count ?? 0;
+                    }
                 }
                 
-                // isLoadingBatchフィールドにアクセス
-                fieldInfo = typeof(CardUIManager).GetField("isLoadingBatch", 
-                    System.Reflection.BindingFlags.NonPublic | 
-                    System.Reflection.BindingFlags.Instance);
-                
-                if (fieldInfo != null)
+                // 仮想スクロールから取得できない場合はアクティブなCardViewコンポーネント数をカウント
+                if (actualDisplayedCount == 0)
                 {
-                    isLoadingCards = (bool)fieldInfo.GetValue(cardBoot);
+                    // シーン内のアクティブなカードビューを検索
+                    actualDisplayedCount = FindObjectsOfType<CardView>(true)
+                        .Count(cv => cv.gameObject.activeInHierarchy);
                 }
+                
+                // カードUIManagerからロード状態を取得
+                var cardBoot = FindObjectOfType<CardUIManager>();
+                if (cardBoot != null)
+                {
+                    // remainingCardsフィールドにアクセス
+                    System.Reflection.FieldInfo fieldInfo = 
+                        typeof(CardUIManager).GetField("remainingCards", 
+                        System.Reflection.BindingFlags.NonPublic | 
+                        System.Reflection.BindingFlags.Instance);
+                    
+                    if (fieldInfo != null)
+                    {
+                        var remainingCards = fieldInfo.GetValue(cardBoot) as List<CardModel>;
+                        int remainingCount = remainingCards?.Count ?? 0;
+                        
+                        // 残りのカード数も含めて計算
+                        totalCardCount = dataModelCardCount;
+                    }
+                    
+                    // isLoadingBatchフィールドにアクセス
+                    fieldInfo = typeof(CardUIManager).GetField("isLoadingBatch", 
+                        System.Reflection.BindingFlags.NonPublic | 
+                        System.Reflection.BindingFlags.Instance);
+                    
+                    if (fieldInfo != null)
+                    {
+                        isLoadingCards = (bool)fieldInfo.GetValue(cardBoot);
+                    }
+                }
+                
+                // 実際に表示されているカード数を更新
+                displayedCardCount = actualDisplayedCount;
             }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"カード統計情報の更新でエラーが発生: {ex.Message}");
         }
     }
     
@@ -376,12 +418,24 @@ public class PerformanceMonitor : MonoBehaviour
                 AppendColoredText(builder, "なし\n", normalColor);
         }
         
-        // カード表示枚数
-        AppendColoredText(builder, "表示カード: ", normalColor);
+        // カード表示枚数（実際に描画されているカード数と総カード数）
+        AppendColoredText(builder, "実際表示: ", normalColor);
         if (displayedCardCount > highCardCountThreshold)
-            AppendColoredText(builder, $"{displayedCardCount}/{totalCardCount}枚\n", dangerColor);
+            AppendColoredText(builder, $"{displayedCardCount}枚", dangerColor);
         else
-            AppendColoredText(builder, $"{displayedCardCount}/{totalCardCount}枚\n", normalColor);
+            AppendColoredText(builder, $"{displayedCardCount}枚", normalColor);
+        
+        // 仮想スクロールの効率性
+        float virtualScrollEfficiency = totalCardCount > 0 ? 
+            100f - ((float)displayedCardCount * 100f / totalCardCount) : 0;
+        
+        AppendColoredText(builder, " / 総カード: ", normalColor);
+        AppendColoredText(builder, $"{totalCardCount}枚", normalColor);
+        
+        // 仮想スクロールの効率を色分け
+        Color effColor = virtualScrollEfficiency > 90 ? new Color(0, 0.8f, 0) : // 緑色
+                        (virtualScrollEfficiency > 70 ? normalColor : warningColor);
+        AppendColoredText(builder, $" (効率: {virtualScrollEfficiency:F0}%)\n", effColor);
         
         // 読み込み状態表示
         AppendColoredText(builder, "読込状態: ", normalColor);

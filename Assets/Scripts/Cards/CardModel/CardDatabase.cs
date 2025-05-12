@@ -268,7 +268,6 @@ public class CardDatabase : MonoBehaviour
             string json = JsonConvert.SerializeObject(cardsToSave, Formatting.Indented, jsonSettings);
             File.WriteAllText(SavePath, json);
             
-            FeedbackContainer.Instance?.ShowSuccessFeedback("カードデータベースを保存しました", 2f);
             Debug.Log($"カードデータベースを保存しました: {cardsToSave.Count}枚のカード, 保存先: {SavePath}");
         }
         catch (System.Exception e)

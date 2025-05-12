@@ -66,7 +66,7 @@ public class CardView : MonoBehaviour, IPointerClickHandler
             return;
         }
         
-        // CardModelに保存されているテクスチャを直接表示（UniTask不要）
+        // CardModelに保存されているテクスチャを直接表示
         if (data.imageTexture != null && cardImage != null)
         {
             cardImage.texture = data.imageTexture;
@@ -87,7 +87,9 @@ public class CardView : MonoBehaviour, IPointerClickHandler
         }
     }
 
+    // ----------------------------------------------------------------------
     // 画像を非同期で読み込み、完了後ステータスを非表示化
+    // ----------------------------------------------------------------------
     private async void LoadImageAsync()
     {
         if (data == null || isImageLoading) return;
@@ -102,7 +104,10 @@ public class CardView : MonoBehaviour, IPointerClickHandler
             loadingText.gameObject.SetActive(false);
     }
 
+    // ----------------------------------------------------------------------
     // プレースホルダー画像を設定
+    // デフォルトのグレーテクスチャを生成
+    // ----------------------------------------------------------------------
     private void SetPlaceholderImage()
     {
         if (ImageCacheManager.Instance != null && ImageCacheManager.Instance.GetDefaultTexture() != null)
