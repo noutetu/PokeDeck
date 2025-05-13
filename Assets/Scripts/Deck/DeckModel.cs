@@ -33,6 +33,15 @@ public class DeckModel
     // ----------------------------------------------------------------------
     [SerializeField] private List<EnergyRequirement> _energyRequirements = new List<EnergyRequirement>();
     public IReadOnlyList<EnergyRequirement> EnergyRequirements => _energyRequirements.AsReadOnly();
+    
+    // ----------------------------------------------------------------------
+    // 選択されたエネルギータイプのリスト（最大2つまで）
+    // ----------------------------------------------------------------------
+    [SerializeField] private List<Enum.PokemonType> _selectedEnergyTypes = new List<Enum.PokemonType>();
+    public IReadOnlyList<Enum.PokemonType> SelectedEnergyTypes => _selectedEnergyTypes.AsReadOnly();
+    
+    // 選択可能なエネルギーの最大数
+    public const int MAX_SELECTED_ENERGIES = 2;
 
     // ----------------------------------------------------------------------
     // 最大カード枚数
@@ -294,6 +303,7 @@ public class DeckModel
         _cardIds.Clear();
         _cardNameCounts.Clear();
         _energyRequirements.Clear();
+        _selectedEnergyTypes.Clear();
     }
 
     // ----------------------------------------------------------------------
@@ -362,6 +372,18 @@ public class DeckModel
                     _cardNameCounts[model.name] = 1;
                 }
             }
+        }
+        
+        // 選択されたエネルギータイプの情報をログ出力
+        if (_selectedEnergyTypes != null && _selectedEnergyTypes.Count > 0)
+        {
+            List<string> typeNames = new List<string>();
+            foreach (var et in _selectedEnergyTypes)
+            {
+                typeNames.Add(et.ToString());
+            }
+            string energyNames = string.Join(", ", typeNames);
+            Debug.Log($"デッキ '{_name}' のエネルギータイプ（{_selectedEnergyTypes.Count}個）: {energyNames}");
         }
     }
 
@@ -559,6 +581,104 @@ public class DeckModel
                 return 800; // その他のカードは後方に配置
         }
         
+    }
+
+    // ----------------------------------------------------------------------
+    // エネルギータイプを追加する（最大MAX_SELECTED_ENERGIES個まで）
+    // ----------------------------------------------------------------------
+    public bool AddSelectedEnergyType(Enum.PokemonType energyType)
+    {
+        // 既に最大数選択されている場合は追加できない
+        if (_selectedEnergyTypes.Count >= MAX_SELECTED_ENERGIES)
+            return false;
+            
+        // 既に同じタイプが選択されている場合は追加しない
+        if (_selectedEnergyTypes.Contains(energyType))
+            return false;
+            
+        _selectedEnergyTypes.Add(energyType);
+        return true;
+    }
+    
+    // ----------------------------------------------------------------------
+    // エネルギータイプを削除する
+    // ----------------------------------------------------------------------
+    public bool RemoveSelectedEnergyType(Enum.PokemonType energyType)
+    {
+        return _selectedEnergyTypes.Remove(energyType);
+    }
+    
+    // ----------------------------------------------------------------------
+    // 選択されたエネルギータイプをすべて削除する
+    // ----------------------------------------------------------------------
+    public void ClearSelectedEnergyTypes()
+    {
+        _selectedEnergyTypes.Clear();
+    }
+
+    // ----------------------------------------------------------------------
+    // デッキ内のポケモンタイプを分析し、最も多く使用されているタイプを
+    // 自動的にエネルギータイプとして選択する（最大2つまで）
+    // ----------------------------------------------------------------------
+    public void AutoSelectEnergyTypes()
+    {
+        // すでにエネルギータイプが選択されている場合は何もしない
+        if (_selectedEnergyTypes.Count > 0)
+            return;
+            
+        // ポケモンタイプの出現回数をカウントする辞書
+        Dictionary<Enum.PokemonType, int> typeCount = new Dictionary<Enum.PokemonType, int>();
+        
+        // デッキ内の各カードについて処理
+        foreach (string cardId in _cardIds)
+        {
+            // カードモデルを取得
+            CardModel cardModel = GetCardModel(cardId);
+            if (cardModel != null && 
+                (cardModel.cardTypeEnum == Enum.CardType.非EX || cardModel.cardTypeEnum == Enum.CardType.EX) && 
+                cardModel.typeEnum != Enum.PokemonType.無色)
+            {
+                // ポケモンカードでかつ無色以外の場合、タイプをカウント
+                if (typeCount.ContainsKey(cardModel.typeEnum))
+                {
+                    typeCount[cardModel.typeEnum]++;
+                }
+                else
+                {
+                    typeCount[cardModel.typeEnum] = 1;
+                }
+            }
+        }
+        
+        // タイプのカウントがない場合は終了
+        if (typeCount.Count == 0)
+            return;
+            
+        // タイプの出現回数で降順にソート（同じ数の場合はEnum値の小さい順）
+        var sortedTypes = typeCount.OrderByDescending(pair => pair.Value)
+                                  .ThenBy(pair => (int)pair.Key)
+                                  .Take(MAX_SELECTED_ENERGIES)
+                                  .Select(pair => pair.Key)
+                                  .ToList();
+        
+        // 選択されたタイプを設定
+        _selectedEnergyTypes.Clear();
+        foreach (var type in sortedTypes)
+        {
+            _selectedEnergyTypes.Add(type);
+        }
+        
+        // デバッグログ
+        if (_selectedEnergyTypes.Count > 0)
+        {
+            List<string> typeNames = new List<string>();
+            foreach (var et in _selectedEnergyTypes)
+            {
+                typeNames.Add(et.ToString());
+            }
+            string energyNames = string.Join(", ", typeNames);
+            Debug.Log($"デッキ '{_name}' のエネルギータイプを自動選択しました ({_selectedEnergyTypes.Count}個): {energyNames}");
+        }
     }
 }
 

@@ -1,9 +1,9 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UniRx;
-using System;
 
 // ----------------------------------------------------------------------
 // デッキ画面のUIを管理するクラス
@@ -24,11 +24,17 @@ public class DeckView : MonoBehaviour
     [SerializeField] private Button openDeckListButton; // デッキ一覧を開くボタン
     [SerializeField] private GameObject deckListPanel; // デッキ一覧パネル
 
+    [Header("エネルギー選択UI")]
+    [SerializeField] private Button inputEnergyButton; // エネルギー選択ボタン
+    [SerializeField] private Image energyImage1; // 1つ目のエネルギーアイコン
+    [SerializeField] private Image energyImage2; // 2つ目のエネルギーアイコン
+    [SerializeField] private SetEnergyPanel setEnergyPanel; // エネルギー選択パネル
     // ----------------------------------------------------------------------
     // プライベート変数
     // ----------------------------------------------------------------------
     private List<GameObject> cardItems = new List<GameObject>(); // カードビューアイテムのリスト
     private List<GameObject> energyItems = new List<GameObject>(); // エネルギービューアイテムのリスト
+    private List<GameObject> selectedEnergyItems = new List<GameObject>(); // 選択されたエネルギービューアイテムのリスト
     private DeckModel currentDeck; // 現在表示中のデッキ
     private bool eventsInitialized = false; // イベント初期化フラグ
 
@@ -40,18 +46,15 @@ public class DeckView : MonoBehaviour
         // 現在のデッキを取得
         currentDeck = DeckManager.Instance.CurrentDeck;
 
+        // UIイベントを常に初期化（毎回セットアップするように変更）
+        SetupUIEvents();
+        eventsInitialized = true;
+
         // UI要素を初期化
         InitializeUI();
 
         // デッキをUIに表示
         DisplayDeck(currentDeck);
-
-        // UIイベントを初期化（初回のみ）
-        if (!eventsInitialized)
-        {
-            SetupUIEvents();
-            eventsInitialized = true;
-        }
     }
 
     // ----------------------------------------------------------------------
@@ -97,6 +100,9 @@ public class DeckView : MonoBehaviour
                 }
             });
         }
+        
+        // 新しいエネルギー選択UIのセットアップ
+        SetupEnergySelectionUI();
     }
 
     // ----------------------------------------------------------------------
@@ -131,8 +137,11 @@ public class DeckView : MonoBehaviour
         {
             CreateEnergyItem(energyReq);
         }
+        
+        // 新しいエネルギーボタンの画像を更新
+        UpdateEnergyButtonImages();
     }
-
+    
     // ----------------------------------------------------------------------
     // カードアイテムを作成
     // ----------------------------------------------------------------------
@@ -278,6 +287,26 @@ public class DeckView : MonoBehaviour
 
     private void OnSaveButtonClicked()
     {
+        // エネルギータイプが選択されていない場合は自動選択する
+        if (currentDeck.SelectedEnergyTypes.Count == 0)
+        {
+            currentDeck.AutoSelectEnergyTypes();
+            // エネルギータイプが自動選択された場合はUI上のエネルギーアイコンも更新
+            UpdateEnergyButtonImages();
+            
+            // 自動選択されたことをユーザーに通知
+            if (currentDeck.SelectedEnergyTypes.Count > 0 && FeedbackContainer.Instance != null)
+            {
+                List<string> typeNames = new List<string>();
+                foreach (var et in currentDeck.SelectedEnergyTypes)
+                {
+                    typeNames.Add(et.ToString());
+                }
+                string energyNames = string.Join("、", typeNames);
+                FeedbackContainer.Instance.ShowProgressFeedback($"エネルギータイプが自動選択されました: {energyNames}");
+            }
+        }
+        
         // 現在のデッキを保存
         DeckManager.Instance.SaveCurrentDeck();
     }
@@ -309,4 +338,162 @@ public class DeckView : MonoBehaviour
         }
         return success;
     }
+    // ----------------------------------------------------------------------
+    // エネルギー選択UIのセットアップ
+    // ----------------------------------------------------------------------
+    private void SetupEnergySelectionUI()
+    {
+        if (inputEnergyButton != null && setEnergyPanel != null)
+        {
+            // 既存のリスナーを削除してから新しいリスナーを追加（重複防止）
+            inputEnergyButton.onClick.RemoveAllListeners();
+            inputEnergyButton.onClick.AddListener(ToggleEnergyPanel);
+            
+            // エネルギー選択イベントのリスナー設定
+            setEnergyPanel.OnEnergyTypeSelected -= OnEnergyTypesSelected; // 既存のリスナーを削除
+            setEnergyPanel.OnEnergyTypeSelected += OnEnergyTypesSelected;
+            
+            // 初期状態ではパネルを非表示に
+            setEnergyPanel.gameObject.SetActive(false);
+            
+            Debug.Log("エネルギー選択UIのセットアップが完了しました");
+        }
+    }
+    
+    // ----------------------------------------------------------------------
+    // エネルギーパネルの表示/非表示を切り替え
+    // ----------------------------------------------------------------------
+    private void ToggleEnergyPanel()
+    {
+        Debug.Log("ToggleEnergyPanel が呼び出されました");
+        
+        if (setEnergyPanel == null || currentDeck == null)
+        {
+            Debug.LogWarning("setEnergyPanel または currentDeck が null です");
+            return;
+        }
+            
+        bool isActive = setEnergyPanel.gameObject.activeSelf;
+        Debug.Log($"現在のパネル表示状態: {isActive}");
+        
+        if (isActive)
+        {
+            // パネルを非表示
+            setEnergyPanel.gameObject.SetActive(false);
+            Debug.Log("エネルギーパネルを非表示にしました");
+            
+            // 最終的な画像を更新（トグル選択中にすでに反映済み）
+            UpdateEnergyButtonImages();
+        }
+        else
+        {
+            // パネルを表示する際に現在のデッキの選択状態を反映
+            setEnergyPanel.ShowPanel(currentDeck);
+            
+            // 明示的にパネルを表示
+            setEnergyPanel.gameObject.SetActive(true);
+            Debug.Log("エネルギーパネルを表示しました");
+        }
+    }
+    
+    // ----------------------------------------------------------------------
+    // エネルギータイプ選択時のコールバック
+    // ----------------------------------------------------------------------
+    private void OnEnergyTypesSelected(HashSet<Enum.PokemonType> selectedTypes)
+    {
+        // リアルタイムでボタン画像プレビューを更新
+        UpdateEnergyButtonImagesPreview(selectedTypes);
+        
+        // 選択内容をデッキモデルに一時的に反映（パネルを閉じたときに正式に保存される）
+        currentDeck.ClearSelectedEnergyTypes();
+        foreach (var type in selectedTypes)
+        {
+            currentDeck.AddSelectedEnergyType(type);
+        }
+    }
+    
+    // ----------------------------------------------------------------------
+    // エネルギーボタンの画像をプレビュー表示（選択中にリアルタイム更新）
+    // ----------------------------------------------------------------------
+    private void UpdateEnergyButtonImagesPreview(HashSet<Enum.PokemonType> types)
+    {
+        if (setEnergyPanel == null)
+            return;
+        
+        // 最初に両方の画像を非表示に
+        if (energyImage1 != null)
+        {
+            energyImage1.sprite = null;
+            energyImage1.enabled = false;
+        }
+        
+        if (energyImage2 != null)
+        {
+            energyImage2.sprite = null;
+            energyImage2.enabled = false;
+        }
+        
+        // 選択されたエネルギータイプを配列に変換
+        List<Enum.PokemonType> typeList = new List<Enum.PokemonType>(types);
+        
+        // 選択されたタイプがあれば画像を設定
+        if (typeList.Count > 0 && energyImage1 != null)
+        {
+            energyImage1.sprite = setEnergyPanel.GetEnergySprite(typeList[0]);
+            energyImage1.enabled = true;
+        }
+        
+        if (typeList.Count > 1 && energyImage2 != null)
+        {
+            energyImage2.sprite = setEnergyPanel.GetEnergySprite(typeList[1]);
+            energyImage2.enabled = true;
+        }
+    }
+    
+    // ----------------------------------------------------------------------
+    // エネルギーボタンの画像を更新
+    // ----------------------------------------------------------------------
+    private void UpdateEnergyButtonImages()
+    {
+        if (currentDeck == null || setEnergyPanel == null)
+            return;
+        
+        // 最初に両方の画像を非表示に
+        if (energyImage1 != null)
+        {
+            energyImage1.sprite = null;
+            energyImage1.enabled = false;
+        }
+        
+        if (energyImage2 != null)
+        {
+            energyImage2.sprite = null;
+            energyImage2.enabled = false;
+        }
+        
+        // 選択されたエネルギータイプがあれば画像を設定
+        var selectedTypes = currentDeck.SelectedEnergyTypes;
+        
+        if (selectedTypes.Count > 0 && energyImage1 != null)
+        {
+            energyImage1.sprite = setEnergyPanel.GetEnergySprite(selectedTypes[0]);
+            energyImage1.enabled = true;
+        }
+        
+        if (selectedTypes.Count > 1 && energyImage2 != null)
+        {
+            energyImage2.sprite = setEnergyPanel.GetEnergySprite(selectedTypes[1]);
+            energyImage2.enabled = true;
+        }
+    }
+    
+    // ----------------------------------------------------------------------
+    // エネルギーボタンの画像を更新する（外部からアクセス用）
+    // ----------------------------------------------------------------------
+    public void UpdateEnergyImages()
+    {
+        UpdateEnergyButtonImages();
+    }
+    
+    
 }

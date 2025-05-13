@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 using Newtonsoft.Json;
 using Cysharp.Threading.Tasks; // UniTask用
@@ -189,10 +190,22 @@ public class DeckManager : MonoBehaviour
         // 保存成功のフィードバックを表示
         if (FeedbackContainer.Instance != null)
         {
-            FeedbackContainer.Instance.ShowSuccessFeedback($"デッキ '{_currentDeck.Name}' を保存しました");
+            string energyInfo = "";
+            var energyTypes = _currentDeck.SelectedEnergyTypes;
+            if (energyTypes.Count > 0)
+            {
+                List<string> typeNames = new List<string>();
+                foreach (var et in energyTypes)
+                {
+                    typeNames.Add(et.ToString());
+                }
+                energyInfo = $"（エネルギー: {string.Join(", ", typeNames)}）";
+            }
+            
+            FeedbackContainer.Instance.ShowSuccessFeedback($"デッキ '{_currentDeck.Name}' を保存しました{energyInfo}");
         }
         
-        Debug.Log($"デッキ '{_currentDeck.Name}' を保存しました（全{_savedDecks.Count}個）");
+        Debug.Log($"デッキ '{_currentDeck.Name}' を保存しました（全{_savedDecks.Count}個）、エネルギータイプ: {_currentDeck.SelectedEnergyTypes.Count}個");
     }
 
     // ----------------------------------------------------------------------
@@ -210,6 +223,12 @@ public class DeckManager : MonoBehaviour
         foreach (string cardId in sourceDeck.CardIds)
         {
             saveDeck.AddCard(cardId);
+        }
+        
+        // 選択されたエネルギータイプをコピー
+        foreach (var energyType in sourceDeck.SelectedEnergyTypes)
+        {
+            saveDeck.AddSelectedEnergyType(energyType);
         }
         
         return saveDeck;
@@ -270,8 +289,16 @@ public class DeckManager : MonoBehaviour
             var simpleDeck = new SimplifiedDeck
             {
                 Name = deck.Name,
-                CardIds = new List<string>(deck.CardIds)
+                CardIds = new List<string>(deck.CardIds),
+                SelectedEnergyTypes = new List<int>()
             };
+            
+            // 選択されたエネルギータイプをintに変換して保存
+            foreach (var energyType in deck.SelectedEnergyTypes)
+            {
+                simpleDeck.SelectedEnergyTypes.Add((int)energyType);
+            }
+            
             simplifiedDecks.Add(simpleDeck);
         }
         
@@ -337,6 +364,35 @@ public class DeckManager : MonoBehaviour
                         {
                             // シンプルに追加（IDのみ）
                             newDeck._AddCardId(cardId);
+                        }
+                        
+                        // エネルギータイプを復元（存在する場合）
+                        if (simpleDeck.SelectedEnergyTypes != null && simpleDeck.SelectedEnergyTypes.Count > 0)
+                        {
+                            try
+                            {
+                                foreach (int energyTypeInt in simpleDeck.SelectedEnergyTypes)
+                                {
+                                    // 有効な範囲のエネルギータイプかチェック
+                                    if (System.Enum.IsDefined(typeof(Enum.PokemonType), energyTypeInt))
+                                    {
+                                        // intからPokemonType enumに変換して追加
+                                        Enum.PokemonType energyType = (Enum.PokemonType)energyTypeInt;
+                                        newDeck.AddSelectedEnergyType(energyType);
+                                    }
+                                    else
+                                    {
+                                        Debug.LogWarning($"無効なエネルギータイプ値: {energyTypeInt}、スキップします");
+                                    }
+                                }
+                                
+                                Debug.Log($"デッキ '{newDeck.Name}' からエネルギータイプを {newDeck.SelectedEnergyTypes.Count} 個復元しました");
+                            }
+                            catch (System.Exception ex)
+                            {
+                                Debug.LogError($"エネルギータイプの復元中にエラーが発生しました: {ex.Message}");
+                                // エラーが発生しても処理を続行
+                            }
                         }
                         
                         _savedDecks.Add(newDeck);
@@ -595,4 +651,5 @@ public class SimplifiedDeck
 {
     public string Name { get; set; }
     public List<string> CardIds { get; set; } = new List<string>();
+    public List<int> SelectedEnergyTypes { get; set; } = new List<int>(); // 選択されたエネルギータイプ（int型で保存）
 }
