@@ -216,7 +216,8 @@ public class DeckManager : MonoBehaviour
         // 新しいデッキオブジェクトを作成
         DeckModel saveDeck = new DeckModel
         {
-            Name = sourceDeck.Name
+            Name = sourceDeck.Name,
+            Memo = sourceDeck.Memo
         };
         
         // カードIDのみをコピー
@@ -290,7 +291,8 @@ public class DeckManager : MonoBehaviour
             {
                 Name = deck.Name,
                 CardIds = new List<string>(deck.CardIds),
-                SelectedEnergyTypes = new List<int>()
+                SelectedEnergyTypes = new List<int>(),
+                Memo = deck.Memo
             };
             
             // 選択されたエネルギータイプをintに変換して保存
@@ -357,7 +359,10 @@ public class DeckManager : MonoBehaviour
                     
                     foreach (var simpleDeck in simplifiedDecks)
                     {
-                        DeckModel newDeck = new DeckModel { Name = simpleDeck.Name };
+                        DeckModel newDeck = new DeckModel { 
+                            Name = simpleDeck.Name,
+                            Memo = simpleDeck.Memo ?? "" // nullの場合は空文字列を設定
+                        };
                         
                         // カードIDを追加（カードモデル情報はRestoreCardReferencesで復元）
                         foreach (string cardId in simpleDeck.CardIds)
@@ -652,4 +657,5 @@ public class SimplifiedDeck
     public string Name { get; set; }
     public List<string> CardIds { get; set; } = new List<string>();
     public List<int> SelectedEnergyTypes { get; set; } = new List<int>(); // 選択されたエネルギータイプ（int型で保存）
+    public string Memo { get; set; } = ""; // デッキメモ
 }

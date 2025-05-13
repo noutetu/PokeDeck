@@ -25,6 +25,21 @@ public class SetEnergyPanel : MonoBehaviour
     private DeckModel deckModel; // 現在編集中のデッキモデル
 
     // ----------------------------------------------------------------------
+    // 選択可能なエネルギータイプ（ドラゴンと無色を除外）
+    // ----------------------------------------------------------------------
+    private readonly Enum.PokemonType[] availableEnergyTypes = new Enum.PokemonType[]
+    {
+        Enum.PokemonType.草,
+        Enum.PokemonType.炎,
+        Enum.PokemonType.水,
+        Enum.PokemonType.雷,
+        Enum.PokemonType.超,
+        Enum.PokemonType.闘,
+        Enum.PokemonType.悪,
+        Enum.PokemonType.鋼,
+    };
+
+    // ----------------------------------------------------------------------
     // エネルギータイプ画像リソース
     // ----------------------------------------------------------------------
     [Header("エネルギー画像")]
@@ -36,8 +51,6 @@ public class SetEnergyPanel : MonoBehaviour
     [SerializeField] private Sprite psychicEnergySprite; // 超エネルギー
     [SerializeField] private Sprite darknessEnergySprite; // 悪エネルギー
     [SerializeField] private Sprite steelEnergySprite; // 鋼エネルギー
-    [SerializeField] private Sprite dragonEnergySprite; // ドラゴンエネルギー
-    [SerializeField] private Sprite colorlessEnergySprite; // 無色エネルギー
 
     // ----------------------------------------------------------------------
     // イベント
@@ -70,14 +83,34 @@ public class SetEnergyPanel : MonoBehaviour
         // エネルギータイプトグルの設定
         if (energyTypeToggles != null)
         {
+            // 利用可能なエネルギータイプの数
+            int availableCount = availableEnergyTypes.Length;
+            
             for (int i = 0; i < energyTypeToggles.Length; i++)
             {
-                // 現在のインデックスを保持
-                int index = i;
                 if (energyTypeToggles[i] != null)
                 {
-                    // トグルの値変更イベントをリスナーに追加
-                    energyTypeToggles[i].onValueChanged.AddListener((isOn) => OnEnergyTypeToggleChanged(index, isOn));
+                    // 利用可能なタイプかどうかを確認
+                    bool isAvailable = i < availableCount;
+                    
+                    // 利用不可能なエネルギータイプのトグルは非アクティブに
+                    energyTypeToggles[i].gameObject.SetActive(isAvailable);
+                    
+                    if (isAvailable)
+                    {
+                        // 配列内の対応するインデックスを取得
+                        int typeIndex = i;
+                        
+                        // トグルの値変更イベントをリスナーに追加
+                        energyTypeToggles[i].onValueChanged.AddListener((isOn) => 
+                            OnEnergyTypeToggleChanged(typeIndex, isOn));
+                        
+                        // 対応するエネルギー画像を設定
+                        if (i < energyTypeImages.Length && energyTypeImages[i] != null)
+                        {
+                            energyTypeImages[i].sprite = GetEnergySprite(availableEnergyTypes[i]);
+                        }
+                    }
                 }
             }
         }
@@ -88,11 +121,11 @@ public class SetEnergyPanel : MonoBehaviour
     // ----------------------------------------------------------------------
     private void OnEnergyTypeToggleChanged(int index, bool isOn)
     {
-        if (index < 0 || index >= System.Enum.GetValues(typeof(Enum.PokemonType)).Length)
+        if (index < 0 || index >= availableEnergyTypes.Length)
             return;
 
-        // ポケモンタイプに変換
-        Enum.PokemonType type = (Enum.PokemonType)index;
+        // 対応するポケモンタイプを取得
+        Enum.PokemonType type = availableEnergyTypes[index];
 
         // トグルがONになった場合（選択された）
         if (isOn)
@@ -113,11 +146,10 @@ public class SetEnergyPanel : MonoBehaviour
                         FeedbackContainer.Instance.ShowFailureFeedback(
                             $"最大{DeckModel.MAX_SELECTED_ENERGIES}つまでしか選択できません");
                     }
-                    // トグルを元に戻す（ユーザー操作ではなくコードから変更することに注意）
-                    // イベントの無限ループを避けるためにイベントを一時的に無効化することが理想的
+                    // トグルを元に戻す（イベントを発生させずに）
                     if (energyTypeToggles[index] != null)
                     {
-                        energyTypeToggles[index].isOn = false;
+                        energyTypeToggles[index].SetIsOnWithoutNotify(false);
                     }
                     return;
                 }
@@ -230,9 +262,9 @@ public class SetEnergyPanel : MonoBehaviour
     private void UpdateAllToggleSelections()
     {
         // 全てのトグルの選択状態をリセット
-        for (int i = 0; i < energyTypeToggles.Length; i++)
+        for (int i = 0; i < availableEnergyTypes.Length && i < energyTypeToggles.Length; i++)
         {
-            Enum.PokemonType type = (Enum.PokemonType)i;
+            Enum.PokemonType type = availableEnergyTypes[i];
             UpdateToggleSelection(i, selectedTypes.Contains(type));
         }
     }
@@ -252,8 +284,6 @@ public class SetEnergyPanel : MonoBehaviour
             case Enum.PokemonType.超: return psychicEnergySprite;
             case Enum.PokemonType.悪: return darknessEnergySprite;
             case Enum.PokemonType.鋼: return steelEnergySprite;
-            case Enum.PokemonType.ドラゴン: return dragonEnergySprite;
-            case Enum.PokemonType.無色: return colorlessEnergySprite;
             default: return null;
         }
     }

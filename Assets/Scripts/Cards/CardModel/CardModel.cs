@@ -13,8 +13,8 @@ public class CardModel
     // ----------------------------------------------------------------------
     // カード基本情報
     // ----------------------------------------------------------------------
-    public string id;
-    public string name;
+    public string id;                    // カードID（ユニークな識別子）
+    public string name;                  // カード名 
     public string cardType;              // カードタイプ（EXやサポート、グッズなど）
     public string evolutionStage;        // 進化段階（たね、1進化、2進化）
     public string pack;                  // カードパック名（最強の遺伝子,幻の島、、、、）

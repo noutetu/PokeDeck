@@ -15,6 +15,7 @@ public class DeckView : MonoBehaviour
     // ----------------------------------------------------------------------
     [Header("UI参照")]
     [SerializeField] private TMP_InputField deckNameInput; // デッキ名入力フィールド
+    [SerializeField] private TMP_InputField deckMemoInput; // デッキメモ入力フィールド
     [SerializeField] private Transform cardContainer; // カードアイテムを配置するコンテナ
     [SerializeField] private GameObject cardItemPrefab; // カードアイテムのプレハブ
     [SerializeField] private Transform energyContainer; // エネルギーアイテムを配置するコンテナ
@@ -75,6 +76,17 @@ public class DeckView : MonoBehaviour
         // デッキ名変更時のイベントを設定
         if (deckNameInput != null)
             deckNameInput.onEndEdit.AddListener(OnDeckNameChanged);
+            
+        
+        // デッキメモの設定
+        if (deckMemoInput != null)
+        {
+            // 自動改行を有効にする
+            TMP_Text textComponent = deckMemoInput.GetComponentInChildren<TMP_Text>();
+            textComponent.enableWordWrapping = true; 
+            // メモの変更時のイベントを設定
+            deckMemoInput.onEndEdit.AddListener(OnDeckMemoChanged);
+        }
 
         // 保存ボタンのクリックイベントを設定
         if (saveButton != null)
@@ -116,6 +128,10 @@ public class DeckView : MonoBehaviour
         // デッキ名を更新
         if (deckNameInput != null)
             deckNameInput.text = deck.Name;
+            
+        // デッキメモを更新
+        if (deckMemoInput != null)
+            deckMemoInput.text = deck.Memo;
 
         // カードをタイプ順に並べ替え
         deck.SortCardsByTypeAndID();
@@ -283,6 +299,15 @@ public class DeckView : MonoBehaviour
             // 空の場合は元の名前に戻す
             deckNameInput.text = currentDeck.Name;
         }
+    }
+    
+    // ----------------------------------------------------------------------
+    // デッキメモ変更時の処理
+    // ----------------------------------------------------------------------
+    private void OnDeckMemoChanged(string newMemo)
+    {
+        // メモを更新（nullチェックは不要、空文字列も許容）
+        currentDeck.Memo = newMemo;
     }
 
     private void OnSaveButtonClicked()

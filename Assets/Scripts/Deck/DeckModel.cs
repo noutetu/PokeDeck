@@ -40,6 +40,16 @@ public class DeckModel
     [SerializeField] private List<Enum.PokemonType> _selectedEnergyTypes = new List<Enum.PokemonType>();
     public IReadOnlyList<Enum.PokemonType> SelectedEnergyTypes => _selectedEnergyTypes.AsReadOnly();
     
+    // ----------------------------------------------------------------------
+    // デッキメモ（ユーザーが自由に記入できるメモ）
+    // ----------------------------------------------------------------------
+    [SerializeField] private string _memo = "";
+    public string Memo
+    {
+        get => _memo;
+        set => _memo = value;
+    }
+    
     // 選択可能なエネルギーの最大数
     public const int MAX_SELECTED_ENERGIES = 2;
 
@@ -626,6 +636,19 @@ public class DeckModel
         if (_selectedEnergyTypes.Count > 0)
             return;
             
+        // 実際に選択可能なエネルギータイプ（ドラゴンと無色を除外）
+        HashSet<Enum.PokemonType> validEnergyTypes = new HashSet<Enum.PokemonType>
+        {
+            Enum.PokemonType.草,
+            Enum.PokemonType.炎,
+            Enum.PokemonType.水,
+            Enum.PokemonType.雷,
+            Enum.PokemonType.超,
+            Enum.PokemonType.闘,
+            Enum.PokemonType.悪,
+            Enum.PokemonType.鋼
+        };
+            
         // ポケモンタイプの出現回数をカウントする辞書
         Dictionary<Enum.PokemonType, int> typeCount = new Dictionary<Enum.PokemonType, int>();
         
@@ -635,17 +658,34 @@ public class DeckModel
             // カードモデルを取得
             CardModel cardModel = GetCardModel(cardId);
             if (cardModel != null && 
-                (cardModel.cardTypeEnum == Enum.CardType.非EX || cardModel.cardTypeEnum == Enum.CardType.EX) && 
-                cardModel.typeEnum != Enum.PokemonType.無色)
+                (cardModel.cardTypeEnum == Enum.CardType.非EX || cardModel.cardTypeEnum == Enum.CardType.EX))
             {
-                // ポケモンカードでかつ無色以外の場合、タイプをカウント
-                if (typeCount.ContainsKey(cardModel.typeEnum))
+                if (cardModel.typeEnum == Enum.PokemonType.ドラゴン)
                 {
-                    typeCount[cardModel.typeEnum]++;
+                    // ドラゴンタイプのポケモンは炎と水のエネルギーを使う傾向が強いため、
+                    // これらのタイプをカウントに追加
+                    if (typeCount.ContainsKey(Enum.PokemonType.炎))
+                        typeCount[Enum.PokemonType.炎]++;
+                    else
+                        typeCount[Enum.PokemonType.炎] = 1;
+                        
+                    if (typeCount.ContainsKey(Enum.PokemonType.水))
+                        typeCount[Enum.PokemonType.水]++;
+                    else
+                        typeCount[Enum.PokemonType.水] = 1;
                 }
-                else
+                else if (cardModel.typeEnum == Enum.PokemonType.無色)
                 {
-                    typeCount[cardModel.typeEnum] = 1;
+                    // 無色タイプのポケモンは特に対応するエネルギーがないためカウントしない
+                    // 必要に応じて、デッキ内の他のカードのタイプに基づいて選択する
+                }
+                else if (validEnergyTypes.Contains(cardModel.typeEnum))
+                {
+                    // 選択可能なエネルギータイプの場合、カウントを追加
+                    if (typeCount.ContainsKey(cardModel.typeEnum))
+                        typeCount[cardModel.typeEnum]++;
+                    else
+                        typeCount[cardModel.typeEnum] = 1;
                 }
             }
         }
