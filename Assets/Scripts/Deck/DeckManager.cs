@@ -163,6 +163,18 @@ public class DeckManager : MonoBehaviour
             }
             return;
         }
+        // カードが20枚より多いデッキは保存しない
+        if (_currentDeck.CardCount > DeckModel.MAX_CARDS)
+        {
+            Debug.Log($"デッキ '{_currentDeck.Name}' のカード数が{_currentDeck.CardCount}枚で、{DeckModel.MAX_CARDS}枚を超えているため保存できません");
+            
+            // ユーザーにフィードバックを表示
+            if (FeedbackContainer.Instance != null)
+            {
+                FeedbackContainer.Instance.ShowFailureFeedback($"デッキは{DeckModel.MAX_CARDS}枚以下である必要があります。{_currentDeck.CardCount - DeckModel.MAX_CARDS}枚削除してください。");
+            }
+            return;
+        }
 
         // デッキをID順とカードタイプ順に並べ替え（以前はID順のみ）
         _currentDeck.SortCardsByTypeAndID();

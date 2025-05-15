@@ -64,11 +64,11 @@ public class DeckModel
     public const int MAX_SAME_NAME_CARDS = 2;
 
     // ----------------------------------------------------------------------
-    // デッキが有効かどうかをチェック（20枚ちょうどか）
+    // デッキが有効かどうかをチェック（20枚以下か）
     // ----------------------------------------------------------------------
     public bool IsValid()
     {
-        return _cardIds.Count == MAX_CARDS;
+        return _cardIds.Count <= MAX_CARDS;
     }
     
     // ----------------------------------------------------------------------
@@ -133,11 +133,11 @@ public class DeckModel
     }
 
     // ----------------------------------------------------------------------
-    // カードをデッキに追加（20枚制限あり）
+    // カードをデッキに追加（24枚まで追加可能、保存時は20枚ちょうど必要）
     // ----------------------------------------------------------------------
     public bool AddCard(string cardId)
     {
-        if (_cardIds.Count >= MAX_CARDS)
+        if (_cardIds.Count >= MAX_CARDS + 4)
             return false;
         
         // CardDatabaseからカードモデルを取得
@@ -147,6 +147,7 @@ public class DeckModel
             cardModel = CardDatabase.Instance.GetCard(cardId);
         }
         
+        // カードモデルが見つからない場合はエラーログを出力
         if (cardModel == null)
         {
             Debug.LogWarning($"カードID:{cardId}のモデルが見つかりません");
@@ -187,14 +188,14 @@ public class DeckModel
     }
 
     // ----------------------------------------------------------------------
-    // カードモデルをデッキに追加（20枚制限あり）
+    // カードモデルをデッキに追加（24枚まで追加可能）
     // ----------------------------------------------------------------------
     public bool AddCard(CardModel card)
     {
         if (card == null || string.IsNullOrEmpty(card.id))
             return false;
         
-        if (_cardIds.Count >= MAX_CARDS)
+        if (_cardIds.Count >= MAX_CARDS + 4)
             return false;
             
         // 同名カードの制限チェック

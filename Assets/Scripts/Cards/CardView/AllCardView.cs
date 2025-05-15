@@ -24,7 +24,7 @@ public class AllCardView : MonoBehaviour
     [SerializeField] private SimpleVirtualScroll virtualScroll; // スクロールビューのコンポーネント
 
     // 並べ替え用のUI要素
-    [SerializeField] private TMP_Dropdown sortDropdown; // 並べ替え選択用ドロップダウン
+    [SerializeField] private Dropdown sortDropdown; // 並べ替え選択用ドロップダウン
     [SerializeField] private Button sortButton;       // 並べ替え実行ボタン
 
     // ----------------------------------------------------------------------

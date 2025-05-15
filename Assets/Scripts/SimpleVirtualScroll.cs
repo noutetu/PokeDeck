@@ -121,10 +121,6 @@ public class SimpleVirtualScroll : MonoBehaviour
             SetGridSettings(25f, 20f, 440f, 660f, 25f, 80f, 2);
         }
 
-        // コンテンツのアンカー設定を上部固定に変更
-        content.anchorMin = new Vector2(0, 1);
-        content.anchorMax = new Vector2(1, 1);
-        content.pivot = new Vector2(0.5f, 1); // 上部中央を基準に
 
         // スクロール位置をリセットして、一番上から表示
         content.anchoredPosition = Vector2.zero;
@@ -215,11 +211,6 @@ public class SimpleVirtualScroll : MonoBehaviour
         
         // コンテンツのサイズを調整
         content.sizeDelta = new Vector2(content.sizeDelta.x, contentHeight);
-        
-        // アンカーを上に固定（Start()で設定済みだが念のため）
-        content.anchorMin = new Vector2(0, 1);
-        content.anchorMax = new Vector2(1, 1);
-        content.pivot = new Vector2(0.5f, 1);
         
         // 初期表示を更新
         UpdateVisibleCards();

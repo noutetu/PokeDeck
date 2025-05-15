@@ -61,6 +61,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 409223578567347d1a5b5cb868a7a9d0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  loadingText: {fileID: 0}
   cardImage: {fileID: 4921079225491324440}
   cardButton: {fileID: 4685666238617570751}
 --- !u!114 &4921079225491324440
@@ -83,7 +84,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 2800000, guid: 54ecfc21deda04b8e85d69f00ce004bf, type: 3}
+  m_Texture: {fileID: 2800000, guid: 46ede435fa317c4478735b47e947bb95, type: 3}
   m_UVRect:
     serializedVersion: 2
     x: 0

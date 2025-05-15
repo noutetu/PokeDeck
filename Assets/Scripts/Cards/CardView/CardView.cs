@@ -209,13 +209,11 @@ public class CardView : MonoBehaviour, IPointerClickHandler
                 // カード名が空の場合、IDを名前として使用
                 data.name = $"ID:{data.id}のカード";
                 Debug.Log($"⭐ カード名を設定: {data.name}");
-            }
-            
-            // 現在のデッキが最大枚数に達しているか確認
-            if (DeckManager.Instance.CurrentDeck.CardCount >= DeckModel.MAX_CARDS)
+            }                // 現在のデッキが最大枚数に達しているか確認
+            if (DeckManager.Instance.CurrentDeck.CardCount >= DeckModel.MAX_CARDS + 4)
             {
-                Debug.LogWarning($"デッキが最大枚数({DeckModel.MAX_CARDS}枚)に達しています");
-                ShowFailureFeedback(ADD_FAILED_TEXT);
+                Debug.LogWarning($"デッキが最大枚数(24枚)に達しています");
+                ShowFailureFeedback("デッキは24枚まで追加可能");
                 return;
             }
             
@@ -251,9 +249,9 @@ public class CardView : MonoBehaviour, IPointerClickHandler
                 // 失敗の詳細理由を特定して表示
                 string failureReason = "追加失敗";
                 
-                if (DeckManager.Instance.CurrentDeck.CardCount >= DeckModel.MAX_CARDS)
+                if (DeckManager.Instance.CurrentDeck.CardCount >= DeckModel.MAX_CARDS + 4)
                 {
-                    failureReason = $"デッキ上限（{DeckModel.MAX_CARDS}枚）";
+                    failureReason = "デッキ上限（24枚）";
                 }
                 else if (DeckManager.Instance.CurrentDeck.GetSameNameCardCount(data.name) >= DeckModel.MAX_SAME_NAME_CARDS)
                 {
