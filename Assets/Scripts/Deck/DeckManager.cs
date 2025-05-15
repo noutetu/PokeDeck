@@ -1,7 +1,9 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Networking;
 using Newtonsoft.Json;
 using Cysharp.Threading.Tasks; // UniTask用
 
@@ -176,8 +178,69 @@ public class DeckManager : MonoBehaviour
             return;
         }
 
-        // デッキをID順とカードタイプ順に並べ替え（以前はID順のみ）
+        // カードテクスチャのロード処理を開始
+        StartCoroutine(LoadCardTexturesAndSaveDeck());
+    }
+    
+    // ----------------------------------------------------------------------
+    // カードテクスチャをロードしてデッキを保存するコルーチン
+    // ----------------------------------------------------------------------
+    private IEnumerator LoadCardTexturesAndSaveDeck()
+    {
+        // ロード開始ログ
+        Debug.Log($"デッキ '{_currentDeck.Name}' のカード画像読み込みを開始...");
+        
+        // ローディングインジケータを表示
+        if (FeedbackContainer.Instance != null)
+        {
+            FeedbackContainer.Instance.ShowSuccessFeedback("デッキ画像を準備中...");
+        }
+        
+        // テクスチャ読み込み対象のカードをリストアップ
+        List<CardModel> cardsToLoad = new List<CardModel>();
+        foreach (string cardId in _currentDeck.CardIds)
+        {
+            CardModel card = _currentDeck.GetCardModel(cardId);
+            if (card != null && card.imageTexture == null && !string.IsNullOrEmpty(card.imageKey))
+            {
+                cardsToLoad.Add(card);
+            }
+        }
+        
+        // 読み込み対象カード数をログ出力
+        Debug.Log($"読み込み対象カード: {cardsToLoad.Count}枚");
+        
+        // 実際の読み込み処理
+        int loadedCount = 0;
+        
+        // ImageCacheManagerを使って画像をロード
+        if (ImageCacheManager.Instance != null)
+        {
+            foreach (CardModel card in cardsToLoad)
+            {
+                // 進捗状況を表示
+                if (FeedbackContainer.Instance != null)
+                {
+                    FeedbackContainer.Instance.ShowSuccessFeedback($"画像を準備中... ({loadedCount}/{cardsToLoad.Count})");
+                }
+                
+                // ImageCacheManagerを使用してカード画像を読み込む
+                yield return ImageCacheManager.Instance.GetCardTextureAsync(card).ToCoroutine();
+                
+                loadedCount++;
+                Debug.Log($"カード画像を読み込みました: {card.name} ({loadedCount}/{cardsToLoad.Count})");
+            }
+        }
+        else
+        {
+            Debug.LogError("ImageCacheManagerが見つかりません。カード画像を読み込めませんでした。");
+        }
+        
+        // デッキをID順とカードタイプ順に並べ替え
         _currentDeck.SortCardsByTypeAndID();
+        
+        // デッキ保存前にカードモデルキャッシュを構築
+        _currentDeck.RestoreCardReferences();
         
         // 既存のデッキを更新または新規追加
         bool found = false;
@@ -185,7 +248,7 @@ public class DeckManager : MonoBehaviour
         {
             if (_savedDecks[i].Name == _currentDeck.Name)
             {
-                _savedDecks[i] = CreateSaveDeck(_currentDeck);
+                _savedDecks[i] = _currentDeck; // 現在のデッキ参照をそのまま使用
                 found = true;
                 break;
             }
@@ -193,7 +256,7 @@ public class DeckManager : MonoBehaviour
 
         if (!found)
         {
-            _savedDecks.Add(CreateSaveDeck(_currentDeck));
+            _savedDecks.Add(_currentDeck); // 現在のデッキ参照をそのまま追加
         }
 
         // 全デッキをJSON形式で保存（シンプルな形式）
@@ -214,37 +277,17 @@ public class DeckManager : MonoBehaviour
                 energyInfo = $"（エネルギー: {string.Join(", ", typeNames)}）";
             }
             
-            FeedbackContainer.Instance.ShowSuccessFeedback($"デッキ '{_currentDeck.Name}' を保存しました{energyInfo}");
+            if (cardsToLoad.Count > 0)
+            {
+                FeedbackContainer.Instance.ShowSuccessFeedback($"画像の準備が完了しました。デッキ '{_currentDeck.Name}' を保存しました{energyInfo}");
+            }
+            else
+            {
+                FeedbackContainer.Instance.ShowSuccessFeedback($"デッキ '{_currentDeck.Name}' を保存しました{energyInfo}");
+            }
         }
         
-        Debug.Log($"デッキ '{_currentDeck.Name}' を保存しました（全{_savedDecks.Count}個）、エネルギータイプ: {_currentDeck.SelectedEnergyTypes.Count}個");
-    }
-
-    // ----------------------------------------------------------------------
-    // 保存用のシンプルなデッキ構造を作成
-    // ----------------------------------------------------------------------
-    private DeckModel CreateSaveDeck(DeckModel sourceDeck)
-    {
-        // 新しいデッキオブジェクトを作成
-        DeckModel saveDeck = new DeckModel
-        {
-            Name = sourceDeck.Name,
-            Memo = sourceDeck.Memo
-        };
-        
-        // カードIDのみをコピー
-        foreach (string cardId in sourceDeck.CardIds)
-        {
-            saveDeck.AddCard(cardId);
-        }
-        
-        // 選択されたエネルギータイプをコピー
-        foreach (var energyType in sourceDeck.SelectedEnergyTypes)
-        {
-            saveDeck.AddSelectedEnergyType(energyType);
-        }
-        
-        return saveDeck;
+        Debug.Log($"デッキ '{_currentDeck.Name}' の保存が完了しました（読み込んだ画像: {loadedCount}枚）");
     }
     
     // ----------------------------------------------------------------------
@@ -257,7 +300,7 @@ public class DeckManager : MonoBehaviour
         {
             _savedDecks.RemoveAt(index);
             SaveDecks();
-            
+
             // 現在のデッキが削除されたら新しいデッキを選択
             if (_currentDeck.Name == deckName)
             {
@@ -268,7 +311,7 @@ public class DeckManager : MonoBehaviour
             }
             return true;
         }
-        
+
         return false;
     }
 
@@ -607,12 +650,6 @@ public class DeckManager : MonoBehaviour
         {
             _isDeckPanelVisible = !_isDeckPanelVisible;
             deckPanel.SetActive(_isDeckPanelVisible);
-            
-            // パネル表示時にログを出力
-            if (_isDeckPanelVisible)
-            {
-                Debug.Log("デッキパネルを表示しました");
-            }
         }
         else
         {
@@ -629,7 +666,6 @@ public class DeckManager : MonoBehaviour
         {
             deckPanel.SetActive(true);
             _isDeckPanelVisible = true;
-            Debug.Log("デッキパネルを表示しました");
         }
     }
 
@@ -642,7 +678,6 @@ public class DeckManager : MonoBehaviour
         {
             deckPanel.SetActive(false);
             _isDeckPanelVisible = false;
-            Debug.Log("デッキパネルを非表示にしました");
         }
     }
     

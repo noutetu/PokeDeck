@@ -45,11 +45,6 @@ public class ImageCacheManager : MonoBehaviour
     [SerializeField] private bool useDiskCache = true; // ディスクキャッシュを使用するか
     
     // -------------------------------------------------
-    // メモリ管理設定
-    // -------------------------------------------------
-    [SerializeField] private int maxMemoryCacheCount = 1000; // 最大100テクスチャをメモリに保持
-
-    // -------------------------------------------------
     // 読み込み中のURLを追跡するためのセット
     // -------------------------------------------------
     private HashSet<string> loadingUrls = new HashSet<string>();
@@ -61,12 +56,6 @@ public class ImageCacheManager : MonoBehaviour
     private int diskCacheHitCount = 0;       // ディスクキャッシュからの読み込み回数
     private int networkLoadCount = 0;        // ネットワークからの読み込み回数
     private int totalLoadCount = 0;          // 総読み込み試行回数
-    
-    // -------------------------------------------------
-    // デバッグログ設定
-    // -------------------------------------------------
-    [SerializeField] private bool enableDetailedLog = true;  // 詳細ログを有効化するか
-    [SerializeField] private bool logStatisticsOnLoad = true; // ロード完了時に統計情報を出力するか
     
     // -------------------------------------------------
     // UnityのAwakeメソッド
@@ -110,9 +99,6 @@ public class ImageCacheManager : MonoBehaviour
         // URLが空の場合はデフォルトテクスチャを返す
         if (string.IsNullOrEmpty(url))
         {
-            if (enableDetailedLog)
-                Debug.LogWarning("URLが空のため、デフォルトテクスチャを返します");
-            
             if (assignToCard != null)
             {
                 assignToCard.imageTexture = _defaultTexture;

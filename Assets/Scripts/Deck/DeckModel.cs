@@ -41,6 +41,32 @@ public class DeckModel
     public IReadOnlyList<Enum.PokemonType> SelectedEnergyTypes => _selectedEnergyTypes.AsReadOnly();
     
     // ----------------------------------------------------------------------
+    // カードの順序を更新する（シャッフル結果をデータと同期させるため）
+    // ----------------------------------------------------------------------
+    public void UpdateCardOrder(List<string> newCardIds)
+    {
+        if (newCardIds == null || newCardIds.Count == 0)
+            return;
+            
+        // 既存のカードIDと新しいカードIDの内容が一致するかの確認
+        bool sameContents = _cardIds.Count == newCardIds.Count && 
+                           _cardIds.All(id => newCardIds.Contains(id)) && 
+                           newCardIds.All(id => _cardIds.Contains(id));
+                           
+        if (!sameContents)
+        {
+            Debug.LogWarning("UpdateCardOrder: 新しいカードIDリストが既存のカードと一致しません。更新をスキップします。");
+            return;
+        }
+        
+        // カードIDリストを更新
+        _cardIds.Clear();
+        _cardIds.AddRange(newCardIds);
+        
+        Debug.Log("カードの表示順序を更新しました");
+    }
+    
+    // ----------------------------------------------------------------------
     // デッキメモ（ユーザーが自由に記入できるメモ）
     // ----------------------------------------------------------------------
     [SerializeField] private string _memo = "";
@@ -439,6 +465,8 @@ public class DeckModel
         }
         
         // カードIDからCardModelオブジェクトへの参照を再構築
+        int restoredCount = 0;
+        int missingCount = 0;
         foreach (string cardId in _cardIds)
         {
             CardModel cardModel = CardDatabase.Instance.GetCard(cardId);
@@ -446,15 +474,16 @@ public class DeckModel
             {
                 // カードモデルの参照を保存
                 _cardModels[cardId] = cardModel;
-                Debug.Log($"カードIDの参照を復元しました: {cardId}, カード名: {cardModel.name}");
+                restoredCount++;
             }
             else
             {
+                missingCount++;
                 Debug.LogWarning($"カードID {cardId} に対応するカードモデルが見つかりません。このカードはデッキに表示されない可能性があります。");
             }
         }
         
-        Debug.Log($"デッキ '{Name}' のカード参照を復元しました: {_cardModels.Count}/{_cardIds.Count} 枚");
+        Debug.Log($"デッキ '{Name}' のカード参照を復元しました: {restoredCount}枚成功, {missingCount}枚失敗 (合計: {_cardIds.Count}枚)");
     }
 
     // ----------------------------------------------------------------------
@@ -490,10 +519,6 @@ public class DeckModel
         if (_cardIds == null || _cardIds.Count <= 1)
             return;
             
-        // ソート前のカード情報をログ
-        Debug.Log($"デッキ「{_name}」のソート前: {_cardIds.Count}枚");
-        LogCardOrder("ソート前", _cardIds);
-            
         // カードIDのリストをクローン
         List<string> sortedCardIds = new List<string>(_cardIds);
         
@@ -506,52 +531,8 @@ public class DeckModel
         // 並び替えたIDリストで元のリストを置き換え
         _cardIds = sortedCardIds;
         
-        // ソート後のカード情報をログ
-        LogCardOrder("ソート後", _cardIds);
-        
-        Debug.Log($"デッキ「{_name}」のカードをカードタイプ順→ID順に並び替えました：{_cardIds.Count}枚");
     }
     
-    // ----------------------------------------------------------------------
-    // カードの並び順をログに出力
-    // ----------------------------------------------------------------------
-    private void LogCardOrder(string prefix, List<string> cardIds)
-    {
-        if (cardIds == null || cardIds.Count == 0)
-            return;
-            
-        Debug.Log($"===== {prefix} カード一覧 =====");
-        
-        for (int i = 0; i < cardIds.Count; i++)
-        {
-            string cardId = cardIds[i];
-            CardModel card = GetCardModel(cardId);
-            
-            if (card != null)
-            {
-                string cardType = "";
-                string evolutionStage = "";
-                int priority = GetCardTypeSortPriority(card);
-                
-                // カードタイプまたは進化段階を文字列で表現
-                if (!string.IsNullOrEmpty(card.evolutionStage))
-                {
-                    evolutionStage = $"進化段階: {card.evolutionStage}";
-                }
-                
-                cardType = $"タイプ: {card.cardType}";
-                
-                Debug.Log($"[{i+1:D2}] ID: {cardId}, 名前: {card.name}, {evolutionStage} {cardType}, 優先度: {priority}");
-            }
-            else
-            {
-                Debug.Log($"[{i+1:D2}] ID: {cardId}, カードモデルなし");
-            }
-        }
-        
-        Debug.Log($"===== {prefix} カード一覧終了 =====");
-    }
-
     // ----------------------------------------------------------------------
     // カードタイプに基づいてソート優先度を返す
     // （数値が小さいほど先頭に表示される）

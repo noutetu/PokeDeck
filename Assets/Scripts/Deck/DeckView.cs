@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UniRx;
+using Enum;
 
 // ----------------------------------------------------------------------
 // デッキ画面のUIを管理するクラス
@@ -25,6 +27,9 @@ public class DeckView : MonoBehaviour
     [SerializeField] private Button openDeckListButton; // デッキ一覧を開くボタン
     [SerializeField] private GameObject deckListPanel; // デッキ一覧パネル
 
+    [Header("デッキ操作")]
+    [SerializeField] private Button shuffleButton; // シャッフルボタン
+
     [Header("エネルギー選択UI")]
     [SerializeField] private Button inputEnergyButton; // エネルギー選択ボタン
     [SerializeField] private Image energyImage1; // 1つ目のエネルギーアイコン
@@ -37,7 +42,6 @@ public class DeckView : MonoBehaviour
     private List<GameObject> energyItems = new List<GameObject>(); // エネルギービューアイテムのリスト
     private List<GameObject> selectedEnergyItems = new List<GameObject>(); // 選択されたエネルギービューアイテムのリスト
     private DeckModel currentDeck; // 現在表示中のデッキ
-    private bool eventsInitialized = false; // イベント初期化フラグ
 
     // ----------------------------------------------------------------------
     // Unityライフサイクルメソッド
@@ -49,7 +53,6 @@ public class DeckView : MonoBehaviour
 
         // UIイベントを常に初期化（毎回セットアップするように変更）
         SetupUIEvents();
-        eventsInitialized = true;
 
         // UI要素を初期化
         InitializeUI();
@@ -111,6 +114,14 @@ public class DeckView : MonoBehaviour
                     Debug.LogWarning("デッキリストパネルが設定されていません");
                 }
             });
+        }
+        
+        // シャッフルボタンのクリックイベントを設定
+        if (shuffleButton != null)
+        {
+            // 既存のリスナーをすべて削除して重複を防止
+            shuffleButton.onClick.RemoveAllListeners();
+            shuffleButton.onClick.AddListener(ShuffleDeck);
         }
         
         // 新しいエネルギー選択UIのセットアップ
@@ -519,6 +530,276 @@ public class DeckView : MonoBehaviour
     {
         UpdateEnergyButtonImages();
     }
+
+    // シャッフル中を示すフラグ（連続クリックによるエラーを防止）
+    private bool isShuffling = false;
     
+    // ----------------------------------------------------------------------
+    // デッキシャッフル機能
+    // ----------------------------------------------------------------------
+    
+    /// <summary>
+    /// デッキをシャッフル（表示順をランダムに並び替え）します。
+    /// シャッフル結果はデータとUIの両方に反映します。
+    /// 最初の5枚の中にたねポケモンが含まれるように調整します。
+    /// </summary>
+    public void ShuffleDeck()
+    {
+        // シャッフル中の場合は処理をスキップ
+        if (isShuffling)
+        {
+            return;
+        }
+
+        // デッキが表示されていない、またはカードがない場合は処理しない
+        if (currentDeck == null || cardItems.Count == 0)
+        {
+            FeedbackContainer.Instance?.ShowFailureFeedback("デッキにカードがありません");
+            return;
+        }
+
+        // シャッフル開始
+        isShuffling = true;
+        
+        try
+        {
+            // GameObject参照とCardModelの両方を保持する一時的なリスト
+            List<(GameObject gameObject, CardModel cardModel, string cardId)> cardTriples = new List<(GameObject, CardModel, string)>();
+            
+            // 現在のカードアイテムとCardModelとIDのトリプルを作成
+            for (int i = 0; i < cardItems.Count && i < currentDeck.CardIds.Count; i++)
+            {
+                string cardId = currentDeck.CardIds[i];
+                CardModel cardModel = currentDeck.GetCardModel(cardId);
+                
+                // CardModelが取得できた場合のみトリプルを作成
+                if (cardModel != null)
+                {
+                    cardTriples.Add((cardItems[i], cardModel, cardId));
+                }
+            }
+            
+            // デッキにたねポケモンが含まれていない場合は処理しない
+            if (!CheckIfDeckContainsBasicPokemon(cardTriples))
+            {
+                FeedbackContainer.Instance?.ShowFailureFeedback("デッキにたねポケモンが含まれていません");
+                return;
+            }
+    
+            // 有効なシャッフル結果を得るまで繰り返す
+            int maxAttempts = 50; // 最大試行回数を制限
+            int attempts = 0;
+            bool hasBasicPokemon = false;
+            
+            while (!hasBasicPokemon && attempts < maxAttempts)
+            {
+                attempts++;
+                
+                // カードトリプルをシャッフル
+                ShuffleList(cardTriples);
+                
+                // 最初の5枚にたねポケモンが含まれるかチェック
+                hasBasicPokemon = CheckForBasicPokemonInFirstN(cardTriples, 5);
+            }
+            
+            // シャッフル後のカードIDリストを作成（データ更新用）
+            List<string> newCardIds = new List<string>();
+            foreach (var triple in cardTriples)
+            {
+                newCardIds.Add(triple.cardId);
+            }
+            
+            // デッキモデルのカード順序を更新 (データ側の更新)
+            currentDeck.UpdateCardOrder(newCardIds);
+            
+            // UIのリフレッシュ
+            ClearCardContainer();
+            
+            // 新しい順序でカードアイテムを再配置
+            for (int i = 0; i < cardTriples.Count; i++)
+            {
+                GameObject cardItem = cardTriples[i].gameObject;
+                cardItem.transform.SetParent(cardContainer);
+                cardItem.transform.SetSiblingIndex(i);
+            }
+            
+            // カードアイテムの参照リストも最新の順序で更新
+            cardItems.Clear();
+            foreach (var triple in cardTriples)
+            {
+                cardItems.Add(triple.gameObject);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"シャッフル処理でエラーが発生しました: {ex.Message}\n{ex.StackTrace}");
+            FeedbackContainer.Instance?.ShowFailureFeedback("シャッフル処理でエラーが発生しました");
+        }
+        finally
+        {
+            // シャッフル処理完了のフラグをリセット
+            isShuffling = false;
+        }
+    }
+    
+    /// <summary>
+    /// カードコンテナの子オブジェクトをすべて一時的に取り外す（親子関係をクリア）
+    /// </summary>
+    private void ClearCardContainer()
+    {
+        if (cardContainer == null) return;
+        
+        // 子オブジェクトのリストを作成（削除中にコレクションが変更されるのを防ぐため）
+        List<Transform> children = new List<Transform>();
+        foreach (Transform child in cardContainer)
+        {
+            children.Add(child);
+        }
+        
+        // 各子オブジェクトを親から切り離す
+        foreach (Transform child in children)
+        {
+            child.SetParent(null);
+        }
+    }
+    
+    /// <summary>
+    /// デッキ内にたねポケモンが含まれているかをチェック
+    /// </summary>
+    private bool CheckIfDeckContainsBasicPokemon(List<(GameObject gameObject, CardModel cardModel, string cardId)> cardTriples)
+    {
+        if (cardTriples == null || cardTriples.Count == 0)
+            return false;
+            
+        foreach (var triple in cardTriples)
+        {
+            CardModel cardModel = triple.cardModel;
+            if (cardModel != null && 
+                (cardModel.cardTypeEnum == Enum.CardType.非EX || cardModel.cardTypeEnum == Enum.CardType.EX) && 
+                cardModel.evolutionStageEnum == Enum.EvolutionStage.たね)
+            {
+                return true; // たねポケモン発見
+            }
+        }
+        
+        return false; // たねポケモンなし
+    }
+    
+    /// <summary>
+    /// 先頭N枚の中にたねポケモンが含まれているかをチェック
+    /// </summary>
+    private bool CheckForBasicPokemonInFirstN(List<(GameObject gameObject, CardModel cardModel, string cardId)> cardTriples, int n)
+    {
+        if (cardTriples == null || cardTriples.Count == 0 || n <= 0)
+            return false;
+            
+        int checkCount = Math.Min(n, cardTriples.Count);
+            
+        // 先頭N枚をチェック
+        for (int i = 0; i < checkCount; i++)
+        {
+            CardModel cardModel = cardTriples[i].cardModel;
+            if (cardModel != null && 
+                (cardModel.cardTypeEnum == Enum.CardType.非EX || cardModel.cardTypeEnum == Enum.CardType.EX) && 
+                cardModel.evolutionStageEnum == Enum.EvolutionStage.たね)
+            {
+                return true; // たねポケモン発見
+            }
+        }
+        
+        return false; // たねポケモンなし
+    }
+    
+    /// <summary>
+    /// 指定された枚数の中にたねポケモンが含まれるかをチェックする
+    /// </summary>
+    /// <param name="cardPairs">チェックするカードペアのリスト</param>
+    /// <param name="count">チェックする先頭のカード枚数</param>
+    /// <returns>たねポケモンが含まれる場合はtrue</returns>
+    private bool CheckForBasicPokemon(List<(GameObject gameObject, CardModel cardModel)> cardPairs, int count)
+    {
+        // リストが空か指定枚数より少ない場合は無効
+        if (cardPairs == null || cardPairs.Count == 0 || count <= 0)
+            return false;
+            
+        // 実際にチェックする枚数（リストの枚数が少ない場合は全枚数）
+        int checkCount = Math.Min(count, cardPairs.Count);
+        
+        // 先頭の指定枚数をチェック
+        for (int i = 0; i < checkCount; i++)
+        {
+            CardModel cardModel = cardPairs[i].cardModel;
+            if (cardModel != null && 
+                (cardModel.cardTypeEnum == Enum.CardType.非EX || cardModel.cardTypeEnum == Enum.CardType.EX) && 
+                cardModel.evolutionStageEnum == Enum.EvolutionStage.たね)
+            {
+                return true; // たねポケモン発見
+            }
+        }
+        
+        return false; // たねポケモンなし
+    }
+    
+    /// <summary>
+    /// リストをランダムにシャッフルするヘルパーメソッド（Fisher-Yatesアルゴリズム）
+    /// </summary>
+    private void ShuffleList<T>(List<T> list)
+    {
+        System.Random random = new System.Random();
+        int n = list.Count;
+        
+        while (n > 1)
+        {
+            n--;
+            int k = random.Next(n + 1);
+            T value = list[k];
+            list[k] = list[n];
+            list[n] = value;
+        }
+    }
+    
+    // ----------------------------------------------------------------------
+    // リソース解放処理
+    // ----------------------------------------------------------------------
+    private void OnDestroy()
+    {
+        // イベントのクリーンアップ
+        
+        // デッキ名変更イベントを解除
+        if (deckNameInput != null)
+        {
+            deckNameInput.onEndEdit.RemoveListener(OnDeckNameChanged);
+        }
+        
+        // デッキメモ変更イベントを解除
+        if (deckMemoInput != null)
+        {
+            deckMemoInput.onEndEdit.RemoveListener(OnDeckMemoChanged);
+        }
+        
+        // 保存ボタンイベントを解除
+        if (saveButton != null)
+        {
+            saveButton.onClick.RemoveListener(OnSaveButtonClicked);
+        }
+        
+        // 新規デッキボタンイベントを解除
+        if (newDeckButton != null)
+        {
+            newDeckButton.onClick.RemoveListener(OnNewDeckButtonClicked);
+        }
+        
+        // シャッフルボタンイベントを解除
+        if (shuffleButton != null)
+        {
+            shuffleButton.onClick.RemoveListener(ShuffleDeck);
+        }
+        
+        // エネルギー選択パネルのイベントを解除
+        if (setEnergyPanel != null)
+        {
+            setEnergyPanel.OnEnergyTypeSelected -= OnEnergyTypesSelected;
+        }
+    }
     
 }
