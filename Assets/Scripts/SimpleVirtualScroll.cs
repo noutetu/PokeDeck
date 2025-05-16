@@ -323,7 +323,7 @@ public class SimpleVirtualScroll : MonoBehaviour
                             rectTransform.sizeDelta = new Vector2(cellWidth, cellHeight);
                             
                             // データを設定（Setupメソッドを使用）
-                            card.Setup(allCards[i]);
+                            card.SetImage(allCards[i]);
                             
                             // アクティブにする
                             card.gameObject.SetActive(true);

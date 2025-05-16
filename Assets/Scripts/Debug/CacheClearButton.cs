@@ -1,11 +1,10 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
-using TMPro;
 using System.Collections;
 
 // ----------------------------------------------------------------------
-// デバッグ用のキャッシュクリアボタン制御スクリプト
+// キャッシュクリアボタン制御スクリプト
 // このスクリプトは、キャッシュのクリアや完全リセットを行うボタンの制御を担当します。
 // 主な機能:
 // - キャッシュクリアボタンのクリックイベント処理
@@ -15,16 +14,21 @@ using System.Collections;
 // ----------------------------------------------------------------------
 public class CacheClearButton : MonoBehaviour
 {
+    [Header("キャッシュクリアボタン")]
     [SerializeField] private Button fullResetButton;
     
     [Header("再起動設定")]
     [SerializeField] private float restartDelay = 1.5f; // 再起動までの待機時間（秒）
     [SerializeField] private bool restartAfterFullReset = true; // 完全リセット後に再起動するか
     
+    // ----------------------------------------------------------------------
+    // 初期化処理
+    // ----------------------------------------------------------------------
     private void Start()
     {
         if (fullResetButton != null)
         {
+            // ボタンのクリックイベントにFullResetメソッドを登録
             fullResetButton.onClick.AddListener(FullReset);
         }
     }
@@ -35,9 +39,11 @@ public class CacheClearButton : MonoBehaviour
     {
         if (CardDatabase.Instance != null)
         {
+            // キャッシュクリアの処理を実行
             SetStatusText("完全リセット中...");
             CardDatabase.Instance.FullReset();
-            
+
+            // 完全リセット後の処理
             if (restartAfterFullReset)
             {
                 StartCoroutine(RestartScene("再読み込みします..."));
@@ -46,10 +52,6 @@ public class CacheClearButton : MonoBehaviour
             {
                 StartCoroutine(ShowStatus("完全リセット完了！", 2f));
             }
-        }
-        else
-        {
-            SetStatusText("エラー: CardDatabaseが見つかりません");
         }
     }
 
@@ -61,12 +63,15 @@ public class CacheClearButton : MonoBehaviour
         FeedbackContainer.Instance?.ShowSuccessFeedback(message);
     }
     
+    // ----------------------------------------------------------------------
+    // ステータス表示を一定時間後にリセット
+    // ----------------------------------------------------------------------
     private IEnumerator ShowStatus(string message, float duration)
     {
         SetStatusText(message);
-        
+
         yield return new WaitForSeconds(duration);
-        
+
         SetStatusText("準備完了");
     }
     
@@ -83,8 +88,6 @@ public class CacheClearButton : MonoBehaviour
         // 現在のシーンを再読み込み
         Scene currentScene = SceneManager.GetActiveScene();
         SceneManager.LoadScene(currentScene.name);
-        
-        Debug.Log($"[CacheClearButton] シーン '{currentScene.name}' を再起動しました。");
     }
     
     // ----------------------------------------------------------------------

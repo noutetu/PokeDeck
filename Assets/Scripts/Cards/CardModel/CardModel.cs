@@ -51,7 +51,7 @@ public class CardModel
     public EvolutionStage evolutionStageEnum; // 文字列から変換後の進化段階
     public WeaknessType weaknessEnum;    // 文字列から変換後の弱点タイプ
     public CardPack packEnum;            // 文字列から変換後のカードパック
-    public CardTag tagsEnum;             // 文字列から変換後のカードタグ（ビットフラグ）
+    // public CardTag tagsEnum;             // 文字列から変換後のカードタグ（ビットフラグ/今後追加の可能性高）
     
     // ----------------------------------------------------------------------
     // Jsonデータ受信後に文字列から列挙型への変換を行うメソッド

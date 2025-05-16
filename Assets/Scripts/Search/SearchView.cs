@@ -369,7 +369,7 @@ public class SearchView : MonoBehaviour
             
             if (cardView != null)
             {
-                cardView.Setup(card);
+                cardView.SetImage(card);
             }
         }
         

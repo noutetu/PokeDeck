@@ -142,17 +142,7 @@ public class CardUIManager : MonoBehaviour
 
                     // 初期カードをロード
                     presenter.LoadCards(initialCards);
-
-                    Debug.Log($"④ 初期表示：{displayCount}枚のカードを表示（残り{remainingCards.Count}枚）");
                 }
-                else
-                {
-                    Debug.LogWarning("表示するカードがありません");
-                }
-            }
-            else
-            {
-                Debug.LogError("AllCardViewが設定されていません");
             }
 
             // スクロールビューの初期化
@@ -180,10 +170,6 @@ public class CardUIManager : MonoBehaviour
             // 検索結果が適用されたときに呼ばれるイベントハンドラを登録
             SearchNavigator.Instance.OnSearchResult += HandleSearchResult;
         }
-        else
-        {
-            Debug.LogWarning("SearchRouter.Instanceが見つかりません");
-        }
     }
 
     // ----------------------------------------------------------------------
@@ -191,8 +177,6 @@ public class CardUIManager : MonoBehaviour
     // ----------------------------------------------------------------------
     private void HandleSearchResult(List<CardModel> searchResults)
     {
-        Debug.Log($"検索結果を受信: {searchResults.Count}枚のカード");
-
         // 現在表示されているカードをすべてクリア
         presenter.ClearCards();
 
@@ -208,7 +192,6 @@ public class CardUIManager : MonoBehaviour
         int total = filteredCards.Count;
         // 初期表示数を調整
         int displayCount = Mathf.Min(initialCardCount, total);
-        Debug.Log($"🔍 フィルタリング結果の表示: 全{total}枚中、初期表示は{displayCount}枚");
 
         // 初期表示用カードを読み込む
         List<CardModel> initialCards = new List<CardModel>();
@@ -252,11 +235,6 @@ public class CardUIManager : MonoBehaviour
                 scrollRect.onValueChanged.AddListener(OnScrollValueChanged);
                 // 初回の誤発火を無視
                 ignoreScrollEvent = true;
-                Debug.Log("スクロールビューを初期化しました");
-            }
-            else
-            {
-                Debug.LogWarning("ScrollRectコンポーネントが見つかりませんでした");
             }
         }
     }
@@ -326,10 +304,6 @@ public class CardUIManager : MonoBehaviour
                 searchPanel.SetActive(false);
             }
         }
-        else
-        {
-            Debug.LogError("❌ SearchRouterのインスタンスが取得できませんでした");
-        }
     }
 
     // ----------------------------------------------------------------------
@@ -337,21 +311,20 @@ public class CardUIManager : MonoBehaviour
     // ----------------------------------------------------------------------
     private async UniTask LoadJsonAndInitializeAsync()
     {
-        Debug.Log("🟢 JSON取得開始");
-
         try
         {
+            // JSONファイルをリモートから取得
             using var request = UnityWebRequest.Get(jsonUrl);
             await request.SendWebRequest();
 
+            // リクエストが成功した場合
             if (request.result == UnityWebRequest.Result.Success)
             {
+                // JSONデータを取得
                 var jsonText = request.downloadHandler.text;
 
                 // 取得したJSONをAllCardModelにデシリアライズ
                 var loadedModel = JsonConvert.DeserializeObject<AllCardModel>(jsonText);
-
-                Debug.Log("📷 カードデータを設定します");
 
                 // 全カードを保存（検索用）
                 allCards = loadedModel.GetAllCards();
@@ -368,13 +341,10 @@ public class CardUIManager : MonoBehaviour
             }
             else
             {
-                Debug.LogError("❌ JSON読み込み失敗: " + request.error);
-
                 // フォールバック: StreamingAssetsからローカルJSONを読み込む
                 string localPath = Path.Combine(Application.streamingAssetsPath, "cards.json");
                 if (File.Exists(localPath))
                 {
-                    Debug.Log("🔄 ローカルJSON読み込み: " + localPath);
                     string localJson = File.ReadAllText(localPath);
                     var loadedModel = JsonConvert.DeserializeObject<AllCardModel>(localJson);
                     allCards = loadedModel.GetAllCards();
@@ -384,16 +354,11 @@ public class CardUIManager : MonoBehaviour
                         searchView.SetCards(loadedModel.GetAllCards());
                     }
                 }
-                else
-                {
-                    Debug.LogWarning("⚠️ フォールバック用ローカルJSONが見つかりません: " + localPath);
-                }
             }
         }
         catch (System.Exception ex)
         {
             Debug.LogError("❌ JSONロード中に予期せぬエラーが発生しました: " + ex.Message);
-            // ここでは例外を再スローせず初期化を継続します
         }
     }
 
@@ -412,7 +377,6 @@ public class CardUIManager : MonoBehaviour
         {
             // 次のバッチサイズを決定
             int batchSize = Mathf.Min(lazyLoadBatchSize, remainingCards.Count);
-            Debug.Log($"🔄 次の{batchSize}枚のカードを読み込みます（残り{remainingCards.Count}枚）");
 
             // バッチを取得
             List<CardModel> nextBatch = remainingCards.GetRange(0, batchSize);
@@ -453,8 +417,6 @@ public class CardUIManager : MonoBehaviour
 
             // 残りのリストから削除
             remainingCards.RemoveRange(0, batchSize);
-
-            Debug.Log($"🔄 カードを追加表示しました。残り{remainingCards.Count}枚");
         }
         finally
         {

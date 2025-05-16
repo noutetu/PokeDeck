@@ -1,9 +1,11 @@
-using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Enum
 {
+    // ======================================================================
+    // EnumConverter
+    // Json文字列をEnumに変換するクラス
+    // ======================================================================
     public static class EnumConverter
     {
         // ----------------------------------------------------------------------
@@ -48,7 +50,7 @@ namespace Enum
         // ----------------------------------------------------------------------
         public static PokemonType ToPokemonType(string typeString)
         {
-            
+
             switch (typeString)
             {
                 case "草": return PokemonType.草;
@@ -87,8 +89,7 @@ namespace Enum
             }
         }
 
-        // 今後追加の可能性あり
-        
+        // 今後追加の可能性高
         /*
         // ----------------------------------------------------------------------
         // 文字列のリストからCardTagsのフラグを生成

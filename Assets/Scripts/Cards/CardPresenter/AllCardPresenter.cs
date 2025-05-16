@@ -56,7 +56,6 @@ public class AllCardPresenter
         // CardDatabaseにもカードを登録して永続化（アプリ再起動時にも使えるように）
         if (CardDatabase.Instance != null)
         {
-            Debug.Log($"🔄 AllCardPresenter: {cards.Count}枚のカードをCardDatabaseに登録します");
             foreach (var card in cards)
             {
                 CardDatabase.Instance.RegisterCard(card, false); // 保存しないように設定
@@ -68,10 +67,6 @@ public class AllCardPresenter
                 CardDatabase.Instance.SaveCardDatabase();
             }
         }
-        else
-        {
-            Debug.LogWarning("⚠️ AllCardPresenter: CardDatabaseが初期化されていません。カードデータの永続化ができません。");
-        }
         
         // 表示用コレクションをクリアして新しいデータを追加
         DisplayedCards.Clear();
@@ -82,8 +77,6 @@ public class AllCardPresenter
         
         // 読み込み完了イベントを発行（Viewが購読して表示を更新）
         OnLoadComplete.OnNext(Unit.Default);
-        
-        Debug.Log($"✅ AllCardPresenter: {cards.Count}枚のカードを読み込みました");
     }
 
     // ----------------------------------------------------------------------
@@ -107,7 +100,6 @@ public class AllCardPresenter
         // CardDatabaseにも新しいカードを登録
         if (CardDatabase.Instance != null)
         {
-            Debug.Log($"🔄 AllCardPresenter: 新しく{uniqueNewCards.Count}枚のカードをCardDatabaseに登録します");
             foreach (var card in uniqueNewCards)
             {
                 CardDatabase.Instance.RegisterCard(card, false); // 保存しないように設定
@@ -131,8 +123,6 @@ public class AllCardPresenter
         
         // 読み込み完了イベントを発行（Viewが購読して表示を更新）
         OnLoadComplete.OnNext(Unit.Default);
-        
-        Debug.Log($"✅ AllCardPresenter: 新しく{uniqueNewCards.Count}枚のカードを追加しました（合計: {DisplayedCards.Count}枚）");
 
         await Task.CompletedTask;
     }
@@ -148,7 +138,5 @@ public class AllCardPresenter
         
         // 読み込み完了イベントを発行（Viewが購読して表示を更新）
         OnLoadComplete.OnNext(Unit.Default);
-        
-        Debug.Log("🧹 AllCardPresenter: 表示カードをクリアしました");
     }
 }

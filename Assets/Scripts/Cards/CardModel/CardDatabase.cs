@@ -167,42 +167,6 @@ public class CardDatabase : MonoBehaviour
         }
         return null;
     }
-
-    // ----------------------------------------------------------------------
-    /// カード名からカードIDのリストを取得
-    // ----------------------------------------------------------------------
-    public List<string> GetCardIdsByName(string cardName)
-    {
-        List<string> result = new List<string>();
-        foreach (var pair in cardCache)
-        {
-            if (pair.Value.name == cardName)
-            {
-                result.Add(pair.Key);
-            }
-        }
-        return result;
-    }
-    
-    // ----------------------------------------------------------------------
-    /// 名前から同名カードのID文字列リストを取得（互換性維持用）
-    // ----------------------------------------------------------------------
-    public List<string> GetCardIdStringsByName(string cardName)
-    {
-        List<string> result = new List<string>();
-        List<string> numericIds = GetCardIdsByName(cardName);
-        
-        foreach (string id in numericIds)
-        {
-            CardModel card = GetCard(id);
-            if (card != null && !string.IsNullOrEmpty(card.id))
-            {
-                result.Add(card.id);
-            }
-        }
-        
-        return result;
-    }
     
     // ----------------------------------------------------------------------
     /// 全カードを取得
@@ -210,12 +174,12 @@ public class CardDatabase : MonoBehaviour
     public static List<CardModel> GetAllCards()
     {
         List<CardModel> result = new List<CardModel>();
-        
+
         foreach (var card in Instance.cardCache.Values)
         {
             result.Add(card);
         }
-        
+
         return result;
     }
     
@@ -465,7 +429,7 @@ public class CardDatabase : MonoBehaviour
     }
 
     // ----------------------------------------------------------------------
-    /// デバッグ用：保存されたカードデータファイルを削除する
+    // 保存されたカードデータファイルを削除する
     // ----------------------------------------------------------------------
     public bool ClearCardDataFile()
     {
@@ -492,7 +456,7 @@ public class CardDatabase : MonoBehaviour
     }
 
     // ----------------------------------------------------------------------
-    /// デバッグ用：完全にキャッシュをリセット（メモリ＆ファイル）
+    /// 完全にキャッシュをリセット（メモリ＆ファイル）
     // ----------------------------------------------------------------------
     public void FullReset()
     {

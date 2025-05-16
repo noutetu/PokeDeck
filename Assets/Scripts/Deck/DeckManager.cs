@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Networking;
 using Newtonsoft.Json;
 using Cysharp.Threading.Tasks; // UniTask用
 
@@ -36,7 +35,7 @@ public class DeckManager : MonoBehaviour
     // ----------------------------------------------------------------------
     private DeckModel _currentDeck;
     public DeckModel CurrentDeck => _currentDeck;
-    
+
     // ----------------------------------------------------------------------
     // 保存されているデッキリスト
     // ----------------------------------------------------------------------
@@ -60,6 +59,12 @@ public class DeckManager : MonoBehaviour
     private bool _isDeckPanelVisible = false;
     public bool IsDeckPanelVisible => _isDeckPanelVisible;
 
+    // ----------------------------------------------------------------------
+    // サンプルデッキ設定（Inspector上で設定可能）
+    // ----------------------------------------------------------------------
+    [Header("サンプルデッキ設定")]
+    [SerializeField] private bool createSampleDecksWhenEmpty = true;
+    [SerializeField] private List<SampleDeckConfig> sampleDecks = new List<SampleDeckConfig>();
 
     // ----------------------------------------------------------------------
     // Unityの初期化メソッド
@@ -75,30 +80,30 @@ public class DeckManager : MonoBehaviour
 
         _instance = this;
         DontDestroyOnLoad(gameObject);
-        
+
         // 初期化をUniTaskで実行
         await InitializeAsync();
     }
-    
+
     // ----------------------------------------------------------------------
     // UniTaskを使ってCardDatabaseの初期化を待機し、DeckManagerを初期化する
     // ----------------------------------------------------------------------
     private async UniTask InitializeAsync()
     {
         Debug.Log("🔄 DeckManager: 初期化を開始します");
-        
+
         try
         {
             // CardDatabaseの初期化完了を待機
             float startTime = Time.time;
             await CardDatabase.WaitForInitializationAsync();
             float waitTime = Time.time - startTime;
-            
+
             // CardDatabaseが正しく初期化されているか確認
             if (CardDatabase.Instance != null)
             {
                 Debug.Log($"✅ DeckManager: カードデータベースの初期化完了 (待機時間: {waitTime:F1}秒)");
-                
+
                 // カードデータベースに登録されているカード数をログ出力
                 Debug.Log($"📊 CardDatabase: 登録済みカード数: {CardDatabase.GetAllCards().Count}枚");
             }
@@ -106,22 +111,18 @@ public class DeckManager : MonoBehaviour
             {
                 Debug.LogError("❌ DeckManager: カードデータベースの初期化に失敗しました。デッキのカード情報が正しく復元されない可能性があります。");
             }
-            
+
             // カードデータベースが利用可能になったらデッキを読み込む
             LoadDecks();
+
+            // 最初のデッキを選択
+            _currentDeck = _savedDecks[0];
+
+            // カード参照の復元
+            RestoreCardReferencesInDecks();
+            Debug.Log($"既存デッキ {_savedDecks.Count}個のカード参照を復元しました");
             
-            // 常に新しいデッキを作成
-            _currentDeck = new DeckModel { Name = "新規デッキ" };
-            Debug.Log("📝 DeckManager: 新規デッキを作成しました");
-            
-            // 既存のデッキが存在する場合はカード参照を復元
-            if (_savedDecks.Count > 0)
-            {
-                // カード参照の復元
-                RestoreCardReferencesInDecks();
-                Debug.Log($"既存デッキ {_savedDecks.Count}個のカード参照を復元しました");
-            }
-            
+
             Debug.Log($"✅ DeckManager初期化完了: {_savedDecks.Count}個のデッキが読み込まれ、新規デッキが作成されました");
 
             // パネルの初期状態は非表示
@@ -157,7 +158,7 @@ public class DeckManager : MonoBehaviour
         if (_currentDeck.CardCount == 0)
         {
             Debug.Log($"デッキ '{_currentDeck.Name}' にカードが含まれていないため保存をスキップします");
-            
+
             // ユーザーにフィードバックを表示
             if (FeedbackContainer.Instance != null)
             {
@@ -169,7 +170,7 @@ public class DeckManager : MonoBehaviour
         if (_currentDeck.CardCount > DeckModel.MAX_CARDS)
         {
             Debug.Log($"デッキ '{_currentDeck.Name}' のカード数が{_currentDeck.CardCount}枚で、{DeckModel.MAX_CARDS}枚を超えているため保存できません");
-            
+
             // ユーザーにフィードバックを表示
             if (FeedbackContainer.Instance != null)
             {
@@ -181,7 +182,7 @@ public class DeckManager : MonoBehaviour
         // カードテクスチャのロード処理を開始
         StartCoroutine(LoadCardTexturesAndSaveDeck());
     }
-    
+
     // ----------------------------------------------------------------------
     // カードテクスチャをロードしてデッキを保存するコルーチン
     // ----------------------------------------------------------------------
@@ -189,13 +190,13 @@ public class DeckManager : MonoBehaviour
     {
         // ロード開始ログ
         Debug.Log($"デッキ '{_currentDeck.Name}' のカード画像読み込みを開始...");
-        
+
         // ローディングインジケータを表示
         if (FeedbackContainer.Instance != null)
         {
             FeedbackContainer.Instance.ShowSuccessFeedback("デッキ画像を準備中...");
         }
-        
+
         // テクスチャ読み込み対象のカードをリストアップ
         List<CardModel> cardsToLoad = new List<CardModel>();
         foreach (string cardId in _currentDeck.CardIds)
@@ -206,13 +207,13 @@ public class DeckManager : MonoBehaviour
                 cardsToLoad.Add(card);
             }
         }
-        
+
         // 読み込み対象カード数をログ出力
         Debug.Log($"読み込み対象カード: {cardsToLoad.Count}枚");
-        
+
         // 実際の読み込み処理
         int loadedCount = 0;
-        
+
         // ImageCacheManagerを使って画像をロード
         if (ImageCacheManager.Instance != null)
         {
@@ -223,10 +224,10 @@ public class DeckManager : MonoBehaviour
                 {
                     FeedbackContainer.Instance.ShowSuccessFeedback($"画像を準備中... ({loadedCount}/{cardsToLoad.Count})");
                 }
-                
+
                 // ImageCacheManagerを使用してカード画像を読み込む
                 yield return ImageCacheManager.Instance.GetCardTextureAsync(card).ToCoroutine();
-                
+
                 loadedCount++;
                 Debug.Log($"カード画像を読み込みました: {card.name} ({loadedCount}/{cardsToLoad.Count})");
             }
@@ -235,13 +236,13 @@ public class DeckManager : MonoBehaviour
         {
             Debug.LogError("ImageCacheManagerが見つかりません。カード画像を読み込めませんでした。");
         }
-        
+
         // デッキをID順とカードタイプ順に並べ替え
         _currentDeck.SortCardsByTypeAndID();
-        
+
         // デッキ保存前にカードモデルキャッシュを構築
         _currentDeck.RestoreCardReferences();
-        
+
         // 既存のデッキを更新または新規追加
         bool found = false;
         for (int i = 0; i < _savedDecks.Count; i++)
@@ -261,7 +262,7 @@ public class DeckManager : MonoBehaviour
 
         // 全デッキをJSON形式で保存（シンプルな形式）
         SaveDecks();
-        
+
         // 保存成功のフィードバックを表示
         if (FeedbackContainer.Instance != null)
         {
@@ -276,7 +277,7 @@ public class DeckManager : MonoBehaviour
                 }
                 energyInfo = $"（エネルギー: {string.Join(", ", typeNames)}）";
             }
-            
+
             if (cardsToLoad.Count > 0)
             {
                 FeedbackContainer.Instance.ShowSuccessFeedback($"画像の準備が完了しました。デッキ '{_currentDeck.Name}' を保存しました{energyInfo}");
@@ -286,10 +287,10 @@ public class DeckManager : MonoBehaviour
                 FeedbackContainer.Instance.ShowSuccessFeedback($"デッキ '{_currentDeck.Name}' を保存しました{energyInfo}");
             }
         }
-        
+
         Debug.Log($"デッキ '{_currentDeck.Name}' の保存が完了しました（読み込んだ画像: {loadedCount}枚）");
     }
-    
+
     // ----------------------------------------------------------------------
     // 指定名のデッキを削除
     // ----------------------------------------------------------------------
@@ -327,7 +328,7 @@ public class DeckManager : MonoBehaviour
             Debug.Log($"デッキ '{deckName}' を選択しました");
             return true;
         }
-        
+
         Debug.LogWarning($"デッキ '{deckName}' が見つかりません");
         return false;
     }
@@ -339,7 +340,7 @@ public class DeckManager : MonoBehaviour
     {
         // シンプル化されたデッキデータを作成
         var simplifiedDecks = new List<SimplifiedDeck>();
-        
+
         foreach (var deck in _savedDecks)
         {
             var simpleDeck = new SimplifiedDeck
@@ -349,23 +350,23 @@ public class DeckManager : MonoBehaviour
                 SelectedEnergyTypes = new List<int>(),
                 Memo = deck.Memo
             };
-            
+
             // 選択されたエネルギータイプをintに変換して保存
             foreach (var energyType in deck.SelectedEnergyTypes)
             {
                 simpleDeck.SelectedEnergyTypes.Add((int)energyType);
             }
-            
+
             simplifiedDecks.Add(simpleDeck);
         }
-        
+
         // JSONシリアライズ設定（きれいに整形）
         var settings = new JsonSerializerSettings
         {
             Formatting = Formatting.Indented,
             ReferenceLoopHandling = ReferenceLoopHandling.Ignore
         };
-        
+
         // JSONに変換して保存
         string json = JsonConvert.SerializeObject(simplifiedDecks, settings);
         File.WriteAllText(SavePath, json);
@@ -384,7 +385,7 @@ public class DeckManager : MonoBehaviour
             deck.OnAfterDeserialize();
             deck.SortCardsByID(); // 読み込み後にカードをID順に並べ替え
         }
-        
+
         // 現在のデッキも初期化
         if (_currentDeck != null)
         {
@@ -403,29 +404,30 @@ public class DeckManager : MonoBehaviour
             try
             {
                 string json = File.ReadAllText(SavePath);
-                
+
                 // まず簡易版としてデシリアライズを試みる
                 List<SimplifiedDeck> simplifiedDecks = JsonConvert.DeserializeObject<List<SimplifiedDeck>>(json);
-                
+
                 if (simplifiedDecks != null && simplifiedDecks.Count > 0)
                 {
                     // 簡易版が成功したら、正式なDeckオブジェクトに変換
                     _savedDecks = new List<DeckModel>();
-                    
+
                     foreach (var simpleDeck in simplifiedDecks)
                     {
-                        DeckModel newDeck = new DeckModel { 
+                        DeckModel newDeck = new DeckModel
+                        {
                             Name = simpleDeck.Name,
                             Memo = simpleDeck.Memo ?? "" // nullの場合は空文字列を設定
                         };
-                        
+
                         // カードIDを追加（カードモデル情報はRestoreCardReferencesで復元）
                         foreach (string cardId in simpleDeck.CardIds)
                         {
                             // シンプルに追加（IDのみ）
                             newDeck._AddCardId(cardId);
                         }
-                        
+
                         // エネルギータイプを復元（存在する場合）
                         if (simpleDeck.SelectedEnergyTypes != null && simpleDeck.SelectedEnergyTypes.Count > 0)
                         {
@@ -445,7 +447,7 @@ public class DeckManager : MonoBehaviour
                                         Debug.LogWarning($"無効なエネルギータイプ値: {energyTypeInt}、スキップします");
                                     }
                                 }
-                                
+
                                 Debug.Log($"デッキ '{newDeck.Name}' からエネルギータイプを {newDeck.SelectedEnergyTypes.Count} 個復元しました");
                             }
                             catch (System.Exception ex)
@@ -454,10 +456,10 @@ public class DeckManager : MonoBehaviour
                                 // エラーが発生しても処理を続行
                             }
                         }
-                        
+
                         _savedDecks.Add(newDeck);
                     }
-                    
+
                     Debug.Log($"デッキデータを簡易形式で読み込みました: {_savedDecks.Count}個のデッキ");
                 }
                 else
@@ -465,11 +467,17 @@ public class DeckManager : MonoBehaviour
                     // 簡易形式が読み込めなかった場合は新規作成
                     _savedDecks = new List<DeckModel>();
                     Debug.LogWarning("デッキデータを読み込めませんでした。新規作成します。");
+
+                    // デッキがなければサンプルデッキを作成
+                    if (createSampleDecksWhenEmpty)
+                    {
+                        CreateSampleDecks();
+                    }
                 }
-                
+
                 // カードデータベースが準備されているか確認
                 EnsureCardDatabaseLoaded();
-                
+
                 // 読み込み後の初期化処理
                 InitializeLoadedDecks();
             }
@@ -477,12 +485,24 @@ public class DeckManager : MonoBehaviour
             {
                 Debug.LogError($"デッキデータの読み込み中にエラーが発生しました: {e.Message}");
                 _savedDecks = new List<DeckModel>();
+
+                // エラーの場合もサンプルデッキを作成
+                if (createSampleDecksWhenEmpty)
+                {
+                    CreateSampleDecks();
+                }
             }
         }
         else
         {
             _savedDecks = new List<DeckModel>();
             Debug.Log("デッキデータが見つかりません。新規作成します。");
+
+            // ファイルがない場合はサンプルデッキを作成
+            if (createSampleDecksWhenEmpty)
+            {
+                CreateSampleDecks();
+            }
         }
     }
 
@@ -519,7 +539,7 @@ public class DeckManager : MonoBehaviour
         if (missingCardIds.Count > 0)
         {
             Debug.LogWarning($"カードデータベースに存在しないカードが {missingCardIds.Count} 個あります。これらのカードはデッキに表示されない可能性があります。");
-            
+
             // ここでAllCardModelやAllCardPresenterと連携して、不足しているカードを読み込む処理を追加することも可能
         }
     }
@@ -562,7 +582,7 @@ public class DeckManager : MonoBehaviour
         // 重複するカードを避けるためのハッシュセット
         var processedCards = new HashSet<string>();
         var tasks = new List<UniTask>();
-        
+
         // まず現在のデッキの画像を読み込む（優先度高）
         if (_currentDeck != null && _currentDeck.CardIds.Count > 0)
         {
@@ -580,7 +600,7 @@ public class DeckManager : MonoBehaviour
                     }
                 }
             }
-            
+
             // 現在のデッキの画像を優先的に読み込む
             if (tasks.Count > 0)
             {
@@ -589,16 +609,16 @@ public class DeckManager : MonoBehaviour
                 Debug.Log($"現在のデッキ '{_currentDeck.Name}' のカード画像の読み込みが完了しました。");
             }
         }
-        
+
         // 次に他のすべてのデッキの画像を読み込む
         tasks.Clear();
         int otherDeckCardCount = 0;
-        
+
         foreach (var deck in _savedDecks)
         {
             // 現在のデッキはスキップ（既に処理済み）
             if (deck == _currentDeck) continue;
-            
+
             foreach (var cardId in deck.CardIds)
             {
                 // 重複チェック
@@ -615,7 +635,7 @@ public class DeckManager : MonoBehaviour
                 }
             }
         }
-        
+
         // 他のデッキの画像を読み込む
         if (tasks.Count > 0)
         {
@@ -623,7 +643,7 @@ public class DeckManager : MonoBehaviour
             await UniTask.WhenAll(tasks);
             Debug.Log($"他のデッキのカード画像の読み込みが完了しました。");
         }
-        
+
         Debug.Log($"すべてのデッキのカード画像 合計{processedCards.Count}枚の読み込みが完了しました。");
     }
 
@@ -636,7 +656,7 @@ public class DeckManager : MonoBehaviour
 
         // デッキのカード参照を復元するメソッドを呼び出す
         deck.RestoreCardReferences();
-        
+
         // デッキの状態を再初期化
         deck.OnAfterDeserialize();
     }
@@ -680,7 +700,7 @@ public class DeckManager : MonoBehaviour
             _isDeckPanelVisible = false;
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // 実行時にデッキパネル参照を設定するメソッド
     // ----------------------------------------------------------------------
@@ -693,16 +713,173 @@ public class DeckManager : MonoBehaviour
             _isDeckPanelVisible = false;
         }
     }
-}
 
-// ----------------------------------------------------------------------
-// 保存用の簡易デッキモデル
-// ----------------------------------------------------------------------
-[System.Serializable]
-public class SimplifiedDeck
-{
-    public string Name { get; set; }
-    public List<string> CardIds { get; set; } = new List<string>();
-    public List<int> SelectedEnergyTypes { get; set; } = new List<int>(); // 選択されたエネルギータイプ（int型で保存）
-    public string Memo { get; set; } = ""; // デッキメモ
+    // ----------------------------------------------------------------------
+    // Inspectorで設定されたサンプルデッキを作成
+    // ----------------------------------------------------------------------
+    private void CreateSampleDecks()
+    {
+        if (CardDatabase.Instance == null)
+        {
+            Debug.LogWarning("カードデータベースが使用できないため、サンプルデッキの作成をスキップします。");
+            return;
+        }
+        try
+        {
+            int createdDeckCount = 0;
+
+            // Inspectorで設定された各サンプルデッキを作成
+            foreach (var sampleDeck in sampleDecks)
+            {
+                if (string.IsNullOrEmpty(sampleDeck.deckName))
+                {
+                    Debug.LogWarning("サンプルデッキ名が設定されていません。このデッキはスキップします。");
+                    continue;
+                }
+
+                DeckModel newDeck = new DeckModel
+                {
+                    Name = sampleDeck.deckName,
+                    Memo = sampleDeck.deckMemo
+                };
+
+                // エネルギータイプの設定
+                foreach (var energyType in sampleDeck.energyTypes)
+                {
+                    newDeck.AddSelectedEnergyType(energyType);
+                }
+
+                // カード検索条件に基づいてカードを追加
+                int addedCards = 0;
+                int maxCardsToAdd = Mathf.Min(sampleDeck.maxCards, DeckModel.MAX_CARDS);
+
+                // カードタイプ指定がある場合
+                if (sampleDeck.pokemonTypes.Count > 0)
+                {
+                    foreach (var pokemonType in sampleDeck.pokemonTypes)
+                    {
+                        string typeString = pokemonType.ToString();
+                        List<CardModel> typeCards = CardDatabase.GetAllCards()
+                            .Where(card => card != null && card.type == typeString)
+                            .Take(maxCardsToAdd / sampleDeck.pokemonTypes.Count) // タイプごとに均等に分配
+                            .ToList();
+
+                        foreach (var card in typeCards)
+                        {
+                            if (addedCards < maxCardsToAdd)
+                            {
+                                newDeck._AddCardId(card.id);
+                                addedCards++;
+                            }
+                        }
+                    }
+                }
+
+                // カード指定があれば追加
+                foreach (string cardId in sampleDeck.specificCardIds)
+                {
+                    if (addedCards < maxCardsToAdd)
+                    {
+                        CardModel card = CardDatabase.Instance.GetCard(cardId);
+                        if (card != null)
+                        {
+                            newDeck._AddCardId(card.id);
+                            addedCards++;
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"サンプルデッキ '{sampleDeck.deckName}' の指定カードID '{cardId}' が見つかりませんでした。");
+                        }
+                    }
+                }
+
+                // カードが足りない場合はランダムに追加
+                if (addedCards < maxCardsToAdd && sampleDeck.fillWithRandomCards)
+                {
+                    List<CardModel> randomCards = CardDatabase.GetAllCards()
+                        .Where(card => card != null && !newDeck.CardIds.Contains(card.id))
+                        .OrderBy(x => System.Guid.NewGuid()) // ランダムソート
+                        .Take(maxCardsToAdd - addedCards)
+                        .ToList();
+
+                    foreach (var card in randomCards)
+                    {
+                        newDeck._AddCardId(card.id);
+                        addedCards++;
+                    }
+                }
+
+                // カードが追加されたらデッキを保存
+                if (addedCards > 0)
+                {
+                    _savedDecks.Add(newDeck);
+                    createdDeckCount++;
+                    Debug.Log($"サンプルデッキ '{newDeck.Name}' を作成しました。(カード数: {addedCards}枚)");
+                }
+                else
+                {
+                    Debug.LogWarning($"サンプルデッキ '{sampleDeck.deckName}' にカードを追加できませんでした。");
+                }
+            }
+
+            // 作成したデッキがあれば保存して最初のデッキを選択
+            if (createdDeckCount > 0)
+            {
+                SaveDecks();
+                _currentDeck = _savedDecks[0]; // 最初のサンプルデッキを現在のデッキに設定
+                Debug.Log($"サンプルデッキを作成しました。最初のデッキ '{_currentDeck.Name}' を選択しました。");
+                Debug.Log($"合計 {createdDeckCount} 個のサンプルデッキを作成しました。");
+                RestoreCardReferencesInDecks(); // カード参照を復元
+            }
+            else
+            {
+                Debug.LogWarning("サンプルデッキを作成できませんでした。");
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"サンプルデッキ作成中にエラーが発生しました: {ex.Message}");
+        }
+    }
+    // ----------------------------------------------------------------------
+    // サンプルデッキ設定（Inspector上で設定可能）
+    // ----------------------------------------------------------------------
+    [System.Serializable]
+    public class SampleDeckConfig
+    {
+        [Tooltip("サンプルデッキの名前")]
+        public string deckName = "";
+
+        [Tooltip("サンプルデッキの説明（メモ）")]
+        [TextArea(2, 5)]
+        public string deckMemo = "";
+
+        [Tooltip("デッキに設定するエネルギータイプ（最大2つ）")]
+        public List<Enum.PokemonType> energyTypes = new List<Enum.PokemonType>();
+
+        [Tooltip("追加する主要なポケモンタイプ")]
+        public List<Enum.PokemonType> pokemonTypes = new List<Enum.PokemonType>();
+
+        [Tooltip("デッキに含める特定のカードID")]
+        public List<string> specificCardIds = new List<string>();
+
+        [Tooltip("条件に合うカードが足りない場合、ランダムなカードで埋めるか")]
+        public bool fillWithRandomCards = true;
+
+        [Tooltip("デッキに追加するカードの最大数")]
+        [Range(1, 60)]
+        public int maxCards = 20;
+    }
+
+    // ----------------------------------------------------------------------
+    // 保存用の簡易デッキモデル
+    // ----------------------------------------------------------------------
+    [System.Serializable]
+    public class SimplifiedDeck
+    {
+        public string Name { get; set; }
+        public List<string> CardIds { get; set; } = new List<string>();
+        public List<int> SelectedEnergyTypes { get; set; } = new List<int>(); // 選択されたエネルギータイプ（int型で保存）
+        public string Memo { get; set; } = ""; // デッキメモ
+    }
 }

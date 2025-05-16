@@ -4,7 +4,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-// TODO エネルギーのアクティブ表示を確認
 // ----------------------------------------------------------------------
 // デッキ画面のUIを管理するクラス
 // ----------------------------------------------------------------------
@@ -133,6 +132,7 @@ public class DeckView : MonoBehaviour
     {
         // 現在のデッキを設定
         currentDeck = deck;
+        Debug.Log($"デッキを表示: {deck.Name}");
 
         // デッキ名を更新
         if (deckNameInput != null)
@@ -371,7 +371,6 @@ public class DeckView : MonoBehaviour
             // 初期状態ではパネルを非表示に
             setEnergyPanel.gameObject.SetActive(false);
 
-            Debug.Log("エネルギー選択UIのセットアップが完了しました");
         }
     }
 
