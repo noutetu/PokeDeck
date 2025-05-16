@@ -11,7 +11,6 @@ using UnityEngine.EventSystems; // UIイベント検出のため追加
 // ----------------------------------------------------------------------
 public class CardView : MonoBehaviour, IPointerClickHandler
 {
-    [SerializeField] private TextMeshProUGUI loadingText; // ロード中ステータス表示用
     // カードの表示に使用するデータモデル
     private CardModel data;
 
@@ -21,6 +20,7 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     // 基本情報表示用コンポーネント
     [SerializeField] private RawImage cardImage;        // カード画像表示用
     [SerializeField] private Button cardButton;         // クリックイベント用ボタン
+    [SerializeField] private GameObject initialHandSign; // 初手表示用テキスト
     
     // 画像読み込み状態の管理
     private bool isImageLoading = false;
@@ -70,18 +70,11 @@ public class CardView : MonoBehaviour, IPointerClickHandler
         if (data.imageTexture != null && cardImage != null)
         {
             cardImage.texture = data.imageTexture;
-            loadingText?.gameObject.SetActive(false);
         }
         else if (cardImage != null)
         {
             // テクスチャがない場合はプレースホルダーを表示
             SetPlaceholderImage();
-            // 読み込みステータスを表示
-            if (loadingText != null)
-            {
-                loadingText.text = "読み込み中...";
-                loadingText.gameObject.SetActive(true);
-            }
             // 画像ロード開始
             LoadImageAsync();
         }
@@ -99,9 +92,6 @@ public class CardView : MonoBehaviour, IPointerClickHandler
         if (cardImage != null)
             cardImage.texture = texture;
         isImageLoading = false;
-        // ロード完了後ステータス非表示
-        if (loadingText != null)
-            loadingText.gameObject.SetActive(false);
     }
 
     // ----------------------------------------------------------------------
@@ -280,12 +270,21 @@ public class CardView : MonoBehaviour, IPointerClickHandler
             Debug.LogWarning("カードをデッキに追加できません：データが不足しています");
         }
     }
-    
+    // ----------------------------------------------------------------------
+    // 初期手札表示のオンオフを切り替える
+    // ----------------------------------------------------------------------
+    public void ToggleInitialHandDisplay(bool isVisible)
+    {
+        if (initialHandSign != null)
+        {
+            initialHandSign.gameObject.SetActive(isVisible);
+        }
+    }
     // ----------------------------------------------------------------------
     // 成功フィードバックメッセージを表示
     // ----------------------------------------------------------------------
     private void ShowSuccessFeedback(string message)
-    {   
+    {
         // FeedbackContainerを使用して画面上部に表示
         if (FeedbackContainer.Instance != null)
         {

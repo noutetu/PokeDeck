@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using UniRx;
-using Enum;
 
+// TODO エネルギーのアクティブ表示を確認
 // ----------------------------------------------------------------------
 // デッキ画面のUIを管理するクラス
 // ----------------------------------------------------------------------
@@ -40,7 +38,6 @@ public class DeckView : MonoBehaviour
     // ----------------------------------------------------------------------
     private List<GameObject> cardItems = new List<GameObject>(); // カードビューアイテムのリスト
     private List<GameObject> energyItems = new List<GameObject>(); // エネルギービューアイテムのリスト
-    private List<GameObject> selectedEnergyItems = new List<GameObject>(); // 選択されたエネルギービューアイテムのリスト
     private DeckModel currentDeck; // 現在表示中のデッキ
 
     // ----------------------------------------------------------------------
@@ -79,14 +76,14 @@ public class DeckView : MonoBehaviour
         // デッキ名変更時のイベントを設定
         if (deckNameInput != null)
             deckNameInput.onEndEdit.AddListener(OnDeckNameChanged);
-            
-        
+
+
         // デッキメモの設定
         if (deckMemoInput != null)
         {
             // 自動改行を有効にする
             TMP_Text textComponent = deckMemoInput.GetComponentInChildren<TMP_Text>();
-            textComponent.enableWordWrapping = true; 
+            textComponent.enableWordWrapping = true;
             // メモの変更時のイベントを設定
             deckMemoInput.onEndEdit.AddListener(OnDeckMemoChanged);
         }
@@ -102,7 +99,8 @@ public class DeckView : MonoBehaviour
         // デッキ一覧を開くボタンのクリックイベントを設定
         if (openDeckListButton != null)
         {
-            openDeckListButton.onClick.AddListener(() => {
+            openDeckListButton.onClick.AddListener(() =>
+            {
                 if (deckListPanel != null)
                 {
                     // 現在のパネルを非表示にし、デッキ一覧パネルを表示
@@ -115,7 +113,7 @@ public class DeckView : MonoBehaviour
                 }
             });
         }
-        
+
         // シャッフルボタンのクリックイベントを設定
         if (shuffleButton != null)
         {
@@ -123,7 +121,7 @@ public class DeckView : MonoBehaviour
             shuffleButton.onClick.RemoveAllListeners();
             shuffleButton.onClick.AddListener(ShuffleDeck);
         }
-        
+
         // 新しいエネルギー選択UIのセットアップ
         SetupEnergySelectionUI();
     }
@@ -139,7 +137,7 @@ public class DeckView : MonoBehaviour
         // デッキ名を更新
         if (deckNameInput != null)
             deckNameInput.text = deck.Name;
-            
+
         // デッキメモを更新
         if (deckMemoInput != null)
             deckMemoInput.text = deck.Memo;
@@ -164,11 +162,11 @@ public class DeckView : MonoBehaviour
         {
             CreateEnergyItem(energyReq);
         }
-        
+
         // 新しいエネルギーボタンの画像を更新
         UpdateEnergyButtonImages();
     }
-    
+
     // ----------------------------------------------------------------------
     // カードアイテムを作成
     // ----------------------------------------------------------------------
@@ -193,20 +191,6 @@ public class DeckView : MonoBehaviour
             {
                 cardImage.texture = cardModel.imageTexture;
             }
-
-            // カード名を設定
-            TextMeshProUGUI nameText = cardItem.GetComponentInChildren<TextMeshProUGUI>();
-            if (nameText != null)
-            {
-                nameText.text = cardModel.name;
-
-                // 同名カードが複数ある場合は枚数を表示
-                int sameNameCount = currentDeck.GetSameNameCardCount(cardModel.name);
-                if (sameNameCount > 1)
-                {
-                    nameText.text += $" (x{sameNameCount})";
-                }
-            }
         }
         else
         {
@@ -222,7 +206,8 @@ public class DeckView : MonoBehaviour
         var removeButton = cardItem.GetComponentInChildren<Button>();
         if (removeButton != null)
         {
-            removeButton.onClick.AddListener(() => {
+            removeButton.onClick.AddListener(() =>
+            {
                 // カード名を取得
                 string cardName = "カード";
                 if (cardModel != null && !string.IsNullOrEmpty(cardModel.name))
@@ -311,7 +296,7 @@ public class DeckView : MonoBehaviour
             deckNameInput.text = currentDeck.Name;
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // デッキメモ変更時の処理
     // ----------------------------------------------------------------------
@@ -329,7 +314,7 @@ public class DeckView : MonoBehaviour
             currentDeck.AutoSelectEnergyTypes();
             // エネルギータイプが自動選択された場合はUI上のエネルギーアイコンも更新
             UpdateEnergyButtonImages();
-            
+
             // 自動選択されたことをユーザーに通知
             if (currentDeck.SelectedEnergyTypes.Count > 0 && FeedbackContainer.Instance != null)
             {
@@ -342,7 +327,7 @@ public class DeckView : MonoBehaviour
                 FeedbackContainer.Instance.ShowProgressFeedback($"エネルギータイプが自動選択されました: {energyNames}");
             }
         }
-        
+
         // 現在のデッキを保存
         DeckManager.Instance.SaveCurrentDeck();
     }
@@ -352,12 +337,6 @@ public class DeckView : MonoBehaviour
         // 新しいデッキを作成し、UIを更新
         currentDeck = DeckManager.Instance.CreateNewDeck();
         DisplayDeck(currentDeck);
-    }
-
-    private void OnBackButtonClicked()
-    {
-        // 現在の画面を非表示
-        gameObject.SetActive(false);
     }
 
     // ----------------------------------------------------------------------
@@ -384,40 +363,40 @@ public class DeckView : MonoBehaviour
             // 既存のリスナーを削除してから新しいリスナーを追加（重複防止）
             inputEnergyButton.onClick.RemoveAllListeners();
             inputEnergyButton.onClick.AddListener(ToggleEnergyPanel);
-            
+
             // エネルギー選択イベントのリスナー設定
             setEnergyPanel.OnEnergyTypeSelected -= OnEnergyTypesSelected; // 既存のリスナーを削除
             setEnergyPanel.OnEnergyTypeSelected += OnEnergyTypesSelected;
-            
+
             // 初期状態ではパネルを非表示に
             setEnergyPanel.gameObject.SetActive(false);
-            
+
             Debug.Log("エネルギー選択UIのセットアップが完了しました");
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // エネルギーパネルの表示/非表示を切り替え
     // ----------------------------------------------------------------------
     private void ToggleEnergyPanel()
     {
         Debug.Log("ToggleEnergyPanel が呼び出されました");
-        
+
         if (setEnergyPanel == null || currentDeck == null)
         {
             Debug.LogWarning("setEnergyPanel または currentDeck が null です");
             return;
         }
-            
+
         bool isActive = setEnergyPanel.gameObject.activeSelf;
         Debug.Log($"現在のパネル表示状態: {isActive}");
-        
+
         if (isActive)
         {
             // パネルを非表示
             setEnergyPanel.gameObject.SetActive(false);
             Debug.Log("エネルギーパネルを非表示にしました");
-            
+
             // 最終的な画像を更新（トグル選択中にすでに反映済み）
             UpdateEnergyButtonImages();
         }
@@ -425,13 +404,13 @@ public class DeckView : MonoBehaviour
         {
             // パネルを表示する際に現在のデッキの選択状態を反映
             setEnergyPanel.ShowPanel(currentDeck);
-            
+
             // 明示的にパネルを表示
             setEnergyPanel.gameObject.SetActive(true);
             Debug.Log("エネルギーパネルを表示しました");
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // エネルギータイプ選択時のコールバック
     // ----------------------------------------------------------------------
@@ -439,7 +418,7 @@ public class DeckView : MonoBehaviour
     {
         // リアルタイムでボタン画像プレビューを更新
         UpdateEnergyButtonImagesPreview(selectedTypes);
-        
+
         // 選択内容をデッキモデルに一時的に反映（パネルを閉じたときに正式に保存される）
         currentDeck.ClearSelectedEnergyTypes();
         foreach (var type in selectedTypes)
@@ -447,7 +426,7 @@ public class DeckView : MonoBehaviour
             currentDeck.AddSelectedEnergyType(type);
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // エネルギーボタンの画像をプレビュー表示（選択中にリアルタイム更新）
     // ----------------------------------------------------------------------
@@ -455,37 +434,37 @@ public class DeckView : MonoBehaviour
     {
         if (setEnergyPanel == null)
             return;
-        
+
         // 最初に両方の画像を非表示に
         if (energyImage1 != null)
         {
             energyImage1.sprite = null;
             energyImage1.enabled = false;
         }
-        
+
         if (energyImage2 != null)
         {
             energyImage2.sprite = null;
             energyImage2.enabled = false;
         }
-        
+
         // 選択されたエネルギータイプを配列に変換
         List<Enum.PokemonType> typeList = new List<Enum.PokemonType>(types);
-        
+
         // 選択されたタイプがあれば画像を設定
         if (typeList.Count > 0 && energyImage1 != null)
         {
             energyImage1.sprite = setEnergyPanel.GetEnergySprite(typeList[0]);
             energyImage1.enabled = true;
         }
-        
+
         if (typeList.Count > 1 && energyImage2 != null)
         {
             energyImage2.sprite = setEnergyPanel.GetEnergySprite(typeList[1]);
             energyImage2.enabled = true;
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // エネルギーボタンの画像を更新
     // ----------------------------------------------------------------------
@@ -493,36 +472,36 @@ public class DeckView : MonoBehaviour
     {
         if (currentDeck == null || setEnergyPanel == null)
             return;
-        
+
         // 最初に両方の画像を非表示に
         if (energyImage1 != null)
         {
             energyImage1.sprite = null;
             energyImage1.enabled = false;
         }
-        
+
         if (energyImage2 != null)
         {
             energyImage2.sprite = null;
             energyImage2.enabled = false;
         }
-        
+
         // 選択されたエネルギータイプがあれば画像を設定
         var selectedTypes = currentDeck.SelectedEnergyTypes;
-        
+
         if (selectedTypes.Count > 0 && energyImage1 != null)
         {
             energyImage1.sprite = setEnergyPanel.GetEnergySprite(selectedTypes[0]);
             energyImage1.enabled = true;
         }
-        
+
         if (selectedTypes.Count > 1 && energyImage2 != null)
         {
             energyImage2.sprite = setEnergyPanel.GetEnergySprite(selectedTypes[1]);
             energyImage2.enabled = true;
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // エネルギーボタンの画像を更新する（外部からアクセス用）
     // ----------------------------------------------------------------------
@@ -533,11 +512,11 @@ public class DeckView : MonoBehaviour
 
     // シャッフル中を示すフラグ（連続クリックによるエラーを防止）
     private bool isShuffling = false;
-    
+
     // ----------------------------------------------------------------------
     // デッキシャッフル機能
     // ----------------------------------------------------------------------
-    
+
     /// <summary>
     /// デッキをシャッフル（表示順をランダムに並び替え）します。
     /// シャッフル結果はデータとUIの両方に反映します。
@@ -560,69 +539,79 @@ public class DeckView : MonoBehaviour
 
         // シャッフル開始
         isShuffling = true;
-        
+
         try
         {
             // GameObject参照とCardModelの両方を保持する一時的なリスト
             List<(GameObject gameObject, CardModel cardModel, string cardId)> cardTriples = new List<(GameObject, CardModel, string)>();
-            
+
             // 現在のカードアイテムとCardModelとIDのトリプルを作成
             for (int i = 0; i < cardItems.Count && i < currentDeck.CardIds.Count; i++)
             {
                 string cardId = currentDeck.CardIds[i];
                 CardModel cardModel = currentDeck.GetCardModel(cardId);
-                
+
                 // CardModelが取得できた場合のみトリプルを作成
                 if (cardModel != null)
                 {
                     cardTriples.Add((cardItems[i], cardModel, cardId));
                 }
             }
-            
+
             // デッキにたねポケモンが含まれていない場合は処理しない
             if (!CheckIfDeckContainsBasicPokemon(cardTriples))
             {
                 FeedbackContainer.Instance?.ShowFailureFeedback("デッキにたねポケモンが含まれていません");
                 return;
             }
-    
+
             // 有効なシャッフル結果を得るまで繰り返す
             int maxAttempts = 50; // 最大試行回数を制限
             int attempts = 0;
             bool hasBasicPokemon = false;
-            
+
             while (!hasBasicPokemon && attempts < maxAttempts)
             {
                 attempts++;
-                
+
                 // カードトリプルをシャッフル
                 ShuffleList(cardTriples);
-                
+
                 // 最初の5枚にたねポケモンが含まれるかチェック
                 hasBasicPokemon = CheckForBasicPokemonInFirstN(cardTriples, 5);
             }
-            
+
             // シャッフル後のカードIDリストを作成（データ更新用）
             List<string> newCardIds = new List<string>();
             foreach (var triple in cardTriples)
             {
                 newCardIds.Add(triple.cardId);
             }
-            
+
             // デッキモデルのカード順序を更新 (データ側の更新)
             currentDeck.UpdateCardOrder(newCardIds);
-            
+
             // UIのリフレッシュ
             ClearCardContainer();
-            
+
             // 新しい順序でカードアイテムを再配置
             for (int i = 0; i < cardTriples.Count; i++)
             {
                 GameObject cardItem = cardTriples[i].gameObject;
                 cardItem.transform.SetParent(cardContainer);
                 cardItem.transform.SetSiblingIndex(i);
+
+                // 初期手札の表示設定を更新
+                CardView cardView = cardItem.GetComponent<CardView>();
+                if (cardView != null)
+                {
+                    // 最初の5枚のカードのみ初期手札表示をオンにする
+                    bool isInitialHand = i < 5;
+                    cardView.ToggleInitialHandDisplay(isInitialHand);
+                    Debug.Log($"カード {cardView.name} の初期手札表示を {isInitialHand} に設定");
+                }
             }
-            
+
             // カードアイテムの参照リストも最新の順序で更新
             cardItems.Clear();
             foreach (var triple in cardTriples)
@@ -641,28 +630,28 @@ public class DeckView : MonoBehaviour
             isShuffling = false;
         }
     }
-    
+
     /// <summary>
     /// カードコンテナの子オブジェクトをすべて一時的に取り外す（親子関係をクリア）
     /// </summary>
     private void ClearCardContainer()
     {
         if (cardContainer == null) return;
-        
+
         // 子オブジェクトのリストを作成（削除中にコレクションが変更されるのを防ぐため）
         List<Transform> children = new List<Transform>();
         foreach (Transform child in cardContainer)
         {
             children.Add(child);
         }
-        
+
         // 各子オブジェクトを親から切り離す
         foreach (Transform child in children)
         {
             child.SetParent(null);
         }
     }
-    
+
     /// <summary>
     /// デッキ内にたねポケモンが含まれているかをチェック
     /// </summary>
@@ -670,21 +659,21 @@ public class DeckView : MonoBehaviour
     {
         if (cardTriples == null || cardTriples.Count == 0)
             return false;
-            
+
         foreach (var triple in cardTriples)
         {
             CardModel cardModel = triple.cardModel;
-            if (cardModel != null && 
-                (cardModel.cardTypeEnum == Enum.CardType.非EX || cardModel.cardTypeEnum == Enum.CardType.EX) && 
+            if (cardModel != null &&
+                (cardModel.cardTypeEnum == Enum.CardType.非EX || cardModel.cardTypeEnum == Enum.CardType.EX) &&
                 cardModel.evolutionStageEnum == Enum.EvolutionStage.たね)
             {
                 return true; // たねポケモン発見
             }
         }
-        
+
         return false; // たねポケモンなし
     }
-    
+
     /// <summary>
     /// 先頭N枚の中にたねポケモンが含まれているかをチェック
     /// </summary>
@@ -692,24 +681,24 @@ public class DeckView : MonoBehaviour
     {
         if (cardTriples == null || cardTriples.Count == 0 || n <= 0)
             return false;
-            
+
         int checkCount = Math.Min(n, cardTriples.Count);
-            
+
         // 先頭N枚をチェック
         for (int i = 0; i < checkCount; i++)
         {
             CardModel cardModel = cardTriples[i].cardModel;
-            if (cardModel != null && 
-                (cardModel.cardTypeEnum == Enum.CardType.非EX || cardModel.cardTypeEnum == Enum.CardType.EX) && 
+            if (cardModel != null &&
+                (cardModel.cardTypeEnum == Enum.CardType.非EX || cardModel.cardTypeEnum == Enum.CardType.EX) &&
                 cardModel.evolutionStageEnum == Enum.EvolutionStage.たね)
             {
                 return true; // たねポケモン発見
             }
         }
-        
+
         return false; // たねポケモンなし
     }
-    
+
     /// <summary>
     /// 指定された枚数の中にたねポケモンが含まれるかをチェックする
     /// </summary>
@@ -721,25 +710,25 @@ public class DeckView : MonoBehaviour
         // リストが空か指定枚数より少ない場合は無効
         if (cardPairs == null || cardPairs.Count == 0 || count <= 0)
             return false;
-            
+
         // 実際にチェックする枚数（リストの枚数が少ない場合は全枚数）
         int checkCount = Math.Min(count, cardPairs.Count);
-        
+
         // 先頭の指定枚数をチェック
         for (int i = 0; i < checkCount; i++)
         {
             CardModel cardModel = cardPairs[i].cardModel;
-            if (cardModel != null && 
-                (cardModel.cardTypeEnum == Enum.CardType.非EX || cardModel.cardTypeEnum == Enum.CardType.EX) && 
+            if (cardModel != null &&
+                (cardModel.cardTypeEnum == Enum.CardType.非EX || cardModel.cardTypeEnum == Enum.CardType.EX) &&
                 cardModel.evolutionStageEnum == Enum.EvolutionStage.たね)
             {
                 return true; // たねポケモン発見
             }
         }
-        
+
         return false; // たねポケモンなし
     }
-    
+
     /// <summary>
     /// リストをランダムにシャッフルするヘルパーメソッド（Fisher-Yatesアルゴリズム）
     /// </summary>
@@ -747,7 +736,7 @@ public class DeckView : MonoBehaviour
     {
         System.Random random = new System.Random();
         int n = list.Count;
-        
+
         while (n > 1)
         {
             n--;
@@ -757,49 +746,49 @@ public class DeckView : MonoBehaviour
             list[n] = value;
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // リソース解放処理
     // ----------------------------------------------------------------------
     private void OnDestroy()
     {
         // イベントのクリーンアップ
-        
+
         // デッキ名変更イベントを解除
         if (deckNameInput != null)
         {
             deckNameInput.onEndEdit.RemoveListener(OnDeckNameChanged);
         }
-        
+
         // デッキメモ変更イベントを解除
         if (deckMemoInput != null)
         {
             deckMemoInput.onEndEdit.RemoveListener(OnDeckMemoChanged);
         }
-        
+
         // 保存ボタンイベントを解除
         if (saveButton != null)
         {
             saveButton.onClick.RemoveListener(OnSaveButtonClicked);
         }
-        
+
         // 新規デッキボタンイベントを解除
         if (newDeckButton != null)
         {
             newDeckButton.onClick.RemoveListener(OnNewDeckButtonClicked);
         }
-        
+
         // シャッフルボタンイベントを解除
         if (shuffleButton != null)
         {
             shuffleButton.onClick.RemoveListener(ShuffleDeck);
         }
-        
+
         // エネルギー選択パネルのイベントを解除
         if (setEnergyPanel != null)
         {
             setEnergyPanel.OnEnergyTypeSelected -= OnEnergyTypesSelected;
         }
     }
-    
+
 }
