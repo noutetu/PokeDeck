@@ -27,7 +27,6 @@ public class DeckViewButton : MonoBehaviour
 
         if (button == null)
         {
-            Debug.LogError("ボタンコンポーネントが見つかりません");
             return;
         }
 
@@ -66,25 +65,5 @@ public class DeckViewButton : MonoBehaviour
 
         // 通常のデッキパネル表示切替
         DeckManager.Instance.ToggleDeckPanel();
-    }
-
-    // ----------------------------------------------------------------------
-    // Inspectorからデッキパネルの参照を更新した場合の処理
-    // ----------------------------------------------------------------------
-    private void OnValidate()
-    {
-        // OnValidate内ではDeckManager.Instanceを直接呼び出さない
-        // プレイモード時のみ遅延して設定する
-        if (Application.isPlaying && deckPanel != null)
-        {
-            Debug.Log("デッキパネル参照が更新されました");
-
-            // 既存のDeckManagerインスタンスを探す（新しく作成しない）
-            DeckManager existingManager = FindObjectOfType<DeckManager>();
-            if (existingManager != null)
-            {
-                existingManager.SetDeckPanel(deckPanel);
-            }
-        }
     }
 }

@@ -14,16 +14,22 @@ using System;
 // ----------------------------------------------------------------------
 public class ImageDiskCache
 {
+    // -----------------------------------------------------------------------
     // ディスクキャッシュの設定
+    // -----------------------------------------------------------------------
     private string cacheFolderPath; // キャッシュフォルダのパス
     private long maxCacheSize; // 最大キャッシュサイズ（バイト単位）
     private readonly object cacheLock = new object(); // キャッシュ操作のスレッドセーフ制御用ロック
 
+    // -----------------------------------------------------------------------
     // キャッシュメタデータ
+    // -----------------------------------------------------------------------
     private Dictionary<string, CacheMetadata> cacheMetadata = new Dictionary<string, CacheMetadata>(); // キャッシュのメタデータを保持
     private string metadataFilePath; // メタデータファイルのパス
 
+    // -----------------------------------------------------------------------
     // ファイルアクセス用の静的ロックオブジェクト
+    // -----------------------------------------------------------------------
     private static readonly object fileLock = new object(); // ファイル操作のスレッドセーフ制御用ロック
 
     // ----------------------------------------------------------------------
@@ -34,21 +40,21 @@ public class ImageDiskCache
     // ----------------------------------------------------------------------
     public ImageDiskCache(string folderName = "ImageCache", long maxSizeMB = 500)
     {
+        // キャッシュフォルダのパスを設定
         cacheFolderPath = Path.Combine(Application.persistentDataPath, folderName);
+        // メタデータファイルのパスを設定
         metadataFilePath = Path.Combine(cacheFolderPath, "cache_metadata.json");
-        maxCacheSize = maxSizeMB * 1024 * 1024; // MBをバイトに変換
+        // MBをバイトに変換
+        maxCacheSize = maxSizeMB * 1024 * 1024; 
 
         // キャッシュディレクトリを作成
         if (!Directory.Exists(cacheFolderPath))
         {
             Directory.CreateDirectory(cacheFolderPath);
-            Debug.Log($"💾 新しいキャッシュディレクトリを作成しました: {cacheFolderPath}");
         }
 
         // メタデータの読み込み
         LoadMetadata();
-
-        Debug.Log($"💾 ImageDiskCacheを初期化: キャッシュパス={cacheFolderPath}, 最大サイズ={maxSizeMB}MB");
     }
 
     // ----------------------------------------------------------------------
@@ -80,12 +86,16 @@ public class ImageDiskCache
     {
         if (string.IsNullOrEmpty(url)) return string.Empty;
 
+        // MD5ハッシュを生成
         using (var md5 = MD5.Create())
         {
+            // URLをバイト配列に変換
             byte[] inputBytes = Encoding.UTF8.GetBytes(url);
             byte[] hashBytes = md5.ComputeHash(inputBytes);
 
+            // バイト配列を16進数文字列に変換
             StringBuilder sb = new StringBuilder();
+            // 各バイトを2桁の16進数に変換して結合
             for (int i = 0; i < hashBytes.Length; i++)
             {
                 sb.Append(hashBytes[i].ToString("x2"));
@@ -103,15 +113,17 @@ public class ImageDiskCache
     // ----------------------------------------------------------------------
     public async UniTask<bool> SaveImageAsync(string url, byte[] imageData)
     {
+        // URLと画像データが有効かチェック
         if (string.IsNullOrEmpty(url) || imageData == null || imageData.Length == 0)
         {
-            Debug.LogWarning("💾 無効な画像データのためキャッシュを保存できません");
             return false;
         }
 
         try
         {
+            // キャッシュキーを生成
             string key = GetKeyFromUrl(url);
+            // キャッシュファイルのパスを生成
             string filePath = Path.Combine(cacheFolderPath, key);
 
             // キャッシュサイズが最大値を超えないようにする
@@ -160,7 +172,9 @@ public class ImageDiskCache
         
         try
         {
+            // キャッシュキーを生成
             string key = GetKeyFromUrl(url);
+            // キャッシュファイルのパスを生成
             string filePath = Path.Combine(cacheFolderPath, key);
             
             if (!File.Exists(filePath))
@@ -176,6 +190,7 @@ public class ImageDiskCache
             {
                 if (cacheMetadata.ContainsKey(key))
                 {
+                    // 最終アクセス日時を更新
                     cacheMetadata[key].LastAccessed = DateTime.Now;
                 }
             }
@@ -201,9 +216,11 @@ public class ImageDiskCache
     {
         if (string.IsNullOrEmpty(url)) return false;
         
+        // キャッシュキーを生成
         string key = GetKeyFromUrl(url);
+        // キャッシュファイルのパスを生成
         string filePath = Path.Combine(cacheFolderPath, key);
-        
+
         lock (cacheLock)
         {
             return File.Exists(filePath) && cacheMetadata.ContainsKey(key);
@@ -221,14 +238,17 @@ public class ImageDiskCache
         
         try
         {
+            // キャッシュキーを生成
             string key = GetKeyFromUrl(url);
+            // キャッシュファイルのパスを生成
             string filePath = Path.Combine(cacheFolderPath, key);
             
+            // キャッシュファイルが存在する場合は削除
             if (File.Exists(filePath))
             {
                 File.Delete(filePath);
             }
-            
+            // メタデータから削除
             lock (cacheLock)
             {
                 cacheMetadata.Remove(key);
@@ -258,7 +278,9 @@ public class ImageDiskCache
             // キャッシュディレクトリ内のすべてのファイルを削除
             if (Directory.Exists(cacheFolderPath))
             {
+                // キャッシュディレクトリ内のファイルを取得
                 string[] files = Directory.GetFiles(cacheFolderPath);
+                // 各ファイルを削除
                 foreach (string file in files)
                 {
                     File.Delete(file);
@@ -274,7 +296,6 @@ public class ImageDiskCache
             // メタデータを保存
             SaveMetadataAsync().Forget();
             
-            Debug.Log("💾 すべてのキャッシュを削除しました");
             return true;
         }
         catch (Exception ex)
@@ -300,8 +321,6 @@ public class ImageDiskCache
             {
                 return;
             }
-            
-            Debug.Log($"💾 キャッシュ容量が上限に近づいています: {currentSize / (1024 * 1024)}MB / {maxCacheSize / (1024 * 1024)}MB");
             
             // メタデータの最終アクセス日時でソートしたリスト
             List<KeyValuePair<string, CacheMetadata>> sortedItems;
@@ -338,15 +357,11 @@ public class ImageDiskCache
                     {
                         cacheMetadata.Remove(key);
                     }
-                    
-                    Debug.Log($"💾 キャッシュを削除しました: {item.Value.Url}, サイズ: {fileSize / 1024}KB");
                 }
             }
             
             // メタデータを保存
             await SaveMetadataAsync();
-            
-            Debug.Log($"💾 キャッシュクリーンアップ完了: {freedSpace / (1024 * 1024)}MB解放");
         }
         catch (Exception ex)
         {
@@ -397,8 +412,10 @@ public class ImageDiskCache
     {
         try
         {
+            // 現在のキャッシュサイズを取得
             long sizeInBytes = GetCurrentCacheSize();
-            return sizeInBytes / (1024f * 1024f); // バイト数をMBに変換
+            // バイト数をMBに変換
+            return sizeInBytes / (1024f * 1024f); 
         }
         catch (Exception ex)
         {
@@ -418,17 +435,19 @@ public class ImageDiskCache
             // キャッシュディレクトリが存在するか確認
             if (!Directory.Exists(cacheFolderPath))
             {
+                // 存在しない場合は作成
                 Directory.CreateDirectory(cacheFolderPath);
-                Debug.Log($"💾 キャッシュディレクトリを作成しました: {cacheFolderPath}");
             }
             
             // JSONデータ作成
             CacheMetadataRoot metadataRoot = new CacheMetadataRoot();
             string json;
-            
+            // キャッシュメタデータをJSON形式に変換
             lock (cacheLock)
             {
+                // キャッシュメタデータをリストに変換
                 metadataRoot.Metadata = new List<CacheMetadata>(cacheMetadata.Values);
+                // JSON形式にシリアライズ
                 json = JsonUtility.ToJson(metadataRoot, true);
             }
             
@@ -437,6 +456,8 @@ public class ImageDiskCache
             int retryCount = 0;
             const int maxRetries = 3;
             
+            // リトライ回数を設定
+            // 最大リトライ回数までリトライ
             while (!success && retryCount < maxRetries)
             {
                 try
@@ -451,10 +472,10 @@ public class ImageDiskCache
                 }
                 catch (IOException ioEx)
                 {
+                    Debug.LogWarning($"💾 メタデータ保存中にエラー: {ioEx.Message}");
                     // 共有違反やファイルアクセスエラーの場合はリトライ
                     retryCount++;
-                    Debug.LogWarning($"💾 メタデータ保存中にIOエラー: {ioEx.Message}, リトライ {retryCount}/{maxRetries}");
-                    
+
                     // リトライ前に少し待機
                     await UniTask.Delay(100 * retryCount);
                 }
@@ -480,33 +501,37 @@ public class ImageDiskCache
     {
         try
         {
+            // キャッシュディレクトリが存在するか確認
             if (!File.Exists(metadataFilePath))
             {
-                Debug.Log("💾 キャッシュメタデータファイルがありません。新規作成します。");
                 // メタデータの初期化と保存
                 SaveMetadataAsync().Forget();
                 return;
             }
             
+            
+            // メタデータファイルを読み込む
             string json = File.ReadAllText(metadataFilePath);
             
             // 空のJSONファイルをチェック
             if (string.IsNullOrWhiteSpace(json))
             {
-                Debug.Log("💾 キャッシュメタデータファイルが空です。新規作成します。");
                 // メタデータの初期化と保存
                 SaveMetadataAsync().Forget();
                 return;
             }
             
+            // JSONをデシリアライズ
             CacheMetadataRoot metadataRoot = JsonUtility.FromJson<CacheMetadataRoot>(json);
             
+            // メタデータがnullでないか確認
             if (metadataRoot != null && metadataRoot.Metadata != null)
             {
                 lock (cacheLock)
                 {
+                    // キャッシュメタデータをクリア
                     cacheMetadata.Clear();
-                    
+                    // メタデータをキャッシュに追加
                     foreach (var item in metadataRoot.Metadata)
                     {
                         // ファイルが存在する場合のみメタデータとして登録
@@ -517,12 +542,9 @@ public class ImageDiskCache
                         }
                     }
                 }
-                
-                Debug.Log($"💾 キャッシュメタデータを読み込みました: {cacheMetadata.Count}個のエントリ");
             }
             else
             {
-                Debug.LogWarning("💾 キャッシュメタデータの読み込みに失敗しました");
                 // メタデータの初期化と保存
                 SaveMetadataAsync().Forget();
             }
@@ -530,10 +552,10 @@ public class ImageDiskCache
         catch (Exception ex)
         {
             Debug.LogWarning($"💾 メタデータ読み込み中にエラー: {ex.Message}");
-            
-            // エラー発生時は新しいメタデータを作成
+    
             lock (cacheLock)
             {
+                // メタデータの初期化
                 cacheMetadata.Clear();
             }
             
@@ -553,6 +575,7 @@ public class ImageDiskCache
         {
             if (texture == null) return null;
             
+            // テクスチャをPNG形式でエンコード
             return texture.EncodeToPNG();
         }
         catch (Exception ex)
@@ -573,6 +596,7 @@ public class ImageDiskCache
         {
             if (bytes == null || bytes.Length == 0) return null;
             
+            // テクスチャを生成
             Texture2D texture = new Texture2D(2, 2);
             if (texture.LoadImage(bytes))
             {
@@ -595,12 +619,12 @@ public class ImageDiskCache
 // ----------------------------------------------------------------------
 [Serializable]
 public class CacheMetadata
-{
-    public string Url;
-    public string Key;
-    public DateTime LastAccessed;
-    public DateTime Created;
-    public long Size;
+{   
+    public string Url;              // 画像のURL
+    public string Key;              // キャッシュキー（MD5ハッシュ）
+    public DateTime LastAccessed;   // 最終アクセス日時
+    public DateTime Created;        // 作成日時
+    public long Size;               // 画像サイズ（バイト単位）
     
     // Unity JSONシリアライザ用の変換プロパティ
     public string LastAccessedString
@@ -609,6 +633,7 @@ public class CacheMetadata
         set => LastAccessed = DateTime.Parse(value);
     }
     
+    // Unity JSONシリアライザ用の変換プロパティ
     public string CreatedString
     {
         get => Created.ToString("o");

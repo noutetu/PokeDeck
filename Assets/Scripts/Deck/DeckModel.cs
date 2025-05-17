@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 
 // ----------------------------------------------------------------------
 // デッキ情報を管理するモデルクラス
-// 20枚のカード、デッキ名、必要エネルギーリストを持つ
+// 20枚のカード、デッキ名、必要エネルギーリスト,デッキメモを持つ
 // ----------------------------------------------------------------------
 [Serializable]
 public class DeckModel 
@@ -39,7 +39,11 @@ public class DeckModel
     // ----------------------------------------------------------------------
     [SerializeField] private List<Enum.PokemonType> _selectedEnergyTypes = new List<Enum.PokemonType>();
     public IReadOnlyList<Enum.PokemonType> SelectedEnergyTypes => _selectedEnergyTypes.AsReadOnly();
-    
+    // ----------------------------------------------------------------------
+    // 選択可能なエネルギーの最大数
+    // ----------------------------------------------------------------------
+    public const int MAX_SELECTED_ENERGIES = 2;
+
     // ----------------------------------------------------------------------
     // カードの順序を更新する（シャッフル結果をデータと同期させるため）
     // ----------------------------------------------------------------------
@@ -47,38 +51,31 @@ public class DeckModel
     {
         if (newCardIds == null || newCardIds.Count == 0)
             return;
-            
+
         // 既存のカードIDと新しいカードIDの内容が一致するかの確認
-        bool sameContents = _cardIds.Count == newCardIds.Count && 
-                           _cardIds.All(id => newCardIds.Contains(id)) && 
+        bool sameContents = _cardIds.Count == newCardIds.Count &&
+                           _cardIds.All(id => newCardIds.Contains(id)) &&
                            newCardIds.All(id => _cardIds.Contains(id));
-                           
+
         if (!sameContents)
         {
-            Debug.LogWarning("UpdateCardOrder: 新しいカードIDリストが既存のカードと一致しません。更新をスキップします。");
             return;
         }
-        
+
         // カードIDリストを更新
         _cardIds.Clear();
         _cardIds.AddRange(newCardIds);
-        
-        Debug.Log("カードの表示順序を更新しました");
     }
     
     // ----------------------------------------------------------------------
     // デッキメモ（ユーザーが自由に記入できるメモ）
     // ----------------------------------------------------------------------
-    [SerializeField] private string _memo = "";
+    private string _memo = "";
     public string Memo
     {
         get => _memo;
         set => _memo = value;
     }
-    
-    // 選択可能なエネルギーの最大数
-    public const int MAX_SELECTED_ENERGIES = 2;
-
     // ----------------------------------------------------------------------
     // 最大カード枚数
     // ----------------------------------------------------------------------
@@ -159,7 +156,7 @@ public class DeckModel
     }
 
     // ----------------------------------------------------------------------
-    // カードをデッキに追加（24枚まで追加可能、保存時は20枚ちょうど必要）
+    // カードをデッキに追加（24枚まで追加可能、保存時は20枚以下）
     // ----------------------------------------------------------------------
     public bool AddCard(string cardId)
     {
@@ -173,24 +170,17 @@ public class DeckModel
             cardModel = CardDatabase.Instance.GetCard(cardId);
         }
         
-        // カードモデルが見つからない場合はエラーログを出力
-        if (cardModel == null)
-        {
-            Debug.LogWarning($"カードID:{cardId}のモデルが見つかりません");
-            return false;
-        }
-        
         // 同名カードの制限チェック
         if (!string.IsNullOrEmpty(cardModel.name))
         {
             int sameNameCount = GetSameNameCardCount(cardModel.name);
             if (sameNameCount >= MAX_SAME_NAME_CARDS)
             {
-                Debug.LogWarning($"同名カード「{cardModel.name}」は{MAX_SAME_NAME_CARDS}枚までしか追加できません");
                 return false;
             }
         }
 
+        // カードIDを追加
         _cardIds.Add(cardId);
         
         // CardModelの参照を保持
@@ -208,8 +198,6 @@ public class DeckModel
                 _cardNameCounts[cardModel.name] = 1;
             }
         }
-        
-        UpdateEnergyRequirements();
         return true;
     }
 
@@ -230,11 +218,11 @@ public class DeckModel
             int sameNameCount = GetSameNameCardCount(card.name);
             if (sameNameCount >= MAX_SAME_NAME_CARDS)
             {
-                Debug.LogWarning($"同名カード「{card.name}」は{MAX_SAME_NAME_CARDS}枚までしか追加できません");
                 return false;
             }
         }
         
+        // カードIDを追加
         _cardIds.Add(card.id);
         
         // CardModelの参照を保持
@@ -258,8 +246,6 @@ public class DeckModel
                 _cardNameCounts[card.name] = 1;
             }
         }
-        
-        UpdateEnergyRequirements();
         return true;
     }
 
@@ -276,7 +262,9 @@ public class DeckModel
             cardName = model.name;
         }
         
+        // カードIDを削除
         bool result = _cardIds.Remove(cardId);
+        // 削除に成功した場合
         if (result)
         {
             // 同名カードカウントの更新
@@ -288,11 +276,6 @@ public class DeckModel
                     _cardNameCounts.Remove(cardName);
                 }
             }
-            
-            // キャッシュから削除（参照は残しておいてもよい）
-            // _cardModels.Remove(cardId);
-            
-            UpdateEnergyRequirements();
         }
         return result;
     }
@@ -327,8 +310,7 @@ public class DeckModel
                 _cardNameCounts.Remove(cardName);
             }
         }
-        
-        UpdateEnergyRequirements();
+
         return true;
     }
 
@@ -342,51 +324,7 @@ public class DeckModel
         _energyRequirements.Clear();
         _selectedEnergyTypes.Clear();
     }
-
-    // ----------------------------------------------------------------------
-    // 必要エネルギーリストを更新
-    // ----------------------------------------------------------------------
-    public void UpdateEnergyRequirements()
-    {
-        // エネルギー要件をクリア
-        _energyRequirements.Clear();
-        
-        // カードデータベースから各カードの必要エネルギーを取得して集計
-        Dictionary<string, int> energyCounts = new Dictionary<string, int>();
-        
-        foreach (string cardId in _cardIds)
-        {
-            // カードモデルを取得
-            CardModel card = GetCardModel(cardId);
-            if (card != null && card.moves != null)
-            {
-                // 各技のエネルギー要件を集計
-                foreach (var move in card.moves)
-                {
-                    if (move.cost != null)
-                    {
-                        foreach (var energy in move.cost)
-                        {
-                            string energyType = energy.Key;
-                            int count = energy.Value;
-                            
-                            if (energyCounts.ContainsKey(energyType))
-                                energyCounts[energyType] += count;
-                            else
-                                energyCounts[energyType] = count;
-                        }
-                    }
-                }
-            }
-        }
-        
-        // 集計結果をリストに変換
-        foreach (var pair in energyCounts)
-        {
-            _energyRequirements.Add(new EnergyRequirement(pair.Key, pair.Value));
-        }
-    }
-
+    
     // ----------------------------------------------------------------------
     // デッキ読み込み後の処理
     // カード名カウントの再構築を行う
@@ -397,9 +335,12 @@ public class DeckModel
         _cardNameCounts.Clear();
         foreach (string cardId in _cardIds)
         {
+            // カードモデルを取得
             CardModel model = GetCardModel(cardId);
+            // カードモデルが存在する場合、カード名をカウント
             if (model != null && !string.IsNullOrEmpty(model.name))
             {
+                // カード名のカウントを更新
                 if (_cardNameCounts.ContainsKey(model.name))
                 {
                     _cardNameCounts[model.name]++;
@@ -410,7 +351,7 @@ public class DeckModel
                 }
             }
         }
-        
+
         // 選択されたエネルギータイプの情報をログ出力
         if (_selectedEnergyTypes != null && _selectedEnergyTypes.Count > 0)
         {
@@ -420,7 +361,6 @@ public class DeckModel
                 typeNames.Add(et.ToString());
             }
             string energyNames = string.Join(", ", typeNames);
-            Debug.Log($"デッキ '{_name}' のエネルギータイプ（{_selectedEnergyTypes.Count}個）: {energyNames}");
         }
     }
 
@@ -444,8 +384,6 @@ public class DeckModel
             // 数値に変換できない場合は文字列として比較
             return string.Compare(a, b);
         });
-        
-        Debug.Log($"デッキ「{_name}」のカードをID順に並べ替えました：{_cardIds.Count}枚");
     }
 
     // ----------------------------------------------------------------------
@@ -457,18 +395,14 @@ public class DeckModel
     {
         // CardModelsコレクションをクリア
         _cardModels.Clear();
-        
-        if (CardDatabase.Instance == null)
-        {
-            Debug.LogWarning("CardDatabaseが利用できないため、カード参照を復元できません。デッキ表示が正しく行われない場合があります。");
-            return;
-        }
-        
+
         // カードIDからCardModelオブジェクトへの参照を再構築
         int restoredCount = 0;
         int missingCount = 0;
+
         foreach (string cardId in _cardIds)
         {
+            // CardDatabaseからカードモデルを取得
             CardModel cardModel = CardDatabase.Instance.GetCard(cardId);
             if (cardModel != null)
             {
@@ -479,11 +413,8 @@ public class DeckModel
             else
             {
                 missingCount++;
-                Debug.LogWarning($"カードID {cardId} に対応するカードモデルが見つかりません。このカードはデッキに表示されない可能性があります。");
             }
         }
-        
-        Debug.Log($"デッキ '{Name}' のカード参照を復元しました: {restoredCount}枚成功, {missingCount}枚失敗 (合計: {_cardIds.Count}枚)");
     }
 
     // ----------------------------------------------------------------------
@@ -512,7 +443,6 @@ public class DeckModel
 
     // ----------------------------------------------------------------------
     // デッキ内のカードをカードタイプ順、その後ID順に並び替える
-    // エネルギー、特殊エネルギー、スタジアムは除外してリストの最後に配置
     // ----------------------------------------------------------------------
     public void SortCardsByTypeAndID()
     {
@@ -588,6 +518,8 @@ public class DeckModel
         if (_selectedEnergyTypes.Contains(energyType))
             return false;
             
+        // エネルギータイプを追加
+        // ただし、無色とドラゴンは除外
         _selectedEnergyTypes.Add(energyType);
         return true;
     }
@@ -609,7 +541,7 @@ public class DeckModel
     }
 
     // ----------------------------------------------------------------------
-    // デッキ内のポケモンタイプを分析し、最も多く使用されているタイプを
+    // デッキ内のポケモンタイプを分析し、最も数の多いタイプを
     // 自動的にエネルギータイプとして選択する（最大2つまで）
     // ----------------------------------------------------------------------
     public void AutoSelectEnergyTypes()
@@ -688,18 +620,6 @@ public class DeckModel
         foreach (var type in sortedTypes)
         {
             _selectedEnergyTypes.Add(type);
-        }
-        
-        // デバッグログ
-        if (_selectedEnergyTypes.Count > 0)
-        {
-            List<string> typeNames = new List<string>();
-            foreach (var et in _selectedEnergyTypes)
-            {
-                typeNames.Add(et.ToString());
-            }
-            string energyNames = string.Join(", ", typeNames);
-            Debug.Log($"デッキ '{_name}' のエネルギータイプを自動選択しました ({_selectedEnergyTypes.Count}個): {energyNames}");
         }
     }
 }

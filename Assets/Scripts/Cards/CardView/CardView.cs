@@ -203,9 +203,6 @@ public class CardView : MonoBehaviour, IPointerClickHandler
                 // メッセージを表示
                 string feedbackMessage = $"{ADD_SUCCESS_TEXT} 「{data.name}」";
                 ShowSuccessFeedback(feedbackMessage);
-
-                // エネルギー要件のみ更新（デッキは保存しない）
-                DeckManager.Instance.CurrentDeck.UpdateEnergyRequirements();
             }
             else
             {

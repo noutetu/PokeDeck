@@ -1,13 +1,13 @@
-// ----------------------------------------------------------------------
-// カード検索のモデルクラス
-// 検索条件の管理とフィルタリング処理を担当する
-// ----------------------------------------------------------------------
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Enum;
 using System;
 
+// ----------------------------------------------------------------------
+// カード検索のモデルクラス
+// 検索条件の管理とフィルタリング処理を担当する
+// ----------------------------------------------------------------------
 public class SearchModel
 {
     // ----------------------------------------------------------------------
@@ -20,25 +20,57 @@ public class SearchModel
     // ----------------------------------------------------------------------
     // 検索条件
     // ----------------------------------------------------------------------
+
+    // 検索テキスト
     private string searchText = "";
+
+    // ---------------------------------------------------
+    // カードタイプフィルター
+    // ---------------------------------------------------
     private HashSet<CardType> selectedCardTypes = new HashSet<CardType>();
+
+    //---------------------------------------------------
+    // 進化段階フィルター
+    // --------------------------------------------------
     private HashSet<EvolutionStage> selectedEvolutionStages = new HashSet<EvolutionStage>();
+
+    //---------------------------------------------------
+    // ポケモンタイプフィルター
+    // --------------------------------------------------
     private HashSet<PokemonType> selectedPokemonTypes = new HashSet<PokemonType>();
+
+    //---------------------------------------------------
+    // カードパックフィルター
+    // --------------------------------------------------
     private HashSet<CardPack> selectedCardPacks = new HashSet<CardPack>();
+
+    //---------------------------------------------------
     // HP関連のフィルター条件を追加
+    // --------------------------------------------------
     private int selectedHP = 0;
     private SetHPArea.HPComparisonType selectedHPComparisonType = SetHPArea.HPComparisonType.None;
+
+    //---------------------------------------------------
     // 最大ダメージ関連のフィルター条件を追加
+    // --------------------------------------------------
     private int selectedMaxDamage = 0;
     private SetMaxDamageArea.DamageComparisonType selectedMaxDamageComparisonType = SetMaxDamageArea.DamageComparisonType.None;
+
+    //---------------------------------------------------
     // 最大エネルギーコスト関連のフィルター条件を追加
+    // --------------------------------------------------
     private int selectedMaxEnergyCost = 0;
     private SetMaxEnergyArea.EnergyComparisonType selectedMaxEnergyCostComparisonType = SetMaxEnergyArea.EnergyComparisonType.None;
+
+    //---------------------------------------------------
     // 逃げるコストフィルター用のフィールドを追加
+    // --------------------------------------------------
     private int selectedRetreatCost = 0;
     private SetRetreatCostArea.RetreatComparisonType selectedRetreatCostComparisonType = SetRetreatCostArea.RetreatComparisonType.None;
-
+    
+    //---------------------------------------------------
     // 連続してフィルターが呼ばれる場合に使用するフラグ
+    // --------------------------------------------------
     private bool isBatchFiltering = false;
 
     // ----------------------------------------------------------------------
@@ -262,7 +294,9 @@ public class SearchModel
         selectedMaxDamageComparisonType = comparisonType;
         if (!isBatchFiltering) ApplyFilters();
     }
+    // ----------------------------------------------------------------------
     // 最大エネルギーコストフィルターを設定
+    // ----------------------------------------------------------------------
     public void SetMaxEnergyCostFilter(int cost, SetMaxEnergyArea.EnergyComparisonType comparisonType)
     {
         selectedMaxEnergyCost = cost;
@@ -419,43 +453,13 @@ public class SearchModel
         // 進化段階フィルターが設定されていない場合はスキップ
         if (selectedEvolutionStages.Count == 0) return;
 
-        // デバッグ情報：フィルタリング前の進化段階の分布を出力
-        Dictionary<EvolutionStage, int> stageDistribution = new Dictionary<EvolutionStage, int>();
-        foreach (var card in filteredCards)
-        {
-            // ポケモンカードのみ進化段階がある
-            if (card.cardTypeEnum == CardType.非EX || card.cardTypeEnum == CardType.EX)
-            {
-                if (!stageDistribution.ContainsKey(card.evolutionStageEnum))
-                {
-                    stageDistribution[card.evolutionStageEnum] = 0;
-                }
-                stageDistribution[card.evolutionStageEnum]++;
-            }
-        }
-
-        // 進化段階によるフィルタリング
         // 修正：ポケモンカードのみ対象とし、選択された進化段階に合致するもののみ表示
         filteredCards = filteredCards.Where(card =>
             // 選択された進化段階に合致するポケモンカードのみを表示
-            ((card.cardTypeEnum == CardType.非EX || card.cardTypeEnum == CardType.EX) &&
+            (card.cardTypeEnum == CardType.非EX || card.cardTypeEnum == CardType.EX) &&
              !string.IsNullOrEmpty(card.evolutionStage) &&
-             selectedEvolutionStages.Contains(card.evolutionStageEnum))
+             selectedEvolutionStages.Contains(card.evolutionStageEnum)
         ).ToList();
-
-        // デバッグ情報：フィルタリング後の進化段階の分布を出力
-        stageDistribution.Clear();
-        foreach (var card in filteredCards)
-        {
-            if (card.cardTypeEnum == CardType.非EX || card.cardTypeEnum == CardType.EX)
-            {
-                if (!stageDistribution.ContainsKey(card.evolutionStageEnum))
-                {
-                    stageDistribution[card.evolutionStageEnum] = 0;
-                }
-                stageDistribution[card.evolutionStageEnum]++;
-            }
-        }
     }
 
     // ----------------------------------------------------------------------
@@ -466,34 +470,6 @@ public class SearchModel
         // ポケモンタイプフィルターが設定されていない場合はスキップ
         if (selectedPokemonTypes.Count == 0) return;
 
-        // デバッグ情報：フィルタリング前のポケモンタイプの分布を出力
-        Dictionary<PokemonType, int> typeDistribution = new Dictionary<PokemonType, int>();
-        foreach (var card in filteredCards)
-        {
-            // ポケモンカードのみポケモンタイプがある
-            if ((card.cardTypeEnum == CardType.非EX || card.cardTypeEnum == CardType.EX) &&
-                !string.IsNullOrEmpty(card.type))
-            {
-                if (!typeDistribution.ContainsKey(card.typeEnum))
-                {
-                    typeDistribution[card.typeEnum] = 0;
-                }
-                typeDistribution[card.typeEnum]++;
-            }
-        }
-
-
-        // カードタイプ分布も出力（どれくらいポケモン以外のカードが含まれているか）
-        Dictionary<CardType, int> cardTypeDistribution = new Dictionary<CardType, int>();
-        foreach (var card in filteredCards)
-        {
-            if (!cardTypeDistribution.ContainsKey(card.cardTypeEnum))
-            {
-                cardTypeDistribution[card.cardTypeEnum] = 0;
-            }
-            cardTypeDistribution[card.cardTypeEnum]++;
-        }
-
         // ポケモンタイプによるフィルタリング（ポケモンカードのみを対象に）
         filteredCards = filteredCards.Where(card =>
             // ポケモンカード（非EXまたはEX）かつポケモンタイプが設定されており、選択されたタイプに一致するもののみを表示
@@ -502,30 +478,6 @@ public class SearchModel
             selectedPokemonTypes.Contains(card.typeEnum)
         ).ToList();
 
-        // デバッグ情報：フィルタリング後のポケモンタイプの分布を出力
-        typeDistribution.Clear();
-        foreach (var card in filteredCards)
-        {
-            if ((card.cardTypeEnum == CardType.非EX || card.cardTypeEnum == CardType.EX) &&
-                !string.IsNullOrEmpty(card.type))
-            {
-                if (!typeDistribution.ContainsKey(card.typeEnum))
-                {
-                    typeDistribution[card.typeEnum] = 0;
-                }
-                typeDistribution[card.typeEnum]++;
-            }
-        }
-        // フィルタリング後のカードタイプ分布も出力
-        cardTypeDistribution.Clear();
-        foreach (var card in filteredCards)
-        {
-            if (!cardTypeDistribution.ContainsKey(card.cardTypeEnum))
-            {
-                cardTypeDistribution[card.cardTypeEnum] = 0;
-            }
-            cardTypeDistribution[card.cardTypeEnum]++;
-        }
     }
 
     // ----------------------------------------------------------------------
@@ -536,33 +488,11 @@ public class SearchModel
         // カードパックフィルターが設定されていない場合はスキップ
         if (selectedCardPacks.Count == 0) return;
 
-        // デバッグ情報：フィルタリング前のカードパックの分布を出力
-        Dictionary<CardPack, int> packDistribution = new Dictionary<CardPack, int>();
-        foreach (var card in filteredCards)
-        {
-            if (!packDistribution.ContainsKey(card.packEnum))
-            {
-                packDistribution[card.packEnum] = 0;
-            }
-            packDistribution[card.packEnum]++;
-        }
-
         // カードパックによるフィルタリング
         // パック情報が設定されているカードのみを対象にする
         filteredCards = filteredCards.Where(card =>
             !string.IsNullOrEmpty(card.pack) && selectedCardPacks.Contains(card.packEnum)
         ).ToList();
-
-        // デバッグ情報：フィルタリング後のカードパックの分布を出力
-        packDistribution.Clear();
-        foreach (var card in filteredCards)
-        {
-            if (!packDistribution.ContainsKey(card.packEnum))
-            {
-                packDistribution[card.packEnum] = 0;
-            }
-            packDistribution[card.packEnum]++;
-        }
     }
 
     // ----------------------------------------------------------------------
@@ -573,31 +503,8 @@ public class SearchModel
         // HP比較タイプが設定されていないか、HP値が0（指定なし）の場合はスキップ
         if (selectedHPComparisonType == SetHPArea.HPComparisonType.None || selectedHP <= 0)
         {
-            Debug.Log("🔍 HPフィルターはスキップします（比較タイプ: " + selectedHPComparisonType + ", HP値: " + selectedHP + "）");
             return;
         }
-
-        Debug.Log($"🔍 HPフィルター適用: {selectedHP}HP, 比較タイプ: {selectedHPComparisonType}");
-
-        // フィルタリング前のカードタイプの分布を出力
-        Dictionary<CardType, int> typeDistribution = new Dictionary<CardType, int>();
-        foreach (var card in filteredCards)
-        {
-            if (!typeDistribution.ContainsKey(card.cardTypeEnum))
-            {
-                typeDistribution[card.cardTypeEnum] = 0;
-            }
-            typeDistribution[card.cardTypeEnum]++;
-        }
-        Debug.Log("🔍 フィルタリング前のカードタイプ分布:");
-        foreach (var kv in typeDistribution)
-        {
-            Debug.Log($"  🔍 {kv.Key}: {kv.Value}枚");
-        }
-
-        // フィルタリング前のHPを持つカードの数を確認
-        int cardsWithHpCount = filteredCards.Count(card => card.hp > 0);
-        Debug.Log($"🔍 フィルタリング前のHPを持つカード数: {cardsWithHpCount}枚");
 
         // HPによるフィルタリング - 修正版（化石も含めてHPを持つカードを対象に）
         filteredCards = filteredCards.Where(card =>
@@ -619,48 +526,6 @@ public class SearchModel
                     return false;
             }
         }).ToList();
-
-        Debug.Log($"🔍 HPフィルター結果: {filteredCards.Count}件");
-
-        // フィルタリング後のカードタイプの分布を出力
-        typeDistribution.Clear();
-        foreach (var card in filteredCards)
-        {
-            if (!typeDistribution.ContainsKey(card.cardTypeEnum))
-            {
-                typeDistribution[card.cardTypeEnum] = 0;
-            }
-            typeDistribution[card.cardTypeEnum]++;
-        }
-        Debug.Log("🔍 フィルタリング後のカードタイプ分布:");
-        foreach (var kv in typeDistribution)
-        {
-            Debug.Log($"  🔍 {kv.Key}: {kv.Value}枚");
-        }
-
-        // フィルタリング後のHPを持つカードの数を確認
-        cardsWithHpCount = filteredCards.Count(card => card.hp > 0);
-        Debug.Log($"🔍 フィルタリング後のHPを持つカード数: {cardsWithHpCount}枚");
-
-        // HPの分布を出力
-        Dictionary<int, int> hpDistribution = new Dictionary<int, int>();
-        foreach (var card in filteredCards)
-        {
-            if (card.hp > 0)
-            {
-                if (!hpDistribution.ContainsKey(card.hp))
-                {
-                    hpDistribution[card.hp] = 0;
-                }
-                hpDistribution[card.hp]++;
-            }
-        }
-
-        Debug.Log("🔍 フィルタリング後のHP分布:");
-        foreach (var kv in hpDistribution.OrderBy(kv => kv.Key))
-        {
-            Debug.Log($"  🔍 {kv.Key}HP: {kv.Value}枚");
-        }
     }
 
     // ----------------------------------------------------------------------
@@ -672,15 +537,8 @@ public class SearchModel
         // これは「指定なし」が選択されている場合
         if (selectedMaxDamageComparisonType == SetMaxDamageArea.DamageComparisonType.None)
         {
-            Debug.Log("🔍 最大ダメージフィルター: 「指定なし」が選択されているため、スキップします");
             return;
         }
-
-        Debug.Log($"🔍 最大ダメージフィルター適用: {selectedMaxDamage}ダメージ, 比較タイプ={selectedMaxDamageComparisonType}");
-
-        // フィルタリング前の最大ダメージを持つカードの数を確認
-        int cardsWithMaxDamageCount = filteredCards.Count(card => card.maxDamage > 0);
-        Debug.Log($"🔍 フィルタリング前の最大ダメージを持つカード数: {cardsWithMaxDamageCount}枚");
 
         // 最大ダメージによるフィルタリング（0ダメージも有効な選択肢として含める）
         filteredCards = filteredCards.Where(card =>
@@ -698,29 +556,6 @@ public class SearchModel
                     return false;
             }
         }).ToList();
-
-        Debug.Log($"🔍 最大ダメージフィルター結果: {filteredCards.Count}件");
-
-        // フィルタリング後の最大ダメージを持つカードの数を確認
-        cardsWithMaxDamageCount = filteredCards.Count(card => card.maxDamage > 0);
-        Debug.Log($"🔍 フィルタリング後の最大ダメージを持つカード数: {cardsWithMaxDamageCount}枚");
-
-        // 最大ダメージの分布を出力
-        Dictionary<int, int> damageDistribution = new Dictionary<int, int>();
-        foreach (var card in filteredCards)
-        {
-            if (!damageDistribution.ContainsKey(card.maxDamage))
-            {
-                damageDistribution[card.maxDamage] = 0;
-            }
-            damageDistribution[card.maxDamage]++;
-        }
-
-        Debug.Log("🔍 フィルタリング後の最大ダメージ分布:");
-        foreach (var kv in damageDistribution.OrderBy(kv => kv.Key))
-        {
-            Debug.Log($"  🔍 {kv.Key}ダメージ: {kv.Value}枚");
-        }
     }
     // ----------------------------------------------------------------------
     // 最大エネルギーコストフィルターの適用
@@ -730,26 +565,7 @@ public class SearchModel
         // EnergyComparisonType.None(指定なし)の場合はスキップ
         if (selectedMaxEnergyCostComparisonType == SetMaxEnergyArea.EnergyComparisonType.None)
         {
-            Debug.Log($"🔍 最大エネルギーコストフィルターはスキップします（比較タイプ: {selectedMaxEnergyCostComparisonType}, コスト: {selectedMaxEnergyCost}）");
             return;
-        }
-
-        // フィルタリング前のカード数をログ出力
-        int beforeCount = filteredCards.Count;
-        Debug.Log($"🔍 最大エネルギーコストフィルター適用前: {beforeCount}枚のカード");
-
-        // フィルタリング条件をログ出力
-        Debug.Log($"🔍 最大エネルギーコストフィルター条件: {selectedMaxEnergyCost}コスト, 比較タイプ={selectedMaxEnergyCostComparisonType}");
-
-        // サンプルカードの値をログ出力（最大5枚）
-        if (filteredCards.Count > 0)
-        {
-            Debug.Log("🔍 エネルギーコスト値のサンプル（最大5枚）:");
-            for (int i = 0; i < Math.Min(5, filteredCards.Count); i++)
-            {
-                var card = filteredCards[i];
-                Debug.Log($"🔍 サンプルカード {i + 1}: 「{card.name}」(ID:{card.id}) maxEnergyCost={card.maxEnergyCost}");
-            }
         }
 
         // CardModel.maxEnergyCost を直接比較
@@ -776,21 +592,6 @@ public class SearchModel
 
             return matches;
         }).ToList();
-
-        // フィルタリング後の結果をログ出力
-        int afterCount = filteredCards.Count;
-        Debug.Log($"🔍 最大エネルギーコストフィルター結果: {afterCount}枚（{beforeCount - afterCount}枚除外）");
-
-        // フィルタリング後の例をログ出力
-        if (filteredCards.Count > 0)
-        {
-            Debug.Log("🔍 フィルタリング後のサンプル（最大3枚）:");
-            for (int i = 0; i < Math.Min(3, filteredCards.Count); i++)
-            {
-                var card = filteredCards[i];
-                Debug.Log($"🔍 カード {i + 1}: 「{card.name}」(ID:{card.id}) maxEnergyCost={card.maxEnergyCost}");
-            }
-        }
     }
 
     // ----------------------------------------------------------------------
@@ -801,26 +602,7 @@ public class SearchModel
         // RetreatComparisonType.None(指定なし)の場合はスキップ
         if (selectedRetreatCostComparisonType == SetRetreatCostArea.RetreatComparisonType.None)
         {
-            Debug.Log($"🔍 逃げるコストフィルターはスキップします（比較タイプ: {selectedRetreatCostComparisonType}, コスト: {selectedRetreatCost}）");
             return;
-        }
-
-        // フィルタリング前のカード数をログ出力
-        int beforeCount = filteredCards.Count;
-        Debug.Log($"🔍 逃げるコストフィルター適用前: {beforeCount}枚のカード");
-
-        // フィルタリング条件をログ出力
-        Debug.Log($"🔍 逃げるコストフィルター条件: {selectedRetreatCost}コスト, 比較タイプ={selectedRetreatCostComparisonType}");
-
-        // サンプルカードの値をログ出力（最大5枚）
-        if (filteredCards.Count > 0)
-        {
-            Debug.Log("🔍 逃げるコスト値のサンプル（最大5枚）:");
-            for (int i = 0; i < Math.Min(5, filteredCards.Count); i++)
-            {
-                var card = filteredCards[i];
-                Debug.Log($"🔍 サンプルカード {i + 1}: 「{card.name}」(ID:{card.id}) retreatCost={card.retreatCost}, カードタイプ={card.cardTypeEnum}");
-            }
         }
 
         // 逃げるコストフィルター適用
@@ -845,37 +627,6 @@ public class SearchModel
                     return true; // フィルタリングしない
             }
         }).ToList();
-
-        // フィルタリング後の結果をログ出力
-        int afterCount = filteredCards.Count;
-        Debug.Log($"🔍 逃げるコストフィルター結果: {afterCount}枚（{beforeCount - afterCount}枚除外）");
-
-        // フィルタリング後の例をログ出力
-        if (filteredCards.Count > 0)
-        {
-            Debug.Log("🔍 フィルタリング後のサンプル（最大3枚）:");
-            for (int i = 0; i < Math.Min(3, filteredCards.Count); i++)
-            {
-                var card = filteredCards[i];
-                Debug.Log($"🔍 カード {i + 1}: 「{card.name}」(ID:{card.id}) retreatCost={card.retreatCost}, カードタイプ={card.cardTypeEnum}");
-            }
-        }
-
-        // カードタイプ分布も出力
-        Dictionary<CardType, int> cardTypeDistribution = new Dictionary<CardType, int>();
-        foreach (var card in filteredCards)
-        {
-            if (!cardTypeDistribution.ContainsKey(card.cardTypeEnum))
-            {
-                cardTypeDistribution[card.cardTypeEnum] = 0;
-            }
-            cardTypeDistribution[card.cardTypeEnum]++;
-        }
-        Debug.Log("🔍 逃げるコストフィルター後のカードタイプ分布:");
-        foreach (var kv in cardTypeDistribution)
-        {
-            Debug.Log($"  🔍 {kv.Key}: {kv.Value}枚");
-        }
     }
 
     // ----------------------------------------------------------------------
@@ -889,7 +640,7 @@ public class SearchModel
 
     // ----------------------------------------------------------------------
     // 現在のフィルタリング条件を取得
-    // @return フィルタリング条件の文字列
+
     // ----------------------------------------------------------------------
     public List<CardModel> Search(
         List<CardType> cardTypes,
@@ -906,7 +657,6 @@ public class SearchModel
         int maxRetreatCost
     )
     {
-        Debug.Log("🔍 [SearchModel] 検索開始");
 
         // 検索条件の有無を適切にチェック
         bool hasCardTypeFilter = cardTypes != null && cardTypes.Count > 0;
@@ -930,16 +680,11 @@ public class SearchModel
         bool hasEnergyCostFilter = minEnergyCost > minDefaultEnergyCost || maxEnergyCost < maxDefaultEnergyCost;
         bool hasRetreatCostFilter = minRetreatCost > minDefaultRetreatCost || maxRetreatCost < maxDefaultRetreatCost;
 
-        // 適用するフィルター条件をログ出力
-        Debug.Log($"🔍 [SearchModel] フィルター条件: カードタイプ({hasCardTypeFilter}), 進化段階({hasEvolutionStageFilter}), タイプ({hasTypeFilter}), カードパック({hasCardPackFilter}), HP({hasHPFilter}), 最大ダメージ({hasMaxDamageFilter}), エネルギーコスト({hasEnergyCostFilter}), 逃げるコスト({hasRetreatCostFilter})");
-        Debug.Log($"🔍 [SearchModel] フィルター値: HP({minHP}-{maxHP}), 最大ダメージ({minMaxDamage}-{maxMaxDamage}), エネルギーコスト({minEnergyCost}-{maxEnergyCost}), 逃げるコスト({minRetreatCost}-{maxRetreatCost})");
-
         // カードリストが直接設定されている場合はそれを使用
         List<CardModel> allCards = null;
         if (cardList != null && cardList.Count > 0)
         {
             allCards = cardList;
-            Debug.Log($"🔍 [SearchModel] cardListから{allCards.Count}枚のカードを検索対象として使用します");
         }
         // それ以外の場合はCardDatabaseから取得
         else if (CardDatabase.Instance != null)

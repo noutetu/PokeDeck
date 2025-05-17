@@ -15,17 +15,23 @@ public class DeckView : MonoBehaviour
     [Header("UI参照")]
     [SerializeField] private TMP_InputField deckNameInput; // デッキ名入力フィールド
     [SerializeField] private TMP_InputField deckMemoInput; // デッキメモ入力フィールド
+
+    [Header("カードアイテム")]
     [SerializeField] private Transform cardContainer; // カードアイテムを配置するコンテナ
     [SerializeField] private GameObject cardItemPrefab; // カードアイテムのプレハブ
+
+    [Header("エネルギーアイテム")]
     [SerializeField] private Transform energyContainer; // エネルギーアイテムを配置するコンテナ
     [SerializeField] private GameObject energyItemPrefab; // エネルギーアイテムのプレハブ
+
+    [Header("ボタンUI")]
     [SerializeField] private Button saveButton; // 保存ボタン
     [SerializeField] private Button newDeckButton; // 新規デッキ作成ボタン
     [SerializeField] private Button openDeckListButton; // デッキ一覧を開くボタン
-    [SerializeField] private GameObject deckListPanel; // デッキ一覧パネル
-
-    [Header("デッキ操作")]
     [SerializeField] private Button shuffleButton; // シャッフルボタン
+
+    [Header("デッキ一覧パネル")]
+    [SerializeField] private GameObject deckListPanel; // デッキ一覧パネル
 
     [Header("エネルギー選択UI")]
     [SerializeField] private Button inputEnergyButton; // エネルギー選択ボタン
@@ -35,7 +41,7 @@ public class DeckView : MonoBehaviour
     // ----------------------------------------------------------------------
     // プライベート変数
     // ----------------------------------------------------------------------
-    private List<GameObject> cardItems = new List<GameObject>(); // カードビューアイテムのリスト
+    private List<GameObject> cardItems = new List<GameObject>(); // デッキ内のカードオブジェクトのリスト
     private List<GameObject> energyItems = new List<GameObject>(); // エネルギービューアイテムのリスト
     private DeckModel currentDeck; // 現在表示中のデッキ
 
@@ -106,10 +112,6 @@ public class DeckView : MonoBehaviour
                     gameObject.SetActive(false);
                     deckListPanel.SetActive(true);
                 }
-                else
-                {
-                    Debug.LogWarning("デッキリストパネルが設定されていません");
-                }
             });
         }
 
@@ -132,7 +134,6 @@ public class DeckView : MonoBehaviour
     {
         // 現在のデッキを設定
         currentDeck = deck;
-        Debug.Log($"デッキを表示: {deck.Name}");
 
         // デッキ名を更新
         if (deckNameInput != null)
@@ -190,15 +191,6 @@ public class DeckView : MonoBehaviour
             if (cardImage != null && cardModel.imageTexture != null)
             {
                 cardImage.texture = cardModel.imageTexture;
-            }
-        }
-        else
-        {
-            // カードモデルが見つからない場合はIDを表示
-            TextMeshProUGUI textComponent = cardItem.GetComponentInChildren<TextMeshProUGUI>();
-            if (textComponent != null)
-            {
-                textComponent.text = $"不明なカード: {cardId}";
             }
         }
 
@@ -332,6 +324,9 @@ public class DeckView : MonoBehaviour
         DeckManager.Instance.SaveCurrentDeck();
     }
 
+    // ----------------------------------------------------------------------
+    // 新規デッキ作成ボタンの処理
+    // ----------------------------------------------------------------------
     private void OnNewDeckButtonClicked()
     {
         // 新しいデッキを作成し、UIを更新
@@ -379,22 +374,12 @@ public class DeckView : MonoBehaviour
     // ----------------------------------------------------------------------
     private void ToggleEnergyPanel()
     {
-        Debug.Log("ToggleEnergyPanel が呼び出されました");
-
-        if (setEnergyPanel == null || currentDeck == null)
-        {
-            Debug.LogWarning("setEnergyPanel または currentDeck が null です");
-            return;
-        }
-
         bool isActive = setEnergyPanel.gameObject.activeSelf;
-        Debug.Log($"現在のパネル表示状態: {isActive}");
 
         if (isActive)
         {
             // パネルを非表示
             setEnergyPanel.gameObject.SetActive(false);
-            Debug.Log("エネルギーパネルを非表示にしました");
 
             // 最終的な画像を更新（トグル選択中にすでに反映済み）
             UpdateEnergyButtonImages();
@@ -405,8 +390,7 @@ public class DeckView : MonoBehaviour
             setEnergyPanel.ShowPanel(currentDeck);
 
             // 明示的にパネルを表示
-            setEnergyPanel.gameObject.SetActive(true);
-            Debug.Log("エネルギーパネルを表示しました");
+            setEnergyPanel.gameObject.SetActive(true);;
         }
     }
 
@@ -457,6 +441,7 @@ public class DeckView : MonoBehaviour
             energyImage1.enabled = true;
         }
 
+        // 2つ目のエネルギータイプがあれば画像を設定
         if (typeList.Count > 1 && energyImage2 != null)
         {
             energyImage2.sprite = setEnergyPanel.GetEnergySprite(typeList[1]);
@@ -514,13 +499,10 @@ public class DeckView : MonoBehaviour
 
     // ----------------------------------------------------------------------
     // デッキシャッフル機能
+    // デッキをシャッフル（表示順をランダムに並び替え）します。
+    // シャッフル結果はデータとUIの両方に反映します。
+    // 最初の5枚の中にたねポケモンが含まれるように調整します。
     // ----------------------------------------------------------------------
-
-    /// <summary>
-    /// デッキをシャッフル（表示順をランダムに並び替え）します。
-    /// シャッフル結果はデータとUIの両方に反映します。
-    /// 最初の5枚の中にたねポケモンが含まれるように調整します。
-    /// </summary>
     public void ShuffleDeck()
     {
         // シャッフル中の場合は処理をスキップ
@@ -569,6 +551,7 @@ public class DeckView : MonoBehaviour
             int attempts = 0;
             bool hasBasicPokemon = false;
 
+            // 最初の5枚にたねポケモンが含まれるまでシャッフルを繰り返す
             while (!hasBasicPokemon && attempts < maxAttempts)
             {
                 attempts++;
@@ -607,7 +590,6 @@ public class DeckView : MonoBehaviour
                     // 最初の5枚のカードのみ初期手札表示をオンにする
                     bool isInitialHand = i < 5;
                     cardView.ToggleInitialHandDisplay(isInitialHand);
-                    Debug.Log($"カード {cardView.name} の初期手札表示を {isInitialHand} に設定");
                 }
             }
 
@@ -618,11 +600,6 @@ public class DeckView : MonoBehaviour
                 cardItems.Add(triple.gameObject);
             }
         }
-        catch (Exception ex)
-        {
-            Debug.LogError($"シャッフル処理でエラーが発生しました: {ex.Message}\n{ex.StackTrace}");
-            FeedbackContainer.Instance?.ShowFailureFeedback("シャッフル処理でエラーが発生しました");
-        }
         finally
         {
             // シャッフル処理完了のフラグをリセット
@@ -630,9 +607,9 @@ public class DeckView : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// カードコンテナの子オブジェクトをすべて一時的に取り外す（親子関係をクリア）
-    /// </summary>
+    // ----------------------------------------------------------------------
+    // カードコンテナの子オブジェクトをすべて一時的に取り外す（親子関係をクリア）
+    // ----------------------------------------------------------------------
     private void ClearCardContainer()
     {
         if (cardContainer == null) return;
@@ -651,18 +628,23 @@ public class DeckView : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// デッキ内にたねポケモンが含まれているかをチェック
-    /// </summary>
+    // ----------------------------------------------------------------------
+    // デッキ内にたねポケモンが含まれているかをチェック
+    // ----------------------------------------------------------------------
     private bool CheckIfDeckContainsBasicPokemon(List<(GameObject gameObject, CardModel cardModel, string cardId)> cardTriples)
     {
         if (cardTriples == null || cardTriples.Count == 0)
             return false;
 
+        // たねポケモンが含まれているかをチェック
         foreach (var triple in cardTriples)
         {
+            // 各カードのCardModelを取得
             CardModel cardModel = triple.cardModel;
+            // CardModelがnullでないことを確認
+            // たねポケモンの条件を満たすかチェック
             if (cardModel != null &&
+
                 (cardModel.cardTypeEnum == Enum.CardType.非EX || cardModel.cardTypeEnum == Enum.CardType.EX) &&
                 cardModel.evolutionStageEnum == Enum.EvolutionStage.たね)
             {
@@ -673,20 +655,24 @@ public class DeckView : MonoBehaviour
         return false; // たねポケモンなし
     }
 
-    /// <summary>
-    /// 先頭N枚の中にたねポケモンが含まれているかをチェック
-    /// </summary>
+    // ----------------------------------------------------------------------
+    // 先頭N枚の中にたねポケモンが含まれているかをチェック
+    // ----------------------------------------------------------------------
     private bool CheckForBasicPokemonInFirstN(List<(GameObject gameObject, CardModel cardModel, string cardId)> cardTriples, int n)
     {
         if (cardTriples == null || cardTriples.Count == 0 || n <= 0)
             return false;
 
+        // 実際にチェックする枚数（リストの枚数が少ない場合は全枚数）
         int checkCount = Math.Min(n, cardTriples.Count);
 
         // 先頭N枚をチェック
         for (int i = 0; i < checkCount; i++)
         {
+            // 各カードのCardModelを取得
             CardModel cardModel = cardTriples[i].cardModel;
+            // CardModelがnullでないことを確認
+            // たねポケモンの条件を満たすかチェック
             if (cardModel != null &&
                 (cardModel.cardTypeEnum == Enum.CardType.非EX || cardModel.cardTypeEnum == Enum.CardType.EX) &&
                 cardModel.evolutionStageEnum == Enum.EvolutionStage.たね)
@@ -698,39 +684,9 @@ public class DeckView : MonoBehaviour
         return false; // たねポケモンなし
     }
 
-    /// <summary>
-    /// 指定された枚数の中にたねポケモンが含まれるかをチェックする
-    /// </summary>
-    /// <param name="cardPairs">チェックするカードペアのリスト</param>
-    /// <param name="count">チェックする先頭のカード枚数</param>
-    /// <returns>たねポケモンが含まれる場合はtrue</returns>
-    private bool CheckForBasicPokemon(List<(GameObject gameObject, CardModel cardModel)> cardPairs, int count)
-    {
-        // リストが空か指定枚数より少ない場合は無効
-        if (cardPairs == null || cardPairs.Count == 0 || count <= 0)
-            return false;
-
-        // 実際にチェックする枚数（リストの枚数が少ない場合は全枚数）
-        int checkCount = Math.Min(count, cardPairs.Count);
-
-        // 先頭の指定枚数をチェック
-        for (int i = 0; i < checkCount; i++)
-        {
-            CardModel cardModel = cardPairs[i].cardModel;
-            if (cardModel != null &&
-                (cardModel.cardTypeEnum == Enum.CardType.非EX || cardModel.cardTypeEnum == Enum.CardType.EX) &&
-                cardModel.evolutionStageEnum == Enum.EvolutionStage.たね)
-            {
-                return true; // たねポケモン発見
-            }
-        }
-
-        return false; // たねポケモンなし
-    }
-
-    /// <summary>
-    /// リストをランダムにシャッフルするヘルパーメソッド（Fisher-Yatesアルゴリズム）
-    /// </summary>
+    // ----------------------------------------------------------------------
+    // リストをランダムにシャッフルするヘルパーメソッド（Fisher-Yatesアルゴリズム）
+    // ----------------------------------------------------------------------
     private void ShuffleList<T>(List<T> list)
     {
         System.Random random = new System.Random();

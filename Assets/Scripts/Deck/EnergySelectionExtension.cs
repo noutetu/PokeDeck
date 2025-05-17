@@ -1,8 +1,5 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using System;
 
 // ----------------------------------------------------------------------
 // DeckViewのエネルギー選択UI機能を拡張するクラス
@@ -43,7 +40,6 @@ public static class EnergySelectionExtension
     // エネルギー画像を更新する（DeckViewクラスにメソッド追加）
     // ----------------------------------------------------------------------
     public static void UpdateEnergyImages(
-        DeckView deckView,
         Image energyImage1, 
         Image energyImage2, 
         SetEnergyPanel setEnergyPanel,

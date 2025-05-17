@@ -1,5 +1,3 @@
-// filepath: /Users/runaki/Desktop/project in Unity/PokeDeck/Assets/Deck/DeckPresenter.cs
-using System;
 using UnityEngine;
 using UniRx;
 
@@ -35,7 +33,6 @@ public class DeckPresenter : MonoBehaviour
             view = GetComponent<DeckView>();
             if (view == null)
             {
-                Debug.LogError("DeckViewが見つかりません。同じGameObjectにアタッチするか、インスペクタで設定してください。");
                 return;
             }
         }
@@ -68,24 +65,11 @@ public class DeckPresenter : MonoBehaviour
         // モデルが設定されていない場合は警告を表示
         if (model == null)
         {
-            Debug.LogWarning("DeckModelが設定されていません。");
             return;
         }
 
         // ビューにモデルの内容を表示
         view.DisplayDeck(model);
-
-        // モデルの変更イベントをサブスクライブ
-        SetupModelSubscriptions();
-    }
-
-    // ----------------------------------------------------------------------
-    // モデルの変更イベントをサブスクライブする
-    // ----------------------------------------------------------------------
-    private void SetupModelSubscriptions()
-    {
-        // モデルの変更を監視し、必要に応じてUIを更新
-        // 例: モデルのカード変更通知などをサブスクライブ
     }
 
     // ----------------------------------------------------------------------

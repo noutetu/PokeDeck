@@ -1,6 +1,5 @@
 using UnityEngine;
 using TMPro;
-using UnityEngine.UI;
 using System.Collections;
 using DG.Tweening; // DOTween追加
 
@@ -22,8 +21,10 @@ public class FeedbackContainer : MonoBehaviour
     [SerializeField] private float floatDistance = 30f; // 浮き上がる距離（ピクセル）
     [SerializeField] private Ease appearEase = Ease.OutBack; // 出現時のイージング
     [SerializeField] private Ease disappearEase = Ease.InBack; // 消失時のイージング
-    
+
+    // -------------------------------------------------
     // フィードバックインスタンス
+    // -------------------------------------------------
     private GameObject currentFeedbackInstance;
     private Coroutine hideCoroutine;
     private Sequence currentAnimation;
@@ -32,6 +33,9 @@ public class FeedbackContainer : MonoBehaviour
     private static FeedbackContainer _instance;
     public static FeedbackContainer Instance => _instance;
     
+    // ----------------------------------------------------------------------
+    // Awakeメソッド（シングルトンの初期化）
+    // ----------------------------------------------------------------------
     private void Awake()
     {
         // シングルトンの設定
@@ -40,7 +44,7 @@ public class FeedbackContainer : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-        
+
         _instance = this;
     }
     
@@ -61,10 +65,6 @@ public class FeedbackContainer : MonoBehaviour
             currentFeedbackInstance = Instantiate(successPrefab, transform);
             SetupFeedbackInstance(currentFeedbackInstance, message, showDuration);
         }
-        else
-        {
-            Debug.LogError("FeedbackContainer: 成功用プレハブが設定されていません");
-        }
     }
     
     // ----------------------------------------------------------------------
@@ -83,10 +83,6 @@ public class FeedbackContainer : MonoBehaviour
         {
             currentFeedbackInstance = Instantiate(failurePrefab, transform);
             SetupFeedbackInstance(currentFeedbackInstance, message, showDuration);
-        }
-        else
-        {
-            Debug.LogError("FeedbackContainer: 失敗用プレハブが設定されていません");
         }
     }
     
@@ -339,10 +335,6 @@ public class FeedbackContainer : MonoBehaviour
             
             // フィードバックを表示（タイマーなし - UpdateFeedbackMessageで更新する）
             currentFeedbackInstance.SetActive(true);
-        }
-        else
-        {
-            Debug.LogError("FeedbackContainer: プレハブが設定されていません");
         }
     }
     
