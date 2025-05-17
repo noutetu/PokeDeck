@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using Enum;
 
 // ----------------------------------------------------------------------
 // 最大エネルギーコストのフィルタリングを担当するPresenter
@@ -56,36 +54,30 @@ public class SetMaxEnergyArea : MonoBehaviour, IFilterArea
         {
             // ドロップダウンの項目をクリア
             energyCostDropdown.ClearOptions();
-            
+
             // 新しいオプションリストを作成
-            List<Dropdown.OptionData> options = new List<Dropdown.OptionData>();
-            
-            // 「指定なし」を最初のオプションとして追加
-            options.Add(new Dropdown.OptionData("指定なし"));
-            
+            List<Dropdown.OptionData> options = new List<Dropdown.OptionData>
+            {
+                // 「指定なし」を最初のオプションとして追加
+                new Dropdown.OptionData("指定なし")
+            };
+
             // エネルギーコスト値のオプションを追加（1から5まで）
             for (int cost = 1; cost <= 5; cost++)
             {
                 options.Add(new Dropdown.OptionData(cost.ToString()));
             }
-            
+
             // 作成したオプションリストをドロップダウンに設定
             energyCostDropdown.AddOptions(options);
-            
+
             // 初期値は「指定なし」
             energyCostDropdown.value = 0;
             energyCostDropdown.RefreshShownValue();
-            
+
             // 既存のリスナーをクリアして新しいリスナーを設定
             energyCostDropdown.onValueChanged.RemoveAllListeners();
             energyCostDropdown.onValueChanged.AddListener(OnDropdownValueChanged);
-            
-            // デバッグ用にオプション一覧を出力
-            Debug.Log($"エネルギーコストドロップダウンの初期化完了: オプション数={energyCostDropdown.options.Count}");
-        }
-        else
-        {
-            Debug.LogError("エネルギーコストドロップダウンがnullです。Inspectorで設定してください。");
         }
     }
     
@@ -97,13 +89,11 @@ public class SetMaxEnergyArea : MonoBehaviour, IFilterArea
         // インデックスの有効性チェック
         if (energyCostDropdown == null || index < 0 || index >= energyCostDropdown.options.Count)
         {
-            Debug.LogError($"無効なドロップダウンインデックス: {index}");
             return;
         }
         
         // 選択されたテキストを取得
         string selectedText = energyCostDropdown.options[index].text;
-        Debug.Log($"選択されたエネルギーコストドロップダウン値: インデックス={index}, テキスト={selectedText}");
         
         // 指定なしの処理
         if (selectedText == "指定なし")
@@ -124,60 +114,44 @@ public class SetMaxEnergyArea : MonoBehaviour, IFilterArea
             if (hadActiveFilter)
             {
                 OnFilterChanged?.Invoke();
-                Debug.Log($"エネルギーコストフィルターをクリア（前回のアクティブ状態: {hadActiveFilter}, 比較タイプ: {prevComparisonType}）");
             }
             return;
         }
-        
+
         // エネルギーコスト値をパース
         if (int.TryParse(selectedText, out int cost))
         {
             selectedEnergyCost = cost;
-            Debug.Log($"エネルギーコスト値を設定: {selectedEnergyCost}");
-            
+
             // トグルを有効化
             SetTogglesInteractable(true);
-            
+
             // トグルが一つもOnになっていない場合は「同じ」トグルを選択状態にする
-            if (selectedComparisonType == EnergyComparisonType.None || 
+            if (selectedComparisonType == EnergyComparisonType.None ||
                 (!lessOrEqualToggle.isOn && !equalToggle.isOn && !greaterOrEqualToggle.isOn))
             {
                 selectedComparisonType = EnergyComparisonType.Equal;
-                
+
                 // 「同じ」トグルをオンにする
                 if (equalToggle != null)
                 {
                     equalToggle.SetIsOnWithoutNotify(true);
-                    
+
                     // SimpleToggleColorコンポーネントを更新
                     SimpleToggleColor colorComponent = equalToggle.GetComponent<SimpleToggleColor>();
                     if (colorComponent != null)
                     {
                         colorComponent.UpdateColorState(true);
                     }
-                    
+
                     // TrueShadowToggleInsetコンポーネントを更新
                     TrueShadowToggleInset shadowComponent = equalToggle.GetComponent<TrueShadowToggleInset>();
                     if (shadowComponent != null)
                     {
                         shadowComponent.UpdateInsetState(true);
                     }
-                    
-                    Debug.Log("🔍 トグルが選択されていなかったため、「同じ」トグルをデフォルトで選択しました");
                 }
             }
-            
-            // 比較タイプが選択されている場合はフィルター更新（オプションOKボタン対応）
-            if (selectedComparisonType != EnergyComparisonType.None)
-            {
-                // OKボタンを押すまではフィルタリングを実行しない
-                // OnFilterChanged?.Invoke();
-                Debug.Log($"エネルギーコストフィルター更新: コスト={selectedEnergyCost}, 比較={selectedComparisonType}");
-            }
-        }
-        else
-        {
-            Debug.LogError($"エネルギーコスト値のパースに失敗: {selectedText}");
         }
     }
     
@@ -222,10 +196,9 @@ public class SetMaxEnergyArea : MonoBehaviour, IFilterArea
             {
                 shadowComponent.UpdateInsetState(true);
             }
-            
-            Debug.Log("🔍 「同じ」トグルをデフォルトで選択状態に設定（視覚状態も更新）");
         }
-        
+
+        // 「同じ」トグルが選択されている場合は、他のトグルをオフにする
         if (greaterOrEqualToggle != null)
         {
             greaterOrEqualToggle.group = toggleGroup;
@@ -247,14 +220,6 @@ public class SetMaxEnergyArea : MonoBehaviour, IFilterArea
         {
             // 同じトグルがオフになった場合は比較タイプをクリア
             selectedComparisonType = EnergyComparisonType.None;
-        }
-        
-        // フィルター変更を通知（エネルギーコスト値が選択されている場合のみ）
-        if (energyCostDropdown.value > 0)
-        {
-            // OKボタンを押すまではフィルタリングを実行しない
-            // OnFilterChanged?.Invoke();
-            Debug.Log($"エネルギーコスト比較タイプフィルター変更: {comparisonType} → {isOn}, 選択値: {selectedEnergyCost}");
         }
     }
     
@@ -322,8 +287,6 @@ public class SetMaxEnergyArea : MonoBehaviour, IFilterArea
                 shadowComponent.UpdateInsetState(false);
             }
         }
-        
-        Debug.Log("🔄 すべてのトグルの状態、色、影をオフに更新しました");
     }
     
     // ----------------------------------------------------------------------
@@ -366,8 +329,6 @@ public class SetMaxEnergyArea : MonoBehaviour, IFilterArea
     // ----------------------------------------------------------------------
     public void ResetFilters()
     {
-        Debug.Log("📋 エネルギーコストフィルターをリセット開始");
-        
         // ドロップダウンは「指定なし」に戻す
         if (energyCostDropdown != null)
         {
@@ -383,37 +344,8 @@ public class SetMaxEnergyArea : MonoBehaviour, IFilterArea
         selectedComparisonType = EnergyComparisonType.None;
         SetTogglesInteractable(false);
         
-        Debug.Log("✅ エネルギーコストフィルターのリセット完了");
-        
         // リセット後にフィルター変更を通知
         OnFilterChanged?.Invoke();
-    }
-    
-    // ----------------------------------------------------------------------
-    // トグルを完全にリセット（状態と色と影の両方）
-    // ----------------------------------------------------------------------
-    private void ResetToggle(Toggle toggle)
-    {
-        if (toggle == null) return;
-        
-        // トグルの状態をリセット（イベント発火なし）
-        toggle.SetIsOnWithoutNotify(false);
-        
-        // SimpleToggleColorコンポーネントを取得して色も更新
-        SimpleToggleColor colorComponent = toggle.GetComponent<SimpleToggleColor>();
-        if (colorComponent != null)
-        {
-            colorComponent.UpdateColorState(false);
-        }
-        
-        // TrueShadowToggleInsetコンポーネントを取得して影状態も更新
-        TrueShadowToggleInset shadowComponent = toggle.GetComponent<TrueShadowToggleInset>();
-        if (shadowComponent != null)
-        {
-            shadowComponent.UpdateInsetState(false);
-        }
-        
-        Debug.Log($"🔄 トグル '{toggle.name}' の状態、色、影をリセットしました");
     }
     
     // ----------------------------------------------------------------------
@@ -426,7 +358,6 @@ public class SetMaxEnergyArea : MonoBehaviour, IFilterArea
             // ドロップダウンが「指定なし」または比較タイプがNoneの場合はフィルタリングをスキップ
             if (energyCostDropdown.value == 0 || selectedComparisonType == EnergyComparisonType.None)
             {
-                Debug.Log($"🔍 エネルギーコストフィルターは無効なのでスキップします（ドロップダウン値={energyCostDropdown.value}, 比較タイプ={selectedComparisonType}）");
                 // フィルター未選択状態を設定（無効化）
                 model.SetMaxEnergyCostFilter(0, EnergyComparisonType.None);
             }
@@ -434,7 +365,6 @@ public class SetMaxEnergyArea : MonoBehaviour, IFilterArea
             {
                 // 現在選択されているエネルギーコスト条件をモデルに適用
                 model.SetMaxEnergyCostFilter(selectedEnergyCost, selectedComparisonType);
-                Debug.Log($"🔍 エネルギーコストフィルターをモデルに適用: コスト={selectedEnergyCost}, 比較タイプ={selectedComparisonType}");
             }
         }
     }

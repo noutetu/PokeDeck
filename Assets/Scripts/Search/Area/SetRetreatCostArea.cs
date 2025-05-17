@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using Enum;
 
 // ----------------------------------------------------------------------
 // 逃げるコストのフィルタリングを担当するPresenter
@@ -58,10 +56,11 @@ public class SetRetreatCostArea : MonoBehaviour, IFilterArea
             retreatCostDropdown.ClearOptions();
             
             // 新しいオプションリストを作成
-            List<Dropdown.OptionData> options = new List<Dropdown.OptionData>();
-            
-            // 「指定なし」を最初のオプションとして追加
-            options.Add(new Dropdown.OptionData("指定なし"));
+            List<Dropdown.OptionData> options = new List<Dropdown.OptionData>
+            {
+                // 「指定なし」を最初のオプションとして追加
+                new Dropdown.OptionData("指定なし")
+            };
             
             // コスト値のオプションを追加（0から4まで）
             for (int cost = 0; cost <= 4; cost++)
@@ -81,10 +80,6 @@ public class SetRetreatCostArea : MonoBehaviour, IFilterArea
             retreatCostDropdown.onValueChanged.AddListener(OnDropdownValueChanged);
             
         }
-        else
-        {
-            Debug.LogError("逃げるコストドロップダウンがnullです。Inspectorで設定してください。");
-        }
     }
     
     // ----------------------------------------------------------------------
@@ -95,13 +90,11 @@ public class SetRetreatCostArea : MonoBehaviour, IFilterArea
         // インデックスの有効性チェック
         if (retreatCostDropdown == null || index < 0 || index >= retreatCostDropdown.options.Count)
         {
-            Debug.LogError($"無効なドロップダウンインデックス: {index}");
             return;
         }
         
         // 選択されたテキストを取得
         string selectedText = retreatCostDropdown.options[index].text;
-        Debug.Log($"選択された逃げるコスト値: インデックス={index}, テキスト={selectedText}");
         
         // 指定なしの処理
         if (selectedText == "指定なし")
@@ -118,60 +111,43 @@ public class SetRetreatCostArea : MonoBehaviour, IFilterArea
             // トグルを無効化して全てオフに
             SetTogglesInteractable(false);
             SetAllTogglesOff();
-            
-            // OKボタンを押すまではフィルタリングを実行しない
-            Debug.Log($"逃げるコストフィルターをクリア（前回のアクティブ状態: {hadActiveFilter}, 比較タイプ: {prevComparisonType}）");
             return;
         }
-        
+
         // コスト値をパース
         if (int.TryParse(selectedText, out int cost))
         {
             selectedRetreatCost = cost;
-            Debug.Log($"逃げるコスト値を設定: {selectedRetreatCost}");
-            
+
             // トグルを有効化
             SetTogglesInteractable(true);
-            
+
             // トグルが一つもOnになっていない場合は「同じ」トグルを選択状態にする
-            if (selectedComparisonType == RetreatComparisonType.None || 
+            if (selectedComparisonType == RetreatComparisonType.None ||
                 (!lessOrEqualToggle.isOn && !equalToggle.isOn && !greaterOrEqualToggle.isOn))
             {
                 selectedComparisonType = RetreatComparisonType.Equal;
-                
+
                 // 「同じ」トグルをオンにする
                 if (equalToggle != null)
                 {
                     equalToggle.SetIsOnWithoutNotify(true);
-                    
+
                     // SimpleToggleColorコンポーネントを更新
                     SimpleToggleColor colorComponent = equalToggle.GetComponent<SimpleToggleColor>();
                     if (colorComponent != null)
                     {
                         colorComponent.UpdateColorState(true);
                     }
-                    
+
                     // TrueShadowToggleInsetコンポーネントを更新
                     TrueShadowToggleInset shadowComponent = equalToggle.GetComponent<TrueShadowToggleInset>();
                     if (shadowComponent != null)
                     {
                         shadowComponent.UpdateInsetState(true);
                     }
-                    
-                    Debug.Log("🔍 トグルが選択されていなかったため、「同じ」トグルをデフォルトで選択しました");
                 }
             }
-            
-            // 比較タイプが選択されている場合はフィルター更新のログを出すが、
-            // OKボタンを押すまではフィルタリングを実行しない
-            if (selectedComparisonType != RetreatComparisonType.None)
-            {
-                Debug.Log($"逃げるコストフィルター更新: コスト={selectedRetreatCost}, 比較={selectedComparisonType}");
-            }
-        }
-        else
-        {
-            Debug.LogError($"コスト値のパースに失敗: {selectedText}");
         }
     }
     
@@ -194,15 +170,15 @@ public class SetRetreatCostArea : MonoBehaviour, IFilterArea
             lessOrEqualToggle.onValueChanged.AddListener((isOn) => OnToggleValueChanged(isOn, RetreatComparisonType.LessOrEqual));
         }
         
+        // 「同じ」トグルはデフォルトで選択状態にする
         if (equalToggle != null)
         {
             equalToggle.group = toggleGroup;
             equalToggle.onValueChanged.AddListener((isOn) => OnToggleValueChanged(isOn, RetreatComparisonType.Equal));
-            
+
             // デフォルトで「同じ」トグルを選択状態にしておく（ただし、まだ有効化しない）
             equalToggle.SetIsOnWithoutNotify(true);
             selectedComparisonType = RetreatComparisonType.Equal;
-            Debug.Log("🔍 「同じ」トグルをデフォルトで選択状態に設定");
         }
         
         if (greaterOrEqualToggle != null)
@@ -226,13 +202,6 @@ public class SetRetreatCostArea : MonoBehaviour, IFilterArea
         {
             // 同じトグルがオフになった場合は比較タイプをクリア
             selectedComparisonType = RetreatComparisonType.None;
-        }
-        
-        // コスト値が選択されている場合はログを出すが、
-        // OKボタンを押すまではフィルタリングを実行しない
-        if (selectedRetreatCost >= 0)
-        {
-            Debug.Log($"逃げるコスト比較タイプフィルター変更: {comparisonType} → {isOn}, 選択値: {selectedRetreatCost}");
         }
     }
     
@@ -310,8 +279,6 @@ public class SetRetreatCostArea : MonoBehaviour, IFilterArea
                 shadowComponent.UpdateInsetState(false);
             }
         }
-        
-        Debug.Log("🔄 すべてのトグルの状態、色、影をオフに更新しました");
     }
     
     // ----------------------------------------------------------------------
@@ -344,8 +311,6 @@ public class SetRetreatCostArea : MonoBehaviour, IFilterArea
     // ----------------------------------------------------------------------
     public void ResetFilters()
     {
-        Debug.Log("📋 逃げるコストフィルターをリセット開始");
-        
         // ドロップダウンは「指定なし」に戻す
         if (retreatCostDropdown != null)
         {
@@ -361,37 +326,8 @@ public class SetRetreatCostArea : MonoBehaviour, IFilterArea
         selectedComparisonType = RetreatComparisonType.None;
         SetTogglesInteractable(false);
         
-        Debug.Log("✅ 逃げるコストフィルターのリセット完了");
-        
         // リセット後にフィルター変更を通知
         OnFilterChanged?.Invoke();
-    }
-    
-    // ----------------------------------------------------------------------
-    // トグルを完全にリセット（状態と色と影の両方）
-    // ----------------------------------------------------------------------
-    private void ResetToggle(Toggle toggle)
-    {
-        if (toggle == null) return;
-        
-        // トグルの状態をリセット（イベント発火なし）
-        toggle.SetIsOnWithoutNotify(false);
-        
-        // SimpleToggleColorコンポーネントを取得して色も更新
-        SimpleToggleColor colorComponent = toggle.GetComponent<SimpleToggleColor>();
-        if (colorComponent != null)
-        {
-            colorComponent.UpdateColorState(false);
-        }
-        
-        // TrueShadowToggleInsetコンポーネントを取得して影状態も更新
-        TrueShadowToggleInset shadowComponent = toggle.GetComponent<TrueShadowToggleInset>();
-        if (shadowComponent != null)
-        {
-            shadowComponent.UpdateInsetState(false);
-        }
-        
-        Debug.Log($"🔄 トグル '{toggle.name}' の状態、色、影をリセットしました");
     }
     
     // ----------------------------------------------------------------------
@@ -404,7 +340,6 @@ public class SetRetreatCostArea : MonoBehaviour, IFilterArea
             // ドロップダウンが「指定なし」または比較タイプがNoneの場合はフィルタリングをスキップ
             if (retreatCostDropdown.value == 0 || selectedComparisonType == RetreatComparisonType.None)
             {
-                Debug.Log($"🔍 逃げるコストフィルターは無効なのでスキップします（ドロップダウン値={retreatCostDropdown.value}, 比較タイプ={selectedComparisonType}）");
                 // フィルター未選択状態を設定（無効化）
                 model.SetRetreatCostFilter(0, RetreatComparisonType.None);
             }
@@ -412,7 +347,6 @@ public class SetRetreatCostArea : MonoBehaviour, IFilterArea
             {
                 // 現在選択されているコスト条件をモデルに適用
                 model.SetRetreatCostFilter(selectedRetreatCost, selectedComparisonType);
-                Debug.Log($"🔍 逃げるコストフィルターをモデルに適用: コスト={selectedRetreatCost}, 比較タイプ={selectedComparisonType}");
             }
         }
     }

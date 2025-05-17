@@ -66,10 +66,6 @@ public class SetCardTypeArea : MonoBehaviour, IFilterArea
             {
                 selectedCardTypes.Remove(cardType);
             }
-            
-            // OKボタンを押すまでフィルタリングを実行しないため、イベント発火を削除
-            // OnFilterChanged?.Invoke();
-            Debug.Log($"カードタイプフィルター変更: {cardType} → {isOn}, 選択数: {selectedCardTypes.Count}");
         });
     }
     
@@ -90,7 +86,6 @@ public class SetCardTypeArea : MonoBehaviour, IFilterArea
         {
             // 現在選択されているカードタイプをモデルに適用
             model.SetCardTypeFilter(GetSelectedCardTypes());
-            Debug.Log($"🔍 カードタイプフィルターをモデルに適用: {selectedCardTypes.Count}個のタイプ");
         }
     }
     
@@ -106,9 +101,7 @@ public class SetCardTypeArea : MonoBehaviour, IFilterArea
     // フィルターのリセット
     // ----------------------------------------------------------------------
     public void ResetFilters()
-    {
-        Debug.Log("📋 カードタイプフィルターをリセット開始");
-        
+    {   
         // 選択状態をクリア
         selectedCardTypes.Clear();
         
@@ -119,8 +112,6 @@ public class SetCardTypeArea : MonoBehaviour, IFilterArea
         ResetToggle(itemToggle);
         ResetToggle(fossilToggle);
         ResetToggle(pokemonToolToggle);
-        
-        Debug.Log("✅ カードタイプフィルターのリセット完了");
         
         // リセット後にフィルター変更を通知
         OnFilterChanged?.Invoke();

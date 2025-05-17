@@ -1,14 +1,13 @@
-// ----------------------------------------------------------------------
-// カード検索画面のView
-// ユーザーからの入力を受け取り、検索条件の設定と結果表示を行う
-// ----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using System.Linq;  // ToList()用
+using System.Linq; 
 
+// ----------------------------------------------------------------------
+// カード検索画面のView
+// ユーザーからの入力を受け取り、検索条件の設定と結果表示を行う
+// ----------------------------------------------------------------------
 public class SearchView : MonoBehaviour
 {
     // ----------------------------------------------------------------------
@@ -18,7 +17,7 @@ public class SearchView : MonoBehaviour
     [SerializeField] private Button applyButton;               // OKボタン（決定）
     [SerializeField] private Button cancelButton;              // 閉じるボタン
     [SerializeField] private Button clearButton;               // フィルタリングリセットボタン
-    
+
     [Header("フィルターエリア")]
     [SerializeField] private SetCardTypeArea cardTypeArea;     // カードタイプフィルターエリア
     [SerializeField] private SetEvolutionStageArea evolutionStageArea; // 進化段階フィルターエリア
@@ -28,7 +27,7 @@ public class SearchView : MonoBehaviour
     [SerializeField] private SetMaxDamageArea maxDamageArea;   // 最大ダメージフィルターエリア
     [SerializeField] private SetMaxEnergyArea maxEnergyCostArea; // 最大エネルギーコストフィルターエリア
     [SerializeField] private SetRetreatCostArea retreatCostArea; // 逃げるコストフィルターエリア
-    
+
     [Header("結果プレビュー表示UI")]
     [SerializeField] private Transform cardContainer;          // 検索結果表示用コンテナ
     [SerializeField] private GameObject cardPrefab;            // カードプレハブ
@@ -39,31 +38,32 @@ public class SearchView : MonoBehaviour
     // ----------------------------------------------------------------------
     private SearchPresenter presenter;
     private SearchModel model;
-    private List<CardModel> currentResults = new List<CardModel>();
-    
+
     // ----------------------------------------------------------------------
     // イベント
     // ----------------------------------------------------------------------
     public event Action OnSearchButtonClicked;
     public event Action OnClearButtonClicked;
-    
+
     // ----------------------------------------------------------------------
     // 初期化処理
     // ----------------------------------------------------------------------
     private void Start()
     {
+        // UIの初期化
         InitializeUI();
+        // リスナーの設定
         SetupListeners();
+        // MVPのセットアップ
         SetupMVP();
-        
+
         // 起動時にすべてのフィルターをリセット
         ResetUI();
-        
+
         // モデルの状態も初期化（クリアボタンはUIのみリセットするため）
         if (model != null)
         {
             model.ClearAllFilters();
-            Debug.Log("✅ [SearchView] 初期起動時にすべてのフィルターをリセットしました");
         }
     }
 
@@ -78,7 +78,7 @@ public class SearchView : MonoBehaviour
             scrollRect.normalizedPosition = new Vector2(0, 1);
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // MVP構造のセットアップ
     // ----------------------------------------------------------------------
@@ -86,28 +86,20 @@ public class SearchView : MonoBehaviour
     {
         // モデルの作成
         model = new SearchModel();
-        
+
         // プレゼンターの作成とビューへの接続
         presenter = new SearchPresenter(this, model);
-        
+
         // カードタイプフィルターエリアの登録
         if (cardTypeArea != null)
         {
             presenter.RegisterCardTypeArea(cardTypeArea);
-        }
-        else
-        {
-            Debug.LogWarning("⚠️ SetCardTypeAreaコンポーネントが設定されていません");
         }
 
         // 進化段階フィルターエリアの登録
         if (evolutionStageArea != null)
         {
             presenter.RegisterEvolutionStageArea(evolutionStageArea);
-        }
-        else
-        {
-            Debug.LogWarning("⚠️ SetEvolutionStageAreaコンポーネントが設定されていません");
         }
 
         // 以下のフィルターエリア登録
@@ -142,12 +134,8 @@ public class SearchView : MonoBehaviour
         {
             presenter.RegisterRetreatCostArea(retreatCostArea);
         }
-        else
-        {
-            Debug.LogWarning("⚠️ SetRetreatCostAreaコンポーネントが設定されていません");
-        }
     }
-    
+
     // ----------------------------------------------------------------------
     // カードデータを外部から設定（エラー対策）
     // ----------------------------------------------------------------------
@@ -158,17 +146,14 @@ public class SearchView : MonoBehaviour
             // modelがnullの場合は初期化する
             SetupMVP();
         }
-        
+
         if (model != null)
         {
+            // モデルにカードデータを設定
             model.SetCards(cards);
         }
-        else
-        {
-            Debug.LogWarning("⚠️ SearchModelがnullです。SetCards()が失敗しました。");
-        }
     }
-    
+
     // ----------------------------------------------------------------------
     // リスナーの設定
     // ----------------------------------------------------------------------
@@ -177,30 +162,32 @@ public class SearchView : MonoBehaviour
         // OKボタン（決定）クリック - 検索実行と結果の適用
         if (applyButton != null)
         {
-            applyButton.onClick.AddListener(() => {
+            applyButton.onClick.AddListener(() =>
+            {
                 // 検索を実行
                 OnSearchButtonClicked?.Invoke();
                 // 検索結果をメインのカードリストに適用して検索パネルを閉じる
                 ApplySearchResults();
             });
         }
-        
+
         // クリアボタンクリック（フィルタリングリセット）
         if (clearButton != null)
         {
-            clearButton.onClick.AddListener(() => {
+            clearButton.onClick.AddListener(() =>
+            {
                 OnClearButtonClicked?.Invoke();
                 ResetUI();
             });
         }
-        
+
         // 閉じるボタンクリック
         if (cancelButton != null)
         {
             cancelButton.onClick.AddListener(CloseSearchPanel);
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // 検索結果を適用して検索パネルを閉じる
     // ----------------------------------------------------------------------
@@ -208,9 +195,7 @@ public class SearchView : MonoBehaviour
     {
         if (SearchNavigator.Instance != null)
         {
-            Debug.Log("🔍 [SearchView] ApplySearchResults: カードタイプフィルターのみ適用します");
-
-            // カードタイプフィルターのみ取得
+            // カードタイプフィルターを取得
             var selectedCardTypes = cardTypeArea != null ? cardTypeArea.GetSelectedCardTypes().ToList() : new List<Enum.CardType>();
             // 進化段階フィルターを取得
             var selectedEvolutionStages = evolutionStageArea != null ? evolutionStageArea.GetSelectedEvolutionStages().ToList() : new List<Enum.EvolutionStage>();
@@ -228,12 +213,13 @@ public class SearchView : MonoBehaviour
                 switch (cmp)
                 {
                     case SetHPArea.HPComparisonType.LessOrEqual: minHP = 0; maxHP = hpVal; break;
-                    case SetHPArea.HPComparisonType.Equal:       minHP = hpVal; maxHP = hpVal; break;
+                    case SetHPArea.HPComparisonType.Equal: minHP = hpVal; maxHP = hpVal; break;
                     case SetHPArea.HPComparisonType.GreaterOrEqual: minHP = hpVal; maxHP = int.MaxValue; break;
                     default: minHP = 0; maxHP = int.MaxValue; break;
                 }
             }
             else { minHP = 0; maxHP = int.MaxValue; }
+
             // ダメージフィルター用のmin/maxを計算
             int minMaxDamage, maxMaxDamage;
             if (maxDamageArea != null)
@@ -243,12 +229,13 @@ public class SearchView : MonoBehaviour
                 switch (cmpD)
                 {
                     case SetMaxDamageArea.DamageComparisonType.LessOrEqual: minMaxDamage = 0; maxMaxDamage = dmg; break;
-                    case SetMaxDamageArea.DamageComparisonType.Equal:       minMaxDamage = dmg; maxMaxDamage = dmg; break;
+                    case SetMaxDamageArea.DamageComparisonType.Equal: minMaxDamage = dmg; maxMaxDamage = dmg; break;
                     case SetMaxDamageArea.DamageComparisonType.GreaterOrEqual: minMaxDamage = dmg; maxMaxDamage = int.MaxValue; break;
                     default: minMaxDamage = 0; maxMaxDamage = int.MaxValue; break;
                 }
             }
             else { minMaxDamage = 0; maxMaxDamage = int.MaxValue; }
+
             // エネルギーフィルターの範囲を計算
             int minEnergyCost, maxEnergyCost;
             if (maxEnergyCostArea != null)
@@ -258,9 +245,9 @@ public class SearchView : MonoBehaviour
                 switch (cmp)
                 {
                     case SetMaxEnergyArea.EnergyComparisonType.LessOrEqual: minEnergyCost = 0; maxEnergyCost = cost; break;
-                    case SetMaxEnergyArea.EnergyComparisonType.Equal:       minEnergyCost = cost; maxEnergyCost = cost; break;
+                    case SetMaxEnergyArea.EnergyComparisonType.Equal: minEnergyCost = cost; maxEnergyCost = cost; break;
                     case SetMaxEnergyArea.EnergyComparisonType.GreaterOrEqual: minEnergyCost = cost; maxEnergyCost = int.MaxValue; break;
-                    default:                                               minEnergyCost = 0; maxEnergyCost = int.MaxValue; break;
+                    default: minEnergyCost = 0; maxEnergyCost = int.MaxValue; break;
                 }
             }
             else { minEnergyCost = 0; maxEnergyCost = int.MaxValue; }
@@ -299,7 +286,7 @@ public class SearchView : MonoBehaviour
             }
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // 検索パネルを閉じる
     // ----------------------------------------------------------------------
@@ -310,7 +297,7 @@ public class SearchView : MonoBehaviour
             SearchNavigator.Instance.HideSearchPanel();
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // UI要素のリセット
     // ----------------------------------------------------------------------
@@ -319,67 +306,65 @@ public class SearchView : MonoBehaviour
         // カードコンテナの中身をクリア
         ClearCardContainer();
         // フィルターUIをリセット（カードタイプと進化段階）
-        if (cardTypeArea != null)      cardTypeArea.ResetFilters();
+        if (cardTypeArea != null) cardTypeArea.ResetFilters();
         if (evolutionStageArea != null) evolutionStageArea.ResetFilters();
-        if (typeArea != null)          typeArea.ResetFilters();
-        if (cardPackArea != null)      cardPackArea.ResetFilters();
-        if (hpArea != null)            hpArea.ResetFilters();
-        if (maxDamageArea != null)     maxDamageArea.ResetFilters();
+        if (typeArea != null) typeArea.ResetFilters();
+        if (cardPackArea != null) cardPackArea.ResetFilters();
+        if (hpArea != null) hpArea.ResetFilters();
+        if (maxDamageArea != null) maxDamageArea.ResetFilters();
         if (maxEnergyCostArea != null) maxEnergyCostArea.ResetFilters();
-        if (retreatCostArea != null)   retreatCostArea.ResetFilters();
+        if (retreatCostArea != null) retreatCostArea.ResetFilters();
     }
-    
+
     // ----------------------------------------------------------------------
     // カードコンテナをクリア
     // ----------------------------------------------------------------------
     private void ClearCardContainer()
     {
         if (cardContainer == null) return;
-        
+
         foreach (Transform child in cardContainer)
         {
             Destroy(child.gameObject);
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // 検索結果の表示
     // @param cards 表示するカードデータのリスト
     // ----------------------------------------------------------------------
     public void DisplaySearchResults(List<CardModel> cards)
     {
-        // 現在の結果を保存
-        currentResults = cards;
-        
         // カードコンテナのクリア
         ClearCardContainer();
-        
+
         // カードプレハブのNullチェック
         if (cardPrefab == null || cardContainer == null)
         {
-            Debug.LogWarning("カードプレハブまたはコンテナが設定されていません。");
             return;
         }
-        
+
         // カードの表示
         foreach (var card in cards)
         {
+            // カードプレハブのインスタンス化
             GameObject cardObj = Instantiate(cardPrefab, cardContainer);
+            // カードの画像を設定
             CardView cardView = cardObj.GetComponent<CardView>();
-            
+
             if (cardView != null)
             {
                 cardView.SetImage(card);
             }
         }
-        
+
         // スクロール位置のリセット
         if (scrollRect != null)
         {
             scrollRect.normalizedPosition = new Vector2(0, 1);
         }
     }
-    
+
     // ----------------------------------------------------------------------
     // コンポーネント破棄時の処理
     // ----------------------------------------------------------------------
@@ -390,12 +375,12 @@ public class SearchView : MonoBehaviour
         {
             clearButton.onClick.RemoveAllListeners();
         }
-        
+
         if (applyButton != null)
         {
             applyButton.onClick.RemoveAllListeners();
         }
-        
+
         if (cancelButton != null)
         {
             cancelButton.onClick.RemoveAllListeners();

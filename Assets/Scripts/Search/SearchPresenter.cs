@@ -1,22 +1,29 @@
+using System.Collections.Generic;
+using UnityEngine;
+
 // ----------------------------------------------------------------------
 // 検索画面のPresenter
 // ViewとModelの橋渡しを行うクラス
 // ----------------------------------------------------------------------
-using System.Collections.Generic;
-using UnityEngine;
-
 public class SearchPresenter
 {
+    // ----------------------------------------------------------------------
+    // フィールド
+    // ----------------------------------------------------------------------
+    // 検索画面のViewとModel
     private SearchView view;
     private SearchModel model;
-    private SetCardTypeArea cardTypeArea;
-    private SetEvolutionStageArea evolutionStageArea;
-    private SetTypeArea typeArea;
-    private SetCardPackArea cardPackArea;
-    private SetHPArea hpArea;
-    private SetMaxDamageArea maxDamageArea;
-    private SetMaxEnergyArea maxEnergyCostArea;
-    [SerializeField] private SetRetreatCostArea retreatCostArea;  // 逃げるコストフィルターエリア
+    // -------------------------------------------------
+    // 各フィルターエリアの参照
+    // -------------------------------------------------
+    private SetCardTypeArea cardTypeArea;                       // カードタイプフィルターエリア
+    private SetEvolutionStageArea evolutionStageArea;           // 進化段階フィルターエリア
+    private SetTypeArea typeArea;                               // ポケモンタイプフィルターエリア
+    private SetCardPackArea cardPackArea;                       // カードパックフィルターエリア   
+    private SetHPArea hpArea;                                   // HPフィルターエリア
+    private SetMaxDamageArea maxDamageArea;                     // 最大ダメージフィルターエリア
+    private SetMaxEnergyArea maxEnergyCostArea;                 // 最大エネルギーコストフィルターエリア
+    private SetRetreatCostArea retreatCostArea;                 // 逃げるコストフィルターエリア
     
     // ----------------------------------------------------------------------
     // コンストラクタ
@@ -41,14 +48,6 @@ public class SearchPresenter
     public void RegisterCardTypeArea(SetCardTypeArea area)
     {
         cardTypeArea = area;
-        
-        // フィルター変更イベントの購読（自動プレビュー用）
-        if (area != null)
-        {
-            // プレビュー検索を無効化するため購読を行わない
-            // area.OnFilterChanged += OnFilterChanged;
-            Debug.Log("✅ SetCardTypeAreaを登録しました");
-        }
     }
     
     // ----------------------------------------------------------------------
@@ -112,35 +111,40 @@ public class SearchPresenter
     // ----------------------------------------------------------------------
     private void ApplyAllFiltersToModel()
     {
-        Debug.Log("🔍 検索フィルターをモデルに適用");
-        
         if (model != null)
         {
             // バッチフィルタリングを開始して、個別のフィルター適用時のログ出力や重複処理を防ぐ
             model.BeginBatchFiltering();
-            
+
             // 各フィルターエリアの設定をモデルに適用
+            // カードタイプフィルターを適用
             if (cardTypeArea != null)
                 cardTypeArea.ApplyFilterToModel(model);
-    
+
+            // 進化段階フィルターを適用
             if (evolutionStageArea != null)
                 evolutionStageArea.ApplyFilterToModel(model);
-    
+
+            // ポケモンタイプフィルターを適用
             if (typeArea != null)
                 typeArea.ApplyFilterToModel(model);
-    
+
+            // カードパックフィルターを適用
             if (cardPackArea != null)
                 cardPackArea.ApplyFilterToModel(model);
-    
+
+            // HPフィルターを適用
             if (hpArea != null)
                 hpArea.ApplyFilterToModel(model);
-    
+
+            // 最大ダメージフィルターを適用
             if (maxDamageArea != null)
                 maxDamageArea.ApplyFilterToModel(model);
-    
+
+            // 最大エネルギーコストフィルターを適用
             if (maxEnergyCostArea != null)
                 maxEnergyCostArea.ApplyFilterToModel(model);
-                
+            
             // 逃げるコストフィルターを適用
             if (retreatCostArea != null)
                 retreatCostArea.ApplyFilterToModel(model);
@@ -148,19 +152,13 @@ public class SearchPresenter
             // バッチフィルタリングを終了してフィルター処理を実行（ログは1回だけ出力される）
             model.EndBatchFiltering();
         }
-        else
-        {
-            Debug.LogError("❌ SearchModelがnullです");
-        }
     }
     
     // ----------------------------------------------------------------------
     // すべてのフィルターをクリア
     // ----------------------------------------------------------------------
     private void ClearAllFilters()
-    {
-        Debug.Log("🧹 すべてのフィルターをリセットします");
-        
+    {   
         // カードタイプフィルターをリセット
         if (cardTypeArea != null)
         {

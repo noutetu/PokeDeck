@@ -74,10 +74,6 @@ public class SetTypeArea : MonoBehaviour, IFilterArea
             {
                 selectedTypes.Remove(pokemonType);
             }
-            
-            // OKボタンを押すまでフィルタリングを実行しないため、イベント発火を削除
-            // OnFilterChanged?.Invoke();
-            Debug.Log($"ポケモンタイプフィルター変更: {pokemonType} → {isOn}, 選択数: {selectedTypes.Count}");
         });
     }
     
@@ -91,22 +87,6 @@ public class SetTypeArea : MonoBehaviour, IFilterArea
             // 現在選択されているポケモンタイプをモデルに適用
             HashSet<PokemonType> types = GetSelectedTypes();
             model.SetPokemonTypeFilter(types);
-            
-            // 選択されたタイプを詳細にログ出力
-            if (types.Count > 0)
-            {
-                Debug.Log($"🔍 [SetTypeArea] ポケモンタイプフィルターをモデルに適用: {types.Count}個のタイプ");
-                string typeNames = string.Join(", ", types);
-                Debug.Log($"🔍 [SetTypeArea] 選択されたタイプ: {typeNames}");
-            }
-            else
-            {
-                Debug.Log("🔍 [SetTypeArea] ポケモンタイプフィルターは選択されていません");
-            }
-        }
-        else
-        {
-            Debug.LogError("❌ [SetTypeArea] ApplyFilterToModel: モデルがnullです");
         }
     }
     
@@ -129,22 +109,6 @@ public class SetTypeArea : MonoBehaviour, IFilterArea
         CheckAndAddType(steelToggle, PokemonType.鋼, result);
         CheckAndAddType(dragonToggle, PokemonType.ドラゴン, result);
         CheckAndAddType(colorlessToggle, PokemonType.無色, result);
-        
-        // selectedTypesとの不一致がないか確認（デバッグ用）
-        if (result.Count != selectedTypes.Count)
-        {
-            Debug.LogWarning($"⚠️ [SetTypeArea] 選択されたタイプの数が一致しません: トグルUI={result.Count}個, 内部状態={selectedTypes.Count}個");
-        }
-        
-        // デバッグログ
-        if (result.Count > 0)
-        {
-            Debug.Log($"🔍 [SetTypeArea] 選択中のポケモンタイプ: {string.Join(", ", result)} (合計{result.Count}個)");
-        }
-        else
-        {
-            Debug.Log("🔍 [SetTypeArea] 選択中のポケモンタイプはありません");
-        }
         
         // 内部状態ではなくUI状態に基づいた結果を返す
         return result;
@@ -174,8 +138,6 @@ public class SetTypeArea : MonoBehaviour, IFilterArea
     // ----------------------------------------------------------------------
     public void ResetFilters()
     {
-        Debug.Log("📋 ポケモンタイプフィルターをリセット開始");
-        
         // 選択状態をクリア
         selectedTypes.Clear();
         
@@ -190,8 +152,6 @@ public class SetTypeArea : MonoBehaviour, IFilterArea
         ResetToggle(steelToggle);
         ResetToggle(dragonToggle);
         ResetToggle(colorlessToggle);
-        
-        Debug.Log("✅ ポケモンタイプフィルターのリセット完了");
         
         // リセット後にフィルター変更を通知
         OnFilterChanged?.Invoke();

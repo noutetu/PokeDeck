@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using Enum;
 
 // ----------------------------------------------------------------------
 // 最大ダメージのフィルタリングを担当するPresenter
@@ -46,7 +44,7 @@ public class SetMaxDamageArea : MonoBehaviour, IFilterArea
         InitializeDropdown();
         InitializeToggles();
     }
-    
+
     // ----------------------------------------------------------------------
     // ドロップダウンの初期化とイベントリスナー設定
     // ----------------------------------------------------------------------
@@ -56,36 +54,30 @@ public class SetMaxDamageArea : MonoBehaviour, IFilterArea
         {
             // ドロップダウンの項目をクリア
             damageDropdown.ClearOptions();
-            
+
             // 新しいオプションリストを作成
-            List<Dropdown.OptionData> options = new List<Dropdown.OptionData>();
-            
-            // 「指定なし」を最初のオプションとして追加
-            options.Add(new Dropdown.OptionData("指定なし"));
-            
+            List<Dropdown.OptionData> options = new List<Dropdown.OptionData>
+            {
+                // 「指定なし」を最初のオプションとして追加
+                new Dropdown.OptionData("指定なし")
+            };
+
             // ダメージ値のオプションを追加（0から200まで10刻み）
             for (int damage = 0; damage <= 200; damage += 10)
             {
                 options.Add(new Dropdown.OptionData(damage.ToString()));
             }
-            
+
             // 作成したオプションリストをドロップダウンに設定
             damageDropdown.AddOptions(options);
-            
+
             // 初期値は「指定なし」
             damageDropdown.value = 0;
             damageDropdown.RefreshShownValue();
-            
+
             // 既存のリスナーをクリアして新しいリスナーを設定
             damageDropdown.onValueChanged.RemoveAllListeners();
             damageDropdown.onValueChanged.AddListener(OnDropdownValueChanged);
-            
-            // デバッグ用にオプション一覧を出力
-            Debug.Log($"ダメージドロップダウンの初期化完了: オプション数={damageDropdown.options.Count}");
-        }
-        else
-        {
-            Debug.LogError("ダメージドロップダウンがnullです。Inspectorで設定してください。");
         }
     }
     
@@ -97,13 +89,11 @@ public class SetMaxDamageArea : MonoBehaviour, IFilterArea
         // インデックスの有効性チェック
         if (damageDropdown == null || index < 0 || index >= damageDropdown.options.Count)
         {
-            Debug.LogError($"無効なドロップダウンインデックス: {index}");
             return;
         }
         
         // 選択されたテキストを取得
         string selectedText = damageDropdown.options[index].text;
-        Debug.Log($"選択されたダメージドロップダウン値: インデックス={index}, テキスト={selectedText}");
         
         // 指定なしの処理
         if (selectedText == "指定なし")
@@ -124,60 +114,44 @@ public class SetMaxDamageArea : MonoBehaviour, IFilterArea
             if (hadActiveFilter)
             {
                 OnFilterChanged?.Invoke();
-                Debug.Log($"ダメージフィルターをクリア（前回のアクティブ状態: {hadActiveFilter}, 比較タイプ: {prevComparisonType}）");
             }
             return;
         }
-        
+
         // ダメージ値をパース
         if (int.TryParse(selectedText, out int damage))
         {
             selectedDamage = damage;
-            Debug.Log($"ダメージ値を設定: {selectedDamage}");
-            
+
             // トグルを有効化
             SetTogglesInteractable(true);
-            
+
             // トグルが一つもOnになっていない場合は「同じ」トグルを選択状態にする
-            if (selectedComparisonType == DamageComparisonType.None || 
+            if (selectedComparisonType == DamageComparisonType.None ||
                 (!lessOrEqualToggle.isOn && !equalToggle.isOn && !greaterOrEqualToggle.isOn))
             {
                 selectedComparisonType = DamageComparisonType.Equal;
-                
+
                 // 「同じ」トグルをオンにする
                 if (equalToggle != null)
                 {
                     equalToggle.SetIsOnWithoutNotify(true);
-                    
+
                     // SimpleToggleColorコンポーネントを更新
                     SimpleToggleColor colorComponent = equalToggle.GetComponent<SimpleToggleColor>();
                     if (colorComponent != null)
                     {
                         colorComponent.UpdateColorState(true);
                     }
-                    
+
                     // TrueShadowToggleInsetコンポーネントを更新
                     TrueShadowToggleInset shadowComponent = equalToggle.GetComponent<TrueShadowToggleInset>();
                     if (shadowComponent != null)
                     {
                         shadowComponent.UpdateInsetState(true);
                     }
-                    
-                    Debug.Log("🔍 トグルが選択されていなかったため、「同じ」トグルをデフォルトで選択しました");
                 }
             }
-            
-            // 比較タイプが選択されている場合はフィルター更新（オプションOKボタン対応）
-            if (selectedComparisonType != DamageComparisonType.None)
-            {
-                // OKボタンを押すまではフィルタリングを実行しない
-                // OnFilterChanged?.Invoke();
-                Debug.Log($"ダメージフィルター更新: ダメージ={selectedDamage}, 比較={selectedComparisonType}");
-            }
-        }
-        else
-        {
-            Debug.LogError($"ダメージ値のパースに失敗: {selectedText}");
         }
     }
     
@@ -200,32 +174,33 @@ public class SetMaxDamageArea : MonoBehaviour, IFilterArea
             lessOrEqualToggle.onValueChanged.AddListener((isOn) => OnToggleValueChanged(isOn, DamageComparisonType.LessOrEqual));
         }
         
+        // 「以下」トグルの初期化
         if (equalToggle != null)
         {
+            // 「同じ」トグルをトグルグループに追加
             equalToggle.group = toggleGroup;
             equalToggle.onValueChanged.AddListener((isOn) => OnToggleValueChanged(isOn, DamageComparisonType.Equal));
-            
+
             // デフォルトで「同じ」トグルを選択状態にしておく（ただし、まだ有効化しない）
             equalToggle.SetIsOnWithoutNotify(true);
             selectedComparisonType = DamageComparisonType.Equal;
-            
+
             // SimpleToggleColorコンポーネントも更新して視覚的に選択状態にする
             SimpleToggleColor colorComponent = equalToggle.GetComponent<SimpleToggleColor>();
             if (colorComponent != null)
             {
                 colorComponent.UpdateColorState(true);
             }
-            
+
             // TrueShadowToggleInsetコンポーネントも更新
             TrueShadowToggleInset shadowComponent = equalToggle.GetComponent<TrueShadowToggleInset>();
             if (shadowComponent != null)
             {
                 shadowComponent.UpdateInsetState(true);
             }
-            
-            Debug.Log("🔍 「同じ」トグルをデフォルトで選択状態に設定（視覚状態も更新）");
         }
         
+        // 「以上」トグルの初期化
         if (greaterOrEqualToggle != null)
         {
             greaterOrEqualToggle.group = toggleGroup;
@@ -247,15 +222,6 @@ public class SetMaxDamageArea : MonoBehaviour, IFilterArea
         {
             // 同じトグルがオフになった場合は比較タイプをクリア
             selectedComparisonType = DamageComparisonType.None;
-        }
-        
-        // フィルター変更を通知（ダメージ値が選択されている場合のみ）
-        // 0ダメージも有効なオプションなので、ドロップダウンの選択インデックスで判断
-        if (damageDropdown.value > 0)
-        {
-            // OKボタンを押すまではフィルタリングを実行しない
-            // OnFilterChanged?.Invoke();
-            Debug.Log($"ダメージ比較タイプフィルター変更: {comparisonType} → {isOn}, 選択値: {selectedDamage}");
         }
     }
     
@@ -323,8 +289,6 @@ public class SetMaxDamageArea : MonoBehaviour, IFilterArea
                 shadowComponent.UpdateInsetState(false);
             }
         }
-        
-        Debug.Log("🔄 すべてのトグルの状態、色、影をオフに更新しました");
     }
     
     // ----------------------------------------------------------------------
@@ -367,8 +331,6 @@ public class SetMaxDamageArea : MonoBehaviour, IFilterArea
     // ----------------------------------------------------------------------
     public void ResetFilters()
     {
-        Debug.Log("📋 ダメージフィルターをリセット開始");
-        
         // ドロップダウンは「指定なし」に戻す
         if (damageDropdown != null)
         {
@@ -384,39 +346,10 @@ public class SetMaxDamageArea : MonoBehaviour, IFilterArea
         selectedComparisonType = DamageComparisonType.None;
         SetTogglesInteractable(false);
         
-        Debug.Log("✅ ダメージフィルターのリセット完了");
-        
         // リセット後にフィルター変更を通知
         OnFilterChanged?.Invoke();
     }
-    
-    // ----------------------------------------------------------------------
-    // トグルを完全にリセット（状態と色と影の両方）
-    // ----------------------------------------------------------------------
-    private void ResetToggle(Toggle toggle)
-    {
-        if (toggle == null) return;
-        
-        // トグルの状態をリセット（イベント発火なし）
-        toggle.SetIsOnWithoutNotify(false);
-        
-        // SimpleToggleColorコンポーネントを取得して色も更新
-        SimpleToggleColor colorComponent = toggle.GetComponent<SimpleToggleColor>();
-        if (colorComponent != null)
-        {
-            colorComponent.UpdateColorState(false);
-        }
-        
-        // TrueShadowToggleInsetコンポーネントを取得して影状態も更新
-        TrueShadowToggleInset shadowComponent = toggle.GetComponent<TrueShadowToggleInset>();
-        if (shadowComponent != null)
-        {
-            shadowComponent.UpdateInsetState(false);
-        }
-        
-        Debug.Log($"🔄 トグル '{toggle.name}' の状態、色、影をリセットしました");
-    }
-    
+
     // ----------------------------------------------------------------------
     // OKボタンが押されたときに現在のフィルターをモデルに適用する
     // ----------------------------------------------------------------------
@@ -427,7 +360,6 @@ public class SetMaxDamageArea : MonoBehaviour, IFilterArea
             // ドロップダウンが「指定なし」または比較タイプがNoneの場合はフィルタリングをスキップ
             if (damageDropdown.value == 0 || selectedComparisonType == DamageComparisonType.None)
             {
-                Debug.Log($"🔍 最大ダメージフィルターは無効なのでスキップします（ドロップダウン値={damageDropdown.value}, 比較タイプ={selectedComparisonType}）");
                 // フィルター未選択状態を設定（無効化）
                 model.SetMaxDamageFilter(0, DamageComparisonType.None);
             }
@@ -435,7 +367,6 @@ public class SetMaxDamageArea : MonoBehaviour, IFilterArea
             {
                 // 現在選択されているダメージ条件をモデルに適用
                 model.SetMaxDamageFilter(selectedDamage, selectedComparisonType);
-                Debug.Log($"🔍 最大ダメージフィルターをモデルに適用: ダメージ={selectedDamage}, 比較タイプ={selectedComparisonType}");
             }
         }
     }

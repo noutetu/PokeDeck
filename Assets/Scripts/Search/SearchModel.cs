@@ -696,13 +696,11 @@ public class SearchModel
             }
             else
             {
-                Debug.LogError("❌ [SearchModel] CardDatabaseからカードを取得できませんでした");
                 return new List<CardModel>();
             }
         }
         else
         {
-            Debug.LogError("❌ [SearchModel] カードリストとCardDatabaseの両方が利用できません");
             return new List<CardModel>();
         }
 
@@ -725,8 +723,6 @@ public class SearchModel
             return matchCardType && matchEvolutionStage && matchType && matchCardPack
                 && matchHP && matchMaxDamage && matchEnergyCost && matchRetreatCost;
         }).ToList();
-
-        Debug.Log($"🔍 [SearchModel] 検索結果: 全{allCards.Count}枚のカードから{filteredCards.Count}枚が条件に一致しました");
 
         return filteredCards;
     }

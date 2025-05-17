@@ -85,7 +85,6 @@ public class SimpleVirtualScroll : MonoBehaviour
     {
         if (scrollRect == null || content == null || cardPrefab == null)
         {
-            Debug.LogError("SimpleVirtualScroll: 必要なコンポーネントが設定されていません");
             return;
         }
         
@@ -143,9 +142,6 @@ public class SimpleVirtualScroll : MonoBehaviour
         
         // カードプールを初期化
         InitializeCardPool();
-        
-        // デバッグ情報を定期的にログ出力
-        StartCoroutine(DebugPoolStatus());
     }
     
     // ----------------------------------------------------------------------
@@ -269,7 +265,6 @@ public class SimpleVirtualScroll : MonoBehaviour
                 {
                     // プールに戻す
                     kvp.Value.gameObject.SetActive(false);
-                    RemoveFromActiveCards(kvp.Key);
                     removeIndices.Add(kvp.Key);
                 }
                 catch (System.Exception e)
@@ -351,9 +346,7 @@ public class SimpleVirtualScroll : MonoBehaviour
     {
         // プールを最適化するためにまず不要なカードを消す
         if (cardPool.Count > poolSize * 2)
-        {
-            Debug.LogWarning($"プールが大きすぎます({cardPool.Count})。クリーンアップを実行します。");
-            
+        {   
             // 非アクティブなカードを削除して適切なサイズに戻す
             int removeCount = 0;
             for (int i = cardPool.Count - 1; i >= poolSize; i--)
@@ -368,8 +361,6 @@ public class SimpleVirtualScroll : MonoBehaviour
                         break;
                 }
             }
-            
-            Debug.Log($"プールクリーンアップ完了: {removeCount}枚のカードを削除しました");
         }
 
         // 非アクティブなカードを探す
@@ -408,17 +399,6 @@ public class SimpleVirtualScroll : MonoBehaviour
     }
     
     // ----------------------------------------------------------------------
-    // RemoveFromActiveCards メソッド
-    // アクティブカードリストから指定されたインデックスを削除します。
-    // 将来的な拡張を考慮したヘルパーメソッドです。
-    // @param index 削除するカードのインデックス
-    // ----------------------------------------------------------------------
-    private void RemoveFromActiveCards(int index)
-    {
-        // このメソッドは将来的に拡張可能
-    }
-    
-    // ----------------------------------------------------------------------
     // OnDestroy メソッド
     // コンポーネント破棄時の処理を行います。
     // スクロールイベントのリスナーを解除します。
@@ -428,26 +408,6 @@ public class SimpleVirtualScroll : MonoBehaviour
         if (scrollRect != null)
         {
             scrollRect.onValueChanged.RemoveListener(OnScroll);
-        }
-    }
-
-    // ----------------------------------------------------------------------
-    // DebugPoolStatus メソッド
-    // 定期的にプール状況をデバッグ出力します。
-    // プール内のアクティブカード数をログに記録します。
-    // ----------------------------------------------------------------------
-    private IEnumerator DebugPoolStatus()
-    {
-        while (enabled)
-        {
-            yield return new WaitForSeconds(10f);
-            
-            int activeCards = 0;
-            foreach (var card in cardPool)
-            {
-                if (card != null && card.gameObject && card.gameObject.activeInHierarchy)
-                    activeCards++;
-            }
         }
     }
 }

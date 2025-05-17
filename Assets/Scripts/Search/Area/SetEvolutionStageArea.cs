@@ -60,10 +60,6 @@ public class SetEvolutionStageArea : MonoBehaviour, IFilterArea
             {
                 selectedEvolutionStages.Remove(evolutionStage);
             }
-            
-            // OKボタンを押すまでフィルタリングを実行しないため、イベント発火を削除
-            // OnFilterChanged?.Invoke();
-            Debug.Log($"進化段階フィルター変更: {evolutionStage} → {isOn}, 選択数: {selectedEvolutionStages.Count}");
         });
     }
     
@@ -88,8 +84,6 @@ public class SetEvolutionStageArea : MonoBehaviour, IFilterArea
     // ----------------------------------------------------------------------
     public void ResetFilters()
     {
-        Debug.Log("📋 進化段階フィルターをリセット開始");
-        
         // 選択状態をクリア
         selectedEvolutionStages.Clear();
         
@@ -97,8 +91,6 @@ public class SetEvolutionStageArea : MonoBehaviour, IFilterArea
         ResetToggle(basicToggle);
         ResetToggle(stage1Toggle);
         ResetToggle(stage2Toggle);
-        
-        Debug.Log("✅ 進化段階フィルターのリセット完了");
         
         // リセット後にフィルター変更を通知
         OnFilterChanged?.Invoke();
@@ -127,8 +119,6 @@ public class SetEvolutionStageArea : MonoBehaviour, IFilterArea
         {
             shadowComponent.UpdateInsetState(false);
         }
-        
-        Debug.Log($"🔄 トグル '{toggle.name}' の状態、色、影をリセットしました");
     }
     
     // ----------------------------------------------------------------------
@@ -140,7 +130,6 @@ public class SetEvolutionStageArea : MonoBehaviour, IFilterArea
         {
             // 現在選択されている進化段階をモデルに適用
             model.SetEvolutionStageFilter(GetSelectedEvolutionStages());
-            Debug.Log($"🔍 進化段階フィルターをモデルに適用: {selectedEvolutionStages.Count}個の段階");
         }
     }
     

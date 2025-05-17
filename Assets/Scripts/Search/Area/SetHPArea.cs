@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using Enum;
 
 // ----------------------------------------------------------------------
 // HPのフィルタリングを担当するPresenter
@@ -58,10 +56,11 @@ public class SetHPArea : MonoBehaviour, IFilterArea
             hpDropdown.ClearOptions();
             
             // 新しいオプションリストを作成
-            List<Dropdown.OptionData> options = new List<Dropdown.OptionData>();
-            
-            // 「指定なし」を最初のオプションとして追加
-            options.Add(new Dropdown.OptionData("指定なし"));
+            List<Dropdown.OptionData> options = new List<Dropdown.OptionData>
+            {
+                // 「指定なし」を最初のオプションとして追加
+                new Dropdown.OptionData("指定なし")
+            };
             
             // HP値のオプションを追加（30から200まで10刻み）
             for (int hp = 30; hp <= 200; hp += 10)
@@ -81,10 +80,6 @@ public class SetHPArea : MonoBehaviour, IFilterArea
             hpDropdown.onValueChanged.AddListener(OnDropdownValueChanged);
             
         }
-        else
-        {
-            Debug.LogError("HPドロップダウンがnullです。Inspectorで設定してください。");
-        }
     }
     
     // ----------------------------------------------------------------------
@@ -95,21 +90,15 @@ public class SetHPArea : MonoBehaviour, IFilterArea
         // インデックスの有効性チェック
         if (hpDropdown == null || index < 0 || index >= hpDropdown.options.Count)
         {
-            Debug.LogError($"無効なドロップダウンインデックス: {index}");
             return;
         }
         
         // 選択されたテキストを取得
         string selectedText = hpDropdown.options[index].text;
-        Debug.Log($"選択されたドロップダウン値: インデックス={index}, テキスト={selectedText}");
         
         // 指定なしの処理
         if (selectedText == "指定なし")
         {
-            // 前回の値を保存
-            bool hadActiveFilter = HasActiveFilters();
-            HPComparisonType prevComparisonType = selectedComparisonType;
-            
             // 選択状態をリセット
             selectedHP = 0;
             selectedComparisonType = HPComparisonType.None;
@@ -117,10 +106,6 @@ public class SetHPArea : MonoBehaviour, IFilterArea
             // トグルを無効化して全てオフに
             SetTogglesInteractable(false);
             SetAllTogglesOff();
-            
-            // OKボタンを押すまではフィルタリングを実行しない
-            // OnFilterChanged?.Invoke();
-            Debug.Log($"HPフィルターをクリア（前回のアクティブ状態: {hadActiveFilter}, 比較タイプ: {prevComparisonType}）");
             return;
         }
         
@@ -128,7 +113,6 @@ public class SetHPArea : MonoBehaviour, IFilterArea
         if (int.TryParse(selectedText, out int hp))
         {
             selectedHP = hp;
-            Debug.Log($"HP値を設定: {selectedHP}");
             
             // トグルを有効化
             SetTogglesInteractable(true);
@@ -157,22 +141,8 @@ public class SetHPArea : MonoBehaviour, IFilterArea
                     {
                         shadowComponent.UpdateInsetState(true);
                     }
-                    
-                    Debug.Log("🔍 トグルが選択されていなかったため、「同じ」トグルをデフォルトで選択しました");
                 }
             }
-            
-            // 比較タイプが選択されている場合はフィルター更新のログを出すが、
-            // OKボタンを押すまではフィルタリングを実行しない
-            if (selectedComparisonType != HPComparisonType.None)
-            {
-                // OnFilterChanged?.Invoke();
-                Debug.Log($"HPフィルター更新: HP={selectedHP}, 比較={selectedComparisonType}");
-            }
-        }
-        else
-        {
-            Debug.LogError($"HP値のパースに失敗: {selectedText}");
         }
     }
     
@@ -195,17 +165,18 @@ public class SetHPArea : MonoBehaviour, IFilterArea
             lessOrEqualToggle.onValueChanged.AddListener((isOn) => OnToggleValueChanged(isOn, HPComparisonType.LessOrEqual));
         }
         
+        // 「同じ」トグルはデフォルトで選択状態にするが、まだ有効化しない
         if (equalToggle != null)
         {
             equalToggle.group = toggleGroup;
             equalToggle.onValueChanged.AddListener((isOn) => OnToggleValueChanged(isOn, HPComparisonType.Equal));
-            
+
             // デフォルトで「同じ」トグルを選択状態にしておく（ただし、まだ有効化しない）
             equalToggle.SetIsOnWithoutNotify(true);
             selectedComparisonType = HPComparisonType.Equal;
-            Debug.Log("🔍 「同じ」トグルをデフォルトで選択状態に設定");
         }
         
+        // 「以上」トグルをトグルグループに追加
         if (greaterOrEqualToggle != null)
         {
             greaterOrEqualToggle.group = toggleGroup;
@@ -227,14 +198,6 @@ public class SetHPArea : MonoBehaviour, IFilterArea
         {
             // 同じトグルがオフになった場合は比較タイプをクリア
             selectedComparisonType = HPComparisonType.None;
-        }
-        
-        // HP値が選択されている場合はログを出すが、
-        // OKボタンを押すまではフィルタリングを実行しない
-        if (selectedHP > 0)
-        {
-            // OnFilterChanged?.Invoke();
-            Debug.Log($"HP比較タイプフィルター変更: {comparisonType} → {isOn}, 選択値: {selectedHP}");
         }
     }
     
@@ -312,8 +275,6 @@ public class SetHPArea : MonoBehaviour, IFilterArea
                 shadowComponent.UpdateInsetState(false);
             }
         }
-        
-        Debug.Log("🔄 すべてのトグルの状態、色、影をオフに更新しました");
     }
     
     // ----------------------------------------------------------------------
@@ -346,8 +307,6 @@ public class SetHPArea : MonoBehaviour, IFilterArea
     // ----------------------------------------------------------------------
     public void ResetFilters()
     {
-        Debug.Log("📋 HPフィルターをリセット開始");
-        
         // ドロップダウンは「指定なし」に戻す
         if (hpDropdown != null)
         {
@@ -363,39 +322,9 @@ public class SetHPArea : MonoBehaviour, IFilterArea
         selectedComparisonType = HPComparisonType.None;
         SetTogglesInteractable(false);
         
-        Debug.Log("✅ HPフィルターのリセット完了");
-        
         // リセット後にフィルター変更を通知
         OnFilterChanged?.Invoke();
     }
-    
-    // ----------------------------------------------------------------------
-    // トグルを完全にリセット（状態と色と影の両方）
-    // ----------------------------------------------------------------------
-    private void ResetToggle(Toggle toggle)
-    {
-        if (toggle == null) return;
-        
-        // トグルの状態をリセット（イベント発火なし）
-        toggle.SetIsOnWithoutNotify(false);
-        
-        // SimpleToggleColorコンポーネントを取得して色も更新
-        SimpleToggleColor colorComponent = toggle.GetComponent<SimpleToggleColor>();
-        if (colorComponent != null)
-        {
-            colorComponent.UpdateColorState(false);
-        }
-        
-        // TrueShadowToggleInsetコンポーネントを取得して影状態も更新
-        TrueShadowToggleInset shadowComponent = toggle.GetComponent<TrueShadowToggleInset>();
-        if (shadowComponent != null)
-        {
-            shadowComponent.UpdateInsetState(false);
-        }
-        
-        Debug.Log($"🔄 トグル '{toggle.name}' の状態、色、影をリセットしました");
-    }
-    
     // ----------------------------------------------------------------------
     // OKボタンが押されたときに現在のフィルターをモデルに適用する
     // ----------------------------------------------------------------------
@@ -406,7 +335,6 @@ public class SetHPArea : MonoBehaviour, IFilterArea
             // ドロップダウンが「指定なし」または比較タイプがNoneの場合はフィルタリングをスキップ
             if (hpDropdown.value == 0 || selectedComparisonType == HPComparisonType.None)
             {
-                Debug.Log($"🔍 HPフィルターは無効なのでスキップします（ドロップダウン値={hpDropdown.value}, 比較タイプ={selectedComparisonType}）");
                 // フィルター未選択状態を設定（無効化）
                 model.SetHPFilter(0, HPComparisonType.None);
             }
@@ -414,7 +342,6 @@ public class SetHPArea : MonoBehaviour, IFilterArea
             {
                 // 現在選択されているHP条件をモデルに適用
                 model.SetHPFilter(selectedHP, selectedComparisonType);
-                Debug.Log($"🔍 HPフィルターをモデルに適用: HP={selectedHP}, 比較タイプ={selectedComparisonType}");
             }
         }
     }

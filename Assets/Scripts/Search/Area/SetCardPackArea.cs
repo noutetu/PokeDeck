@@ -6,7 +6,6 @@ using Enum;
 
 // ----------------------------------------------------------------------
 // カードパックのフィルタリングを担当するPresenter
-// 「最強の遺伝子」「幻のいる島」「時空の激闘」「超克の光」「シャイニングハイ」「双天の守護者」「PROMO」のトグルを管理
 // ----------------------------------------------------------------------
 public class SetCardPackArea : MonoBehaviour, IFilterArea
 {
@@ -68,10 +67,6 @@ public class SetCardPackArea : MonoBehaviour, IFilterArea
             {
                 selectedCardPacks.Remove(cardPack);
             }
-            
-            // OKボタンを押すまでフィルタリングを実行しないため、イベント発火を削除
-            // OnFilterChanged?.Invoke();
-            Debug.Log($"カードパックフィルター変更: {cardPack} → {isOn}, 選択数: {selectedCardPacks.Count}");
         });
     }
     
@@ -84,7 +79,6 @@ public class SetCardPackArea : MonoBehaviour, IFilterArea
         {
             // 現在選択されているカードパックをモデルに適用
             model.SetCardPackFilter(GetSelectedCardPacks());
-            Debug.Log($"🔍 カードパックフィルターをモデルに適用: {selectedCardPacks.Count}個のパック");
         }
     }
     
@@ -108,9 +102,7 @@ public class SetCardPackArea : MonoBehaviour, IFilterArea
     // フィルターのリセット
     // ----------------------------------------------------------------------
     public void ResetFilters()
-    {
-        Debug.Log("📋 カードパックフィルターをリセット開始");
-        
+    {   
         // 選択状態をクリア
         selectedCardPacks.Clear();
         
@@ -122,8 +114,6 @@ public class SetCardPackArea : MonoBehaviour, IFilterArea
         ResetToggle(shiningHigh_Toggle);
         ResetToggle(souten_Toggle);
         ResetToggle(promo_Toggle);
-        
-        Debug.Log("✅ カードパックフィルターのリセット完了");
         
         // リセット後にフィルター変更を通知
         OnFilterChanged?.Invoke();
@@ -152,8 +142,6 @@ public class SetCardPackArea : MonoBehaviour, IFilterArea
         {
             shadowComponent.UpdateInsetState(false);
         }
-        
-        Debug.Log($"🔄 トグル '{toggle.name}' の状態、色、影をリセットしました");
     }
     
     // ----------------------------------------------------------------------
