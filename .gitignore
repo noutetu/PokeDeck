@@ -1,0 +1,47 @@
+# ========== Unity一般 ==========
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+UserSettings/
+
+# ========== Visual Studio / Rider ==========
+*.csproj
+*.sln
+*.user
+*.unityproj
+*.pidb
+*.suo
+*.tmp
+*.userprefs
+.vscode/
+.idea/
+*.sln.DotSettings
+*.svd
+
+# ========== OSによる不要ファイル ==========
+.DS_Store
+Thumbs.db
+
+# ========== バージョン管理外のアセット ==========
+*.apk
+*.aab
+*.keystore
+
+# ========== CrashlyticsやGradleが作るファイル ==========
+.gradle/
+*.gradle
+*.apk
+*.log
+*.hprof
+
+# ========== iOSビルド時のXcode生成ファイル ==========
+Pods/
+DerivedData/
+xcuserdata/
+*.xcworkspace
+*.xcuserstate
+*.xcuserdatad
