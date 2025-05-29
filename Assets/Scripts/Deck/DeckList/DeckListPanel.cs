@@ -56,6 +56,16 @@ public class DeckListPanel : MonoBehaviour
                 if (deckPanel != null)
                 {
                     deckPanel.SetActive(true);
+                    
+                    // 現在のデッキが存在しない場合は、DeckViewをクリアする
+                    if (DeckManager.Instance != null && DeckManager.Instance.CurrentDeck == null)
+                    {
+                        if (deckView != null)
+                        {
+                            // 空のデッキを表示してクリアする
+                            _ = deckView.DisplayDeck(null);
+                        }
+                    }
                 }
             });
         }

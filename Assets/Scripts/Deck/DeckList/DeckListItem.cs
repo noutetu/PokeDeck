@@ -248,12 +248,14 @@ public class DeckListItem : MonoBehaviour
             {
                 // サンプルデッキかどうかを判別
                 bool isSampleDeck = DeckManager.Instance.IsSampleDeck(originalDeckName);
+                Debug.Log($"[DeckListItem] コピー開始: '{originalDeckName}', サンプルデッキ={isSampleDeck}");
                 
                 // 非同期でコピー処理を実行（画像の読み込みとUI更新も含む）
                 DeckModel copiedDeck = await DeckManager.Instance.CopyDeckAsync(originalDeckName);
                 
                 if (copiedDeck != null)
                 {
+                    Debug.Log($"[DeckListItem] コピー完了: '{originalDeckName}' -> '{copiedDeck.Name}'");
                     // サンプルデッキからのコピーの場合は、追加のフィードバックメッセージを表示
                     if (isSampleDeck && FeedbackContainer.Instance != null)
                     {

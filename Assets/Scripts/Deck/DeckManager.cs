@@ -87,20 +87,9 @@ public class DeckManager : MonoBehaviour
     public IReadOnlyList<DeckModel> SampleDecks => _sampleDecks.AsReadOnly();
 
     // ----------------------------------------------------------------------
-    // JSONファイルの保存パス（メインスレッドでキャッシュ）
+    // ファイル保存パス
     // ----------------------------------------------------------------------
-    private string _cachedSavePath;
-    private string SavePath
-    {
-        get
-        {
-            if (string.IsNullOrEmpty(_cachedSavePath))
-            {
-                _cachedSavePath = Path.Combine(Application.persistentDataPath, "decks.json");
-            }
-            return _cachedSavePath;
-        }
-    }
+    private string SavePath => Path.Combine(Application.persistentDataPath, "decks.json");
 
     // ----------------------------------------------------------------------
     // デッキ表示用のパネル参照
@@ -383,25 +372,75 @@ public class DeckManager : MonoBehaviour
             FeedbackContainer.Instance.CompleteProgressFeedback(message, 1.0f);
         }
         Debug.Log($"デッキ '{_currentDeck.Name}' を保存しました");
+        
+        // デッキ保存成功後にレビュー依頼をチェック（成功体験直後の自然なタイミング）
+        TryRequestReviewSafely();
     }
 
     // ----------------------------------------------------------------------
-    // デッキデータをファイルに保存
+    // レビュー依頼を安全に実行（ReviewManagerがある場合のみ）
+    // ----------------------------------------------------------------------
+    private void TryRequestReviewSafely()
+    {
+        try
+        {
+            // リフレクションを使用してReviewManagerを安全に検索・呼び出し
+            var reviewManagerType = System.Type.GetType("ReviewManager");
+            if (reviewManagerType != null)
+            {
+                var reviewManager = FindFirstObjectByType(reviewManagerType);
+                if (reviewManager != null)
+                {
+                    var method = reviewManagerType.GetMethod("TryRequestReview");
+                    if (method != null)
+                    {
+                        method.Invoke(reviewManager, null);
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("ReviewManagerが見つかりません。レビュー依頼をスキップします。");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("ReviewManagerクラスが見つかりません。レビュー依頼をスキップします。");
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"レビュー依頼中にエラーが発生: {ex.Message}");
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // デッキデータをファイルに保存（DeckFileManagerから改良された実装）
     // ----------------------------------------------------------------------
     public void SaveDecks()
     {
         try
         {
+            if (_savedDecks == null)
+            {
+                Debug.LogWarning("保存するデッキリストがnullです");
+                return;
+            }
+
             // シリアライズ用のリストを作成
             List<SimplifiedDeck> simplifiedDecks = new List<SimplifiedDeck>();
             foreach (var deck in _savedDecks)
             {
-                simplifiedDecks.Add(new SimplifiedDeck(deck));
+                if (deck != null)
+                {
+                    simplifiedDecks.Add(new SimplifiedDeck(deck));
+                }
             }
 
             // JSONにシリアライズして保存
             string json = JsonConvert.SerializeObject(simplifiedDecks, Formatting.Indented);
             File.WriteAllText(SavePath, json);
+
+            Debug.Log($"デッキの保存が完了: {simplifiedDecks.Count}個のデッキ");
         }
         catch (System.Exception ex)
         {
@@ -417,8 +456,16 @@ public class DeckManager : MonoBehaviour
         int index = _savedDecks.FindIndex(d => d.Name == deckName);
         if (index >= 0)
         {
+            // 削除されたデッキが現在選択中のデッキの場合、現在のデッキをクリア
+            if (_currentDeck != null && _currentDeck.Name == deckName)
+            {
+                _currentDeck = null;
+                Debug.Log($"現在選択中のデッキ '{deckName}' が削除されたため、CurrentDeck をクリアしました");
+            }
+            
             _savedDecks.RemoveAt(index);
             SaveDecks();
+            Debug.Log($"デッキ '{deckName}' を削除しました");
             return true;
         }
         return false;
@@ -549,7 +596,10 @@ public class DeckManager : MonoBehaviour
     {
         try
         {
-            if (File.Exists(SavePath))
+            // メインスレッドでパスを事前に取得
+            string savePath = SavePath;
+            
+            if (File.Exists(savePath))
             {
                 await LoadDecksFromFileAsync();
             }
@@ -575,7 +625,10 @@ public class DeckManager : MonoBehaviour
     {
         try
         {
-            string json = await UniTask.RunOnThreadPool(() => File.ReadAllText(SavePath));
+            // メインスレッドでパスを事前に取得
+            string savePath = SavePath;
+            
+            string json = await UniTask.RunOnThreadPool(() => File.ReadAllText(savePath));
             List<SimplifiedDeck> simplifiedDecks = await UniTask.RunOnThreadPool(() => 
                 JsonConvert.DeserializeObject<List<SimplifiedDeck>>(json));
 
@@ -1005,126 +1058,143 @@ public class DeckManager : MonoBehaviour
         await LoadCardImagesForAllDecks();
     }
 
-    // TODO　長すぎ
     // ----------------------------------------------------------------------
-    // すべてのデッキに含まれるカード画像を読み込む（サンプルデッキも含む）
+    // すべてのデッキに含まれるカード画像を読み込む（改良版、DeckImageLoaderから統合）
     // ----------------------------------------------------------------------
     private async UniTask LoadCardImagesForAllDecks()
     {
-        // 重複するカードを避けるためのハッシュセット
-        var processedCards = new HashSet<string>();
-        var tasks = new List<UniTask>();
-
-        // まず現在のデッキの画像を読み込む（優先度高）
-        if (_currentDeck != null && _currentDeck.CardIds.Count > 0)
+        try
         {
+            // 重複するカードを避けるためのハッシュセット
+            var processedCards = new HashSet<string>();
+            var tasks = new List<UniTask>();
+
+            // 現在のデッキの画像を優先的に読み込む
+            await LoadCurrentDeckImagesAsync(processedCards, tasks);
+
+            // 通常デッキの画像を読み込む
+            await LoadSavedDecksImagesAsync(processedCards, tasks);
+
+            // サンプルデッキの画像を読み込む
+            await LoadSampleDecksImagesAsync(processedCards, tasks);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"カード画像読み込み中にエラーが発生: {ex.Message}");
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // 現在のデッキの画像を優先的に読み込む
+    // ----------------------------------------------------------------------
+    private async UniTask LoadCurrentDeckImagesAsync(HashSet<string> processedCards, List<UniTask> tasks)
+    {
+        if (_currentDeck?.CardIds?.Count > 0)
+        {
+            tasks.Clear();
+            
             foreach (var cardId in _currentDeck.CardIds)
             {
-                // 重複チェック
-                if (!processedCards.Contains(cardId))
+                if (ShouldLoadCardImage(cardId, _currentDeck, processedCards))
                 {
                     var cardModel = _currentDeck.GetCardModel(cardId);
-                    if (cardModel != null && cardModel.imageTexture == null && !string.IsNullOrEmpty(cardModel.imageKey))
+                    if (IsValidForImageLoad(cardModel))
                     {
-                        // ImageCacheManagerが存在するか確認
-                        if (ImageCacheManager.Instance == null)
-                        {
-                            continue;
-                        }
-
-                        // ImageCacheManagerを使用してカード画像を読み込む
                         tasks.Add(ImageCacheManager.Instance.GetCardTextureAsync(cardModel));
                         processedCards.Add(cardId);
                     }
                 }
             }
 
-            // 現在のデッキの画像を優先的に読み込む
             if (tasks.Count > 0)
             {
-                try
-                {
-                    await UniTask.WhenAll(tasks);
-                }
-                catch (Exception)
-                {
-                    // エラー処理
-                }
+                await ExecuteImageLoadTasks(tasks, "現在のデッキ");
             }
         }
+    }
 
-        // 次に通常デッキの画像を読み込む
+    // ----------------------------------------------------------------------
+    // 保存済みデッキの画像を読み込む
+    // ----------------------------------------------------------------------
+    private async UniTask LoadSavedDecksImagesAsync(HashSet<string> processedCards, List<UniTask> tasks)
+    {
         tasks.Clear();
-        int otherDeckCardCount = 0;
 
         foreach (var deck in _savedDecks)
         {
-            // 現在のデッキはスキップ（既に処理済み）
-            if (deck == _currentDeck) continue;
+            if (deck == _currentDeck) continue; // 現在のデッキはスキップ
 
-            foreach (var cardId in deck.CardIds)
-            {
-                // 重複チェック
-                if (!processedCards.Contains(cardId))
-                {
-                    var cardModel = deck.GetCardModel(cardId);
-                    if (cardModel != null && cardModel.imageTexture == null && !string.IsNullOrEmpty(cardModel.imageKey))
-                    {
-                        // ImageCacheManagerが存在するか確認
-                        if (ImageCacheManager.Instance == null)
-                        {
-                            continue;
-                        }
-
-                        // ImageCacheManagerを使用してカード画像を読み込む
-                        tasks.Add(ImageCacheManager.Instance.GetCardTextureAsync(cardModel));
-                        processedCards.Add(cardId);
-                        otherDeckCardCount++;
-                    }
-                }
-            }
+            LoadDeckImages(deck, processedCards, tasks);
         }
 
-        // サンプルデッキの画像を読み込む
-        foreach (var deck in _sampleDecks)
-        {
-            // 現在のデッキはスキップ（既に処理済み）
-            if (deck == _currentDeck) continue;
-
-            foreach (var cardId in deck.CardIds)
-            {
-                // 重複チェック
-                if (!processedCards.Contains(cardId))
-                {
-                    var cardModel = deck.GetCardModel(cardId);
-                    if (cardModel != null && cardModel.imageTexture == null && !string.IsNullOrEmpty(cardModel.imageKey))
-                    {
-                        // ImageCacheManagerが存在するか確認
-                        if (ImageCacheManager.Instance == null)
-                        {
-                            continue;
-                        }
-
-                        // ImageCacheManagerを使用してカード画像を読み込む
-                        tasks.Add(ImageCacheManager.Instance.GetCardTextureAsync(cardModel));
-                        processedCards.Add(cardId);
-                        otherDeckCardCount++;
-                    }
-                }
-            }
-        }
-
-        // 他のデッキの画像を読み込む
         if (tasks.Count > 0)
         {
-            try
+            await ExecuteImageLoadTasks(tasks, "保存済みデッキ");
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // サンプルデッキの画像を読み込む
+    // ----------------------------------------------------------------------
+    private async UniTask LoadSampleDecksImagesAsync(HashSet<string> processedCards, List<UniTask> tasks)
+    {
+        tasks.Clear();
+
+        foreach (var deck in _sampleDecks)
+        {
+            if (deck == _currentDeck) continue; // 現在のデッキはスキップ
+
+            LoadDeckImages(deck, processedCards, tasks);
+        }
+
+        if (tasks.Count > 0)
+        {
+            await ExecuteImageLoadTasks(tasks, "サンプルデッキ");
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // 画像読み込みヘルパーメソッド
+    // ----------------------------------------------------------------------
+    private bool ShouldLoadCardImage(string cardId, DeckModel deck, HashSet<string> processedCards)
+    {
+        return !processedCards.Contains(cardId);
+    }
+
+    private bool IsValidForImageLoad(CardModel cardModel)
+    {
+        return cardModel != null && 
+               cardModel.imageTexture == null && 
+               !string.IsNullOrEmpty(cardModel.imageKey) &&
+               ImageCacheManager.Instance != null;
+    }
+
+    private void LoadDeckImages(DeckModel deck, HashSet<string> processedCards, List<UniTask> tasks)
+    {
+        foreach (var cardId in deck.CardIds)
+        {
+            if (ShouldLoadCardImage(cardId, deck, processedCards))
             {
-                await UniTask.WhenAll(tasks);
+                var cardModel = deck.GetCardModel(cardId);
+                if (IsValidForImageLoad(cardModel))
+                {
+                    tasks.Add(ImageCacheManager.Instance.GetCardTextureAsync(cardModel));
+                    processedCards.Add(cardId);
+                }
             }
-            catch (Exception)
-            {
-                // エラー処理
-            }
+        }
+    }
+
+    private async UniTask ExecuteImageLoadTasks(List<UniTask> tasks, string deckType)
+    {
+        try
+        {
+            await UniTask.WhenAll(tasks);
+            Debug.Log($"{deckType}の画像読み込み完了: {tasks.Count}枚");
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"{deckType}の画像読み込み中にエラー: {ex.Message}");
         }
     }
 
@@ -1265,13 +1335,40 @@ public class DeckManager : MonoBehaviour
                 }
 
                 // 重複しない名前を生成
-                string newName = newDeck.Name;
+                string baseName = newDeck.Name;
+                string newName;
+                
+                // 既に「のコピー」が付いている場合は、それを除去して元の名前を取得
+                if (baseName.Contains("のコピー"))
+                {
+                    // 「のコピー[数字]」や「のコピー」の部分を除去
+                    int copyIndex = baseName.IndexOf("のコピー");
+                    baseName = baseName.Substring(0, copyIndex);
+                }
+                
+                if (isFromSampleDeck)
+                {
+                    // サンプルデッキからのコピーの場合は常に"のコピー"を付ける
+                    newName = $"{baseName}のコピー";
+                    Debug.Log($"[CopyDeck] サンプルデッキからのコピー: ベース名='{baseName}', 初期名前='{newName}'");
+                }
+                else
+                {
+                    // 通常デッキからのコピーの場合
+                    newName = $"{baseName}のコピー";
+                    Debug.Log($"[CopyDeck] 通常デッキからのコピー: ベース名='{baseName}', 初期名前='{newName}'");
+                }
+                
+                // 重複チェックと番号付け
                 int copyNumber = 2;
                 while (_savedDecks.Any(d => d.Name == newName))
                 {
-                    newName = $"{newDeck.Name}のコピー{copyNumber}";
+                    newName = $"{baseName}のコピー[{copyNumber}]";
+                    Debug.Log($"[CopyDeck] 重複回避: 新しい名前='{newName}'");
                     copyNumber++;
                 }
+                
+                Debug.Log($"[CopyDeck] 最終的な名前: '{newName}'");
                 newDeck.Name = newName;
 
                 // 複製したデッキを通常デッキリストに保存（サンプルデッキからのコピーも通常デッキとして保存）
