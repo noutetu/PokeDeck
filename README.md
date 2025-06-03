@@ -94,8 +94,7 @@ UI ソフトシャドウ用の **有料アセット「TrueShadow」** はライ�
 | **不可** | TrueShadow 未導入（デフォルト状態） |
 | **可能** | Asset Store で TrueShadow を購入 → `Import` した後に Build |
 
-> **動作確認のみ** を行いたい場合は、下記の APK / TestFlight あるいは デモ動画をご利用ください。  
-> コード設計・実装方針のレビューを主目的としたポートフォリオです。
+> **動作確認のみ** を行いたい場合は、下記の APK / TestFlight あるいは デモ動画をご利用ください。
 ### 🔸 Android 端末の場合
 
 - `P-Deck.apk` を端末にインストールしてください（ https://drive.google.com/file/d/1UxiUdqzU4po2-TfWeRRg-21vvyzB8LYx/view?usp=sharing ）
