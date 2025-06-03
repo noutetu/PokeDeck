@@ -10,6 +10,22 @@ using Cysharp.Threading.Tasks;
 public class CardUIInitializer
 {
     // ----------------------------------------------------------------------
+    // 定数定義
+    // ----------------------------------------------------------------------
+    private static class Constants
+    {
+        public const int DEFAULT_BATCH_SIZE = 5;
+        public const int DEFAULT_INITIAL_CARD_COUNT = 30;
+        public const float PROGRESS_COMPLETE_DELAY_SECONDS = 1.0f;
+        
+        // フィードバックメッセージ
+        public const string MSG_IMAGE_LOAD_PROGRESS_FORMAT = "画像ロード: {0}/{1}枚";
+        public const string MSG_INITIAL_IMAGE_LOAD_COMPLETE = "初期画像ロード完了";
+        public const string MSG_INITIALIZATION_FAILED = "カードUI初期化に失敗しました";
+        public const string MSG_IMAGE_LOAD_FAILED = "画像読み込み中にエラーが発生しました";
+        public const string MSG_MVRP_INITIALIZATION_FAILED = "MVRP初期化に失敗しました";
+    }
+    // ----------------------------------------------------------------------
     // フィールド
     // ----------------------------------------------------------------------
     private readonly AllCardView allCardView;
@@ -31,7 +47,7 @@ public class CardUIInitializer
     // ----------------------------------------------------------------------
     // コンストラクタ - 必要なコンポーネントを注入
     // ----------------------------------------------------------------------
-    public CardUIInitializer(AllCardView allCardView, SearchView searchView, int batchSize = 5)
+    public CardUIInitializer(AllCardView allCardView, SearchView searchView, int batchSize = Constants.DEFAULT_BATCH_SIZE)
     {
         this.allCardView = allCardView;
         this.searchView = searchView;
@@ -46,100 +62,321 @@ public class CardUIInitializer
     {
         try
         {
-            InitializeMVRP();
-            await LoadInitialImages(allCards);
-            InitializeSearchView(allCards);
+            return await ExecuteInitializationSteps(allCards);
+        }
+        catch (System.Exception ex)
+        {
+            return HandleInitializationError(ex);
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // 初期化ステップの実行
+    // ----------------------------------------------------------------------
+    private async UniTask<bool> ExecuteInitializationSteps(List<CardModel> allCards)
+    {
+        // MVRP初期化
+        if (!InitializeMVRPSafely())
+        {
+            return false;
+        }
+        
+        // 初期画像読み込み
+        if (!await LoadInitialImagesWithErrorHandling(allCards))
+        {
+            return false;
+        }
+        
+        // 検索機能初期化
+        InitializeSearchViewSafely(allCards);
+        
+        return true;
+    }
+
+    // ----------------------------------------------------------------------
+    // 初期化エラーハンドリング
+    // ----------------------------------------------------------------------
+    private bool HandleInitializationError(System.Exception exception)
+    {
+        // 詳細エラーログ出力
+        Debug.LogError($"CardUIInitializer initialization failed: {exception.Message}");
+        Debug.LogException(exception);
+        
+        // ユーザー向けエラーフィードバック
+        ShowFailureFeedback(Constants.MSG_INITIALIZATION_FAILED);
+        
+        return false;
+    }
+
+    // ----------------------------------------------------------------------
+    // フィードバック表示ヘルパーメソッド
+    // ----------------------------------------------------------------------
+    private void ShowProgressFeedback(string message)
+    {
+        if (FeedbackContainer.Instance != null)
+        {
+            FeedbackContainer.Instance.ShowProgressFeedback(message);
+        }
+    }
+
+    private void UpdateFeedbackMessage(string message)
+    {
+        if (FeedbackContainer.Instance != null)
+        {
+            FeedbackContainer.Instance.UpdateFeedbackMessage(message);
+        }
+    }
+
+    private void CompleteProgressFeedback(string message, float delay)
+    {
+        if (FeedbackContainer.Instance != null)
+        {
+            FeedbackContainer.Instance.CompleteProgressFeedback(message, delay);
+        }
+    }
+
+    private void ShowFailureFeedback(string message)
+    {
+        if (FeedbackContainer.Instance != null)
+        {
+            FeedbackContainer.Instance.ShowFailureFeedback(message);
+        }
+    }
+    
+    // ----------------------------------------------------------------------
+    // 安全なMVRP初期化
+    // ----------------------------------------------------------------------
+    private bool InitializeMVRPSafely()
+    {
+        try
+        {
+            return ExecuteMVRPInitialization();
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"MVRP initialization failed: {ex.Message}");
+            Debug.LogException(ex);
+            ShowFailureFeedback(Constants.MSG_MVRP_INITIALIZATION_FAILED);
+            return false;
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // MVRP初期化実行
+    // ----------------------------------------------------------------------
+    private bool ExecuteMVRPInitialization()
+    {
+        // 前提条件チェック
+        if (allCardView == null)
+        {
+            Debug.LogWarning("AllCardView is null during MVRP initialization");
+            return false;
+        }
+        
+        // Model-View-Reactive-Presenterパターンの各コンポーネントを構築
+        model = new AllCardModel();
+        presenter = new AllCardPresenter(model);
+        
+        // PresenterとViewをバインド
+        allCardView.BindPresenter(presenter);
+        
+        return true;
+    }
+    
+    // ----------------------------------------------------------------------
+    // エラーハンドリング付き初期画像読み込み
+    // ----------------------------------------------------------------------
+    private async UniTask<bool> LoadInitialImagesWithErrorHandling(List<CardModel> cards)
+    {
+        try
+        {
+            await ExecuteInitialImageLoading(cards);
             return true;
         }
         catch (System.Exception ex)
         {
+            Debug.LogError($"Initial image loading failed: {ex.Message}");
+            Debug.LogException(ex);
+            ShowFailureFeedback(Constants.MSG_IMAGE_LOAD_FAILED);
             return false;
         }
     }
-    
+
     // ----------------------------------------------------------------------
-    // MVRPパターンの初期化
-    // Model-View-Reactive-Presenterパターンの各コンポーネントを構築
-    // ----------------------------------------------------------------------
-    private void InitializeMVRP()
-    {
-        if (allCardView == null) return;
-        
-        model = new AllCardModel();
-        presenter = new AllCardPresenter(model);
-        allCardView.BindPresenter(presenter);
-    }
-    
-    // ----------------------------------------------------------------------
-    // 初期画像の非同期読み込み
+    // 初期画像読み込み実行
     // バッチ処理で画像を分割読み込みし、進捗をフィードバック表示
     // ----------------------------------------------------------------------
-    private async UniTask LoadInitialImages(List<CardModel> cards)
+    private async UniTask ExecuteInitialImageLoading(List<CardModel> cards)
     {
-        if (cards == null || cards.Count == 0) return;
-        
-        // 初期表示分のカードのみ画像をロード
-        int initialCount = Mathf.Min(30, cards.Count); // 最初の30枚のみ
-        var initialCards = cards.GetRange(0, initialCount);
-        
-        if (FeedbackContainer.Instance != null)
+        // 前提条件チェック
+        if (cards == null || cards.Count == 0)
         {
-            FeedbackContainer.Instance.ShowProgressFeedback($"画像ロード: 0/{initialCards.Count}枚");
+            Debug.LogWarning("No cards provided for initial image loading");
+            return;
         }
         
+        // 初期表示分のカードを決定
+        var initialCards = GetInitialCardsForLoading(cards);
+        
+        // 進捗表示開始
+        ShowInitialLoadingProgress(initialCards.Count);
+        
+        // バッチ処理で画像読み込み実行
+        await ProcessImageLoadingBatches(initialCards);
+        
+        // 完了フィードバック
+        CompleteProgressFeedback(Constants.MSG_INITIAL_IMAGE_LOAD_COMPLETE, Constants.PROGRESS_COMPLETE_DELAY_SECONDS);
+    }
+
+    // ----------------------------------------------------------------------
+    // 初期読み込み対象カード取得
+    // ----------------------------------------------------------------------
+    private List<CardModel> GetInitialCardsForLoading(List<CardModel> cards)
+    {
+        int initialCount = Mathf.Min(Constants.DEFAULT_INITIAL_CARD_COUNT, cards.Count);
+        return cards.GetRange(0, initialCount);
+    }
+
+    // ----------------------------------------------------------------------
+    // 初期読み込み進捗表示開始
+    // ----------------------------------------------------------------------
+    private void ShowInitialLoadingProgress(int totalCount)
+    {
+        string message = string.Format(Constants.MSG_IMAGE_LOAD_PROGRESS_FORMAT, 0, totalCount);
+        ShowProgressFeedback(message);
+    }
+
+    // ----------------------------------------------------------------------
+    // 画像読み込みバッチ処理
+    // ----------------------------------------------------------------------
+    private async UniTask ProcessImageLoadingBatches(List<CardModel> initialCards)
+    {
         int processedCount = 0;
         
         for (int i = 0; i < initialCards.Count; i += batchSize)
         {
+            // 現在のバッチサイズ決定
             int currentBatchSize = Mathf.Min(batchSize, initialCards.Count - i);
-            var batchTasks = new List<UniTask>();
             
-            for (int j = 0; j < currentBatchSize; j++)
-            {
-                if (i + j < initialCards.Count)
-                {
-                    var card = initialCards[i + j];
-                    if (!string.IsNullOrEmpty(card.imageKey))
-                    {
-                        batchTasks.Add(ImageCacheManager.Instance.LoadTextureAsync(card.imageKey, card));
-                    }
-                }
-            }
+            // バッチ内のタスク生成と実行
+            await ExecuteSingleBatch(initialCards, i, currentBatchSize);
             
-            await UniTask.WhenAll(batchTasks);
+            // 進捗更新
             processedCount += currentBatchSize;
+            UpdateLoadingProgress(processedCount, initialCards.Count);
             
-            if (FeedbackContainer.Instance != null)
-            {
-                FeedbackContainer.Instance.UpdateFeedbackMessage($"画像ロード: {processedCount}/{initialCards.Count}枚");
-            }
+            // UI更新のためのフレーム待機
             await UniTask.Yield();
         }
+    }
+
+    // ----------------------------------------------------------------------
+    // 単一バッチの実行
+    // ----------------------------------------------------------------------
+    private async UniTask ExecuteSingleBatch(List<CardModel> cards, int startIndex, int batchSize)
+    {
+        var batchTasks = new List<UniTask>();
         
-        if (FeedbackContainer.Instance != null)
+        for (int j = 0; j < batchSize; j++)
         {
-            FeedbackContainer.Instance.CompleteProgressFeedback("初期画像ロード完了", 1.0f);
+            int cardIndex = startIndex + j;
+            if (cardIndex < cards.Count)
+            {
+                var card = cards[cardIndex];
+                if (ShouldLoadCardImage(card))
+                {
+                    batchTasks.Add(ImageCacheManager.Instance.LoadTextureAsync(card.imageKey, card));
+                }
+            }
         }
+        
+        if (batchTasks.Count > 0)
+        {
+            await UniTask.WhenAll(batchTasks);
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // カード画像読み込み必要性判定
+    // ----------------------------------------------------------------------
+    private bool ShouldLoadCardImage(CardModel card)
+    {
+        return !string.IsNullOrEmpty(card.imageKey);
+    }
+
+    // ----------------------------------------------------------------------
+    // 読み込み進捗更新
+    // ----------------------------------------------------------------------
+    private void UpdateLoadingProgress(int processedCount, int totalCount)
+    {
+        string message = string.Format(Constants.MSG_IMAGE_LOAD_PROGRESS_FORMAT, processedCount, totalCount);
+        UpdateFeedbackMessage(message);
     }
     
     // ----------------------------------------------------------------------
-    // 検索機能の初期化
+    // 安全な検索機能初期化
+    // ----------------------------------------------------------------------
+    private void InitializeSearchViewSafely(List<CardModel> allCards)
+    {
+        try
+        {
+            ExecuteSearchViewInitialization(allCards);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"SearchView initialization failed: {ex.Message}");
+            Debug.LogException(ex);
+            // 検索機能の初期化失敗は致命的ではないため、警告レベルで処理
+            Debug.LogWarning("Search functionality may not be available");
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // 検索機能初期化実行
     // SearchViewにカードデータを設定して検索機能を有効化
     // ----------------------------------------------------------------------
-    private void InitializeSearchView(List<CardModel> allCards)
+    private void ExecuteSearchViewInitialization(List<CardModel> allCards)
     {
-        if (searchView != null)
+        if (searchView != null && allCards != null)
         {
             searchView.SetCards(allCards);
+            Debug.Log($"SearchView initialized with {allCards.Count} cards");
+        }
+        else
+        {
+            if (searchView == null)
+            {
+                Debug.LogWarning("SearchView is null during initialization");
+            }
+            if (allCards == null)
+            {
+                Debug.LogWarning("AllCards is null during SearchView initialization");
+            }
         }
     }
     
     // ----------------------------------------------------------------------
-    // ScrollRectコンポーネントの取得
+    // ScrollRectコンポーネントの安全な取得
     // 遅延読み込み用にスクロール管理コンポーネントを返す
     // ----------------------------------------------------------------------
     public ScrollRect GetScrollRect()
     {
-        return allCardView?.GetComponentInChildren<ScrollRect>();
+        try
+        {
+            var scrollRect = allCardView?.GetComponentInChildren<ScrollRect>();
+            
+            if (scrollRect == null)
+            {
+                Debug.LogWarning("ScrollRect component not found in AllCardView hierarchy");
+            }
+            
+            return scrollRect;
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Failed to get ScrollRect component: {ex.Message}");
+            Debug.LogException(ex);
+            return null;
+        }
     }
 }
