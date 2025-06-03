@@ -61,31 +61,31 @@
 <summary>Assets/Scripts/</summary>
 
 ```text
-CardUIManager.cs          ── UI 初期化 & 仮想スクロール統括
-SimpleVirtualScroll.cs    ── 仮想スクロール（高速リスト）
-TogglePanel.cs            ── 汎用パネル表示切替
-
-Cards/                    ── カード機能（M-V-P）
- ├─ Model/                ── CardModel / AllCardModel / CardDatabase
- ├─ Presenter/            ── AllCardPresenter
- ├─ View/                 ── CardView / AllCardView
- └─ Enum/                 ── 列挙型＆変換ユーティリティ
-
-Deck/                     ── デッキ機能（M-V-P）
- ├─ Model/                ── DeckModel / DeckManager
- ├─ Presenter/            ── DeckPresenter
- ├─ View/                 ── DeckView 系
- ├─ UI/                   ── SetEnergyPanel
- └─ DeckList/             ── デッキ一覧 UI & Presenter
-
-Search/                   ── 検索機能（M-V-P）
- ├─ SearchModel / View / Presenter
- ├─ SearchNavigator.cs    ── 検索ナビゲーション
- └─ Area/ …               ── 各種フィルタ 8 クラス
-
-ImageCache/               ── 非同期画像キャッシュ
-FeedBack/                 ── ユーザーフィードバック UI
-Debug/                    ── 開発支援 (CacheClearButton)
+Assets/Scripts/
+├── Cards/
+│   ├── Model/
+│   ├── View/
+│   ├── Presenter/
+│   └── Utils/Enum/
+├── Deck/
+│   ├── Model/
+│   ├── View/
+│   ├── Presenter/
+│   ├── Manager/
+│   ├── UI/SampleDeck/
+│   └── Utils/
+├── Search/
+│   ├── Model/
+│   ├── View/
+│   ├── Presenter/
+│   └── Utils/Filters/
+├── CardUIManager/
+│   ├── Manager/
+│   ├── Presenter/
+│   ├── UI/
+│   └── Utils/
+└── Common/
+    └── UI/
 ```
 </details>
 
