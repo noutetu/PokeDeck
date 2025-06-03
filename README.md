@@ -101,6 +101,34 @@ Deck/
 ```
 </details>
 
+<details>
+<summary>Assets/Scripts/Search</summary>
+
+```text
+Search/
+├── Model/          # データとビジネスロジック
+│   └── SearchModel.cs
+├── View/           # UI表示とユーザー入力
+│   └── SearchView.cs
+├── Presenter/      # ModelとViewの仲介
+│   └── SearchPresenter.cs
+└── Utils/          # ユーティリティ
+    ├── SearchNavigator.cs
+    └── Filters/
+        ├── Interface/
+        │   └── IFilterArea.cs
+        ├── CardFilters/
+        │   ├── SetCardPackArea.cs
+        │   ├── SetCardTypeArea.cs
+        │   ├── SetEvolutionStageArea.cs
+        │   └── SetTypeArea.cs
+        └── NumericFilters/
+            ├── SetHPArea.cs
+            ├── SetMaxDamageArea.cs
+            ├── SetMaxEnergyArea.cs
+            └── SetRetreatCostArea.cs
+```
+</details>
 
 ## 🚀 このアプリを動作させるには
 ### 🔍 注意事項（Unity ビルドについて）
