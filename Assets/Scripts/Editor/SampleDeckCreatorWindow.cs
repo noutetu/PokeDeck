@@ -300,12 +300,10 @@ namespace PokeDeck.Editor
                 Selection.activeObject = deckManager;
                 EditorGUIUtility.PingObject(deckManager);
                 
-                Debug.Log($"Sample deck '{deckName}' created successfully with {validCardIds.Count} cards and {selectedTypes.Count} energy types.");
             }
             catch (System.Exception ex)
             {
                 EditorUtility.DisplayDialog("エラー", $"サンプルデッキの作成中にエラーが発生しました: {ex.Message}", "OK");
-                Debug.LogError($"Failed to create sample deck: {ex.Message}");
             }
         }
 
@@ -322,7 +320,6 @@ namespace PokeDeck.Editor
                 energyTypeSelected = new List<bool>(new bool[availableEnergyTypes.Length]);
                 cardIds = new List<string> { "" };
                 
-                Debug.Log("Sample deck creator form cleared.");
             }
         }
     }

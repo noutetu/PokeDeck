@@ -72,7 +72,6 @@ public class ImageDiskCache
         }
         catch (Exception ex)
         {
-            Debug.LogError($"💾 キャッシュファイル数取得中にエラー: {ex.Message}");
             return 0;
         }
     }
@@ -155,7 +154,6 @@ public class ImageDiskCache
         }
         catch (Exception ex)
         {
-            Debug.LogError($"💾 画像のキャッシュ保存中にエラー: {ex.Message}");
             return false;
         }
     }
@@ -202,7 +200,6 @@ public class ImageDiskCache
         }
         catch (Exception ex)
         {
-            Debug.LogError($"💾 キャッシュからの画像読み込み中にエラー: {ex.Message}");
             return null;
         }
     }
@@ -261,7 +258,6 @@ public class ImageDiskCache
         }
         catch (Exception ex)
         {
-            Debug.LogError($"💾 キャッシュ削除中にエラー: {ex.Message}");
             return false;
         }
     }
@@ -300,7 +296,6 @@ public class ImageDiskCache
         }
         catch (Exception ex)
         {
-            Debug.LogError($"💾 キャッシュクリア中にエラー: {ex.Message}");
             return false;
         }
     }
@@ -365,7 +360,6 @@ public class ImageDiskCache
         }
         catch (Exception ex)
         {
-            Debug.LogError($"💾 キャッシュ容量確保中にエラー: {ex.Message}");
         }
     }
     
@@ -399,7 +393,6 @@ public class ImageDiskCache
         }
         catch (Exception ex)
         {
-            Debug.LogError($"💾 キャッシュサイズ計算中にエラー: {ex.Message}");
             return 0;
         }
     }
@@ -419,7 +412,6 @@ public class ImageDiskCache
         }
         catch (Exception ex)
         {
-            Debug.LogError($"💾 キャッシュサイズ取得中にエラー: {ex.Message}");
             return 0f;
         }
     }
@@ -472,7 +464,6 @@ public class ImageDiskCache
                 }
                 catch (IOException ioEx)
                 {
-                    Debug.LogWarning($"💾 メタデータ保存中にエラー: {ioEx.Message}");
                     // 共有違反やファイルアクセスエラーの場合はリトライ
                     retryCount++;
 
@@ -489,7 +480,6 @@ public class ImageDiskCache
         }
         catch (Exception ex)
         {
-            Debug.LogError($"💾 メタデータ保存中にエラー: {ex.Message}");
         }
     }
     
@@ -551,7 +541,6 @@ public class ImageDiskCache
         }
         catch (Exception ex)
         {
-            Debug.LogWarning($"💾 メタデータ読み込み中にエラー: {ex.Message}");
     
             lock (cacheLock)
             {
@@ -580,7 +569,6 @@ public class ImageDiskCache
         }
         catch (Exception ex)
         {
-            Debug.LogError($"💾 テクスチャ変換中にエラー: {ex.Message}");
             return null;
         }
     }
@@ -607,7 +595,6 @@ public class ImageDiskCache
         }
         catch (Exception ex)
         {
-            Debug.LogError($"💾 テクスチャ生成中にエラー: {ex.Message}");
             return null;
         }
     }

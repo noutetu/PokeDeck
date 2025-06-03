@@ -103,7 +103,6 @@ public class SearchView : MonoBehaviour
             model = FindFirstObjectByType<SearchModel>();
             if (model == null)
             {
-                Debug.LogError("SearchModelが見つかりません。SearchModelコンポーネントをシーンに追加してください。");
                 return;
             }
         }

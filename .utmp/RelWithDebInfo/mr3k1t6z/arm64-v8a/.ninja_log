@@ -1,5 +1,0 @@
-# ninja log v5
-140	268	1748079476265168817	/Users/runaki/PokeDeck/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/mr3k1t6z/obj/arm64-v8a/libswappywrapper.so	a42e48ab2c91643e
-0	139	1748079476149783211	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	8605f56c4ed75f76
-3	27231	1748241540617196904	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	8605f56c4ed75f76
-27232	43258	1748241556625556588	/Users/runaki/PokeDeck/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/mr3k1t6z/obj/arm64-v8a/libswappywrapper.so	a42e48ab2c91643e

@@ -82,12 +82,10 @@ public class DeckViewButton : MonoBehaviour
             // フィルターパネルを非表示にする
             if (SearchPanel != null)
             {
-                Debug.Log("SearchPanel is being deactivated.");
                 SearchPanel.SetActive(false);
             }
             if(SearchPanel == null)
             {
-                Debug.Log("SearchPanel is null.");
             }
         }
     }

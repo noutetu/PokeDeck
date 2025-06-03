@@ -101,7 +101,6 @@ public class SearchModel : MonoBehaviour
     {
         if (searchInputField == null)
         {
-            Debug.LogWarning("🔍 SearchModel: searchInputFieldが設定されていません。");
             return;
         }
 
@@ -128,7 +127,6 @@ public class SearchModel : MonoBehaviour
             currentSearchDelayTimer = 0f;
         });
 
-        Debug.Log("🔍 SearchModel: InputFieldのリスナー設定完了");
     }
 
     // ----------------------------------------------------------------------
@@ -299,7 +297,6 @@ public class SearchModel : MonoBehaviour
                 else if (string.IsNullOrEmpty(card.cardType))
                 {
                     // カードタイプが空の場合は「不明」などの特別な処理が必要
-                    Debug.LogWarning($"⚠️ カードタイプが未設定: {card.name}");
                 }
             }
             // カードタイプの分布を集計して出力（問題分析用）
@@ -347,7 +344,6 @@ public class SearchModel : MonoBehaviour
         {
             // CardDatabaseからカードを取得できない場合、空のリストを作成
             allCards = new List<CardModel>();
-            Debug.LogWarning("⚠️ CardDatabase.GetAllCards()がnullを返しました。カードデータが読み込まれていない可能性があります。");
         }
 
         // 初期状態では全カードを表示
@@ -383,7 +379,6 @@ public class SearchModel : MonoBehaviour
         }
         else
         {
-            Debug.LogError("❌ SetCards()にnullが渡されました");
         }
     }
 
@@ -515,7 +510,6 @@ public class SearchModel : MonoBehaviour
         // 最初に全カードをベースにする
         if (allCards == null)
         {
-            Debug.LogWarning("🔍 ExecuteSearchAndFilters: allCards is null. LoadCards might not have run or failed.");
             allCards = new List<CardModel>(); // NullGuard
         }
         filteredCards = new List<CardModel>(allCards);
@@ -564,7 +558,6 @@ public class SearchModel : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("🔍 SearchNavigator.Instance が null のため、検索結果を適用できません。");
         }
     }
 
@@ -894,7 +887,6 @@ public class SearchModel : MonoBehaviour
             allCards = CardDatabase.GetAllCards();
             if (allCards != null)
             {
-                Debug.Log($"🔍 [SearchModel] CardDatabaseから{allCards.Count}枚のカードを取得しました");
             }
             else
             {

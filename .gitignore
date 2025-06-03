@@ -21,6 +21,7 @@ UserSettings/
 .idea/
 *.sln.DotSettings
 *.svd
+*.Utmp/
 
 # ========== OSによる不要ファイル ==========
 .DS_Store
