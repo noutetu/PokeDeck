@@ -151,15 +151,19 @@ public class DeckImageLoader
 
     // ----------------------------------------------------------------------
     // 画像読み込みタスクを実行
+    // 引数:
+    // - tasks: 読み込みタスクのリスト
     // ----------------------------------------------------------------------
     private static async UniTask ExecuteImageLoadTasks(List<UniTask> tasks, string deckType)
     {
+        // すべてのタスクを並列に実行
         try
         {
             await UniTask.WhenAll(tasks);
         }
         catch (Exception ex)
         {
+            Debug.LogError($"カード画像の並列ロードに失敗しました: {ex.Message}");
         }
     }
 
@@ -195,7 +199,7 @@ public class DeckImageLoader
             {
                 tasks.Add(ImageCacheManager.Instance.GetCardTextureAsync(card));
             }
-
+            // すべてのタスクを並列に実行
             if (tasks.Count > 0)
             {
                 try
@@ -204,6 +208,7 @@ public class DeckImageLoader
                 }
                 catch (Exception ex)
                 {
+                    Debug.LogError($"コピーデッキのカード画像ロードに失敗しました: {ex.Message}");
                 }
             }
         }

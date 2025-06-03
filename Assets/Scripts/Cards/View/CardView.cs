@@ -9,6 +9,23 @@ using UnityEngine.EventSystems; // UIイベント検出のため追加
 public class CardView : MonoBehaviour, IPointerClickHandler
 {
     // ----------------------------------------------------------------------
+    // 定数クラス
+    // ----------------------------------------------------------------------
+    private static class Constants
+    {
+        public const float DOUBLE_CLICK_THRESHOLD_SECONDS = 1f;
+        public const string ADD_SUCCESS_TEXT = "デッキに追加！";
+        public const string SAME_CARD_LIMIT_TEXT = "同名カード上限";
+        public const string DECK_FULL_MESSAGE = "デッキは24枚まで追加可能です";
+        public const string ADDITION_FAILED_TEXT = "追加失敗";
+        public const string DECK_FULL_REASON = "デッキ上限（24枚）";
+        public const string SAME_NAME_LIMIT_REASON_FORMAT = "同名上限（{0}枚）";
+        public const string CARD_ADDED_MESSAGE_FORMAT = "「{0}」をデッキに追加しました！\nデッキサイズ: {1}/{2}";
+        public const byte PLACEHOLDER_GRAY_VALUE = 200;
+        public const byte PLACEHOLDER_ALPHA_VALUE = 255;
+        public const int PLACEHOLDER_TEXTURE_SIZE = 2;
+    }
+    // ----------------------------------------------------------------------
     // カードの表示に使用するデータモデル
     // ----------------------------------------------------------------------
     private CardModel data;
@@ -30,13 +47,6 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     // ダブルクリック検出用変数
     // ----------------------------------------------------------------------
     private float lastClickTime;
-    private float doubleClickTimeThreshold = 1f; // ダブルクリック判定の時間間隔（秒）
-
-    // ----------------------------------------------------------------------
-    // フィードバックテキスト表示用定数
-    // ----------------------------------------------------------------------
-    private const string ADD_SUCCESS_TEXT = "デッキに追加！";
-    private const string SAME_CARD_LIMIT_TEXT = "同名カード上限";
 
     // ----------------------------------------------------------------------
     // Awakeメソッド - 初期化処理
@@ -46,7 +56,14 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     // ----------------------------------------------------------------------
     private void Awake()
     {
-        // ボタンがなければ追加
+        EnsureCardButtonExists();
+    }
+    
+    // ----------------------------------------------------------------------
+    // カードボタンコンポーネントの確保
+    // ----------------------------------------------------------------------
+    private void EnsureCardButtonExists()
+    {
         if (cardButton == null)
         {
             cardButton = GetComponent<Button>();
@@ -59,38 +76,77 @@ public class CardView : MonoBehaviour, IPointerClickHandler
 
     // ----------------------------------------------------------------------
     // カードデータを設定し、適切な表示形式でUIを更新する
-    // @param data 表示するカードデータ
+    // data 表示するカードデータ
     // ----------------------------------------------------------------------
     public void SetImage(CardModel data)
     {
         this.data = data;
         
+        // データが無効な場合は早期リターン
         if (data == null)
         {
             return;
         }
         
-        // ImageCacheManagerを使用してキャッシュを確認
+        // 1. キャッシュから画像読み込みを試行
+        if (TryLoadFromCache())
+        {
+            return;
+        }
+        
+        // 2. CardModelから既存テクスチャ読み込みを試行
+        if (TryLoadFromCardModel())
+        {
+            return;
+        }
+        
+        // 3. 画像が見つからない場合のフォールバック処理
+        HandleMissingTexture();
+    }
+    
+    // ----------------------------------------------------------------------
+    // キャッシュからの画像読み込み試行
+    // ----------------------------------------------------------------------
+    private bool TryLoadFromCache()
+    {
+        // ImageCacheManagerの存在確認とキャッシュ状態チェック
         if (ImageCacheManager.Instance != null && ImageCacheManager.Instance.IsCardTextureCached(data))
         {
-            // キャッシュにある場合は即座に表示
+            // キャッシュからテクスチャを取得
             Texture2D cachedTexture = ImageCacheManager.Instance.GetCachedCardTexture(data);
+            
+            // テクスチャが有効な場合にUIに適用
             if (cardImage != null && cachedTexture != null)
             {
                 cardImage.texture = cachedTexture;
-                data.imageTexture = cachedTexture;
+                data.imageTexture = cachedTexture; // CardModelにも保存
+                return true;
             }
         }
-        else if (data.imageTexture != null && cardImage != null)
+        return false;
+    }
+    
+    // ----------------------------------------------------------------------
+    // CardModelからの画像読み込み試行
+    // ----------------------------------------------------------------------
+    private bool TryLoadFromCardModel()
+    {
+        if (data.imageTexture != null && cardImage != null)
         {
-            // CardModelに保存されているテクスチャを直接表示
             cardImage.texture = data.imageTexture;
+            return true;
         }
-        else if (cardImage != null)
+        return false;
+    }
+    
+    // ----------------------------------------------------------------------
+    // 画像がない場合の処理
+    // ----------------------------------------------------------------------
+    private void HandleMissingTexture()
+    {
+        if (cardImage != null)
         {
-            // テクスチャがない場合はプレースホルダーを表示
             SetPlaceholderImage();
-            // 画像ロード開始
             LoadImageAsync();
         }
     }
@@ -100,40 +156,51 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     // ----------------------------------------------------------------------
     private async void LoadImageAsync()
     {
+        // 重複読み込み防止チェック
         if (data == null || isImageLoading) return;
         
+        // 読み込み状態フラグをセット
         isImageLoading = true;
         
         try
         {
-            // ImageCacheManagerを使用して画像を読み込み
+            // ImageCacheManagerを使用して非同期で画像を読み込み
             Texture2D texture = await ImageCacheManager.Instance.GetCardTextureAsync(data);
             
-            // UI要素がまだ有効かチェック
+            // UI要素の生存確認（非同期処理中にオブジェクトが破棄される可能性）
             if (cardImage != null && texture != null)
             {
                 cardImage.texture = texture;
-                data.imageTexture = texture;
+                data.imageTexture = texture; // 次回アクセス用にキャッシュ
             }
         }
-        catch (System.Exception ex)
+        catch (System.Exception)
         {
-            // エラー時はデフォルトテクスチャまたはプレースホルダーを設定
-            if (cardImage != null)
-            {
-                if (ImageCacheManager.Instance != null)
-                {
-                    cardImage.texture = ImageCacheManager.Instance.GetDefaultTexture();
-                }
-                else
-                {
-                    SetPlaceholderImage();
-                }
-            }
+            // エラー時のフォールバック処理
+            HandleImageLoadError();
         }
         finally
         {
+            // 読み込み状態フラグをリセット（例外発生時も確実に実行）
             isImageLoading = false;
+        }
+    }
+    
+    // ----------------------------------------------------------------------
+    // 画像読み込みエラー時の処理
+    // ----------------------------------------------------------------------
+    private void HandleImageLoadError()
+    {
+        if (cardImage != null)
+        {
+            if (ImageCacheManager.Instance != null)
+            {
+                cardImage.texture = ImageCacheManager.Instance.GetDefaultTexture();
+            }
+            else
+            {
+                SetPlaceholderImage();
+            }
         }
     }
 
@@ -143,23 +210,53 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     // ----------------------------------------------------------------------
     private void SetPlaceholderImage()
     {
+        if (TrySetDefaultTexture())
+        {
+            return;
+        }
+        
+        CreateAndSetGrayTexture();
+    }
+    
+    // ----------------------------------------------------------------------
+    // デフォルトテクスチャの設定試行
+    // ----------------------------------------------------------------------
+    private bool TrySetDefaultTexture()
+    {
         if (ImageCacheManager.Instance != null && ImageCacheManager.Instance.GetDefaultTexture() != null)
         {
             cardImage.texture = ImageCacheManager.Instance.GetDefaultTexture();
+            return true;
         }
-        else
+        return false;
+    }
+    
+    // ----------------------------------------------------------------------
+    // グレーテクスチャの生成と設定
+    // ----------------------------------------------------------------------
+    private void CreateAndSetGrayTexture()
+    {
+        // 最小サイズのテクスチャを作成（メモリ効率重視）
+        // 2x2ピクセルで十分（UIでスケーリングされるため）
+        var texture = new Texture2D(Constants.PLACEHOLDER_TEXTURE_SIZE, Constants.PLACEHOLDER_TEXTURE_SIZE);
+        
+        // 4ピクセル分の色配列を準備（2x2=4ピクセル）
+        Color32[] colors = new Color32[4];
+        for (int i = 0; i < 4; i++)
         {
-            // デフォルトのグレーテクスチャを生成
-            var texture = new Texture2D(2, 2);
-            Color32[] colors = new Color32[4];
-            for (int i = 0; i < 4; i++)
-            {
-                colors[i] = new Color32(200, 200, 200, 255); // ライトグレー
-            }
-            texture.SetPixels32(colors);
-            texture.Apply();
-            cardImage.texture = texture;
+            // 全ピクセルを同一のグレー色で塗りつぶし
+            // Color32は8bit（0-255）形式でメモリ効率が良い
+            colors[i] = new Color32(Constants.PLACEHOLDER_GRAY_VALUE, Constants.PLACEHOLDER_GRAY_VALUE, 
+                                   Constants.PLACEHOLDER_GRAY_VALUE, Constants.PLACEHOLDER_ALPHA_VALUE);
         }
+        
+        // テクスチャに色を適用してGPUに送信
+        // SetPixels32() → Apply() の順序が重要
+        texture.SetPixels32(colors);
+        texture.Apply(); // GPU側メモリに反映
+        
+        // UIコンポーネントに設定
+        cardImage.texture = texture;
     }
     
     // ----------------------------------------------------------------------
@@ -167,15 +264,19 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     // ----------------------------------------------------------------------
     public void OnPointerClick(PointerEventData eventData)
     {
+        // 前回クリックからの経過時間を計算（Unity標準の時間システムを使用）
         float timeSinceLastClick = Time.time - lastClickTime;
         
-        // ダブルクリック検出
-        if (timeSinceLastClick < doubleClickTimeThreshold)
+        // ダブルクリックの判定（デフォルト0.3秒以内の連続クリック）
+        // 一般的なOSのダブルクリック間隔に合わせた設定
+        if (timeSinceLastClick < Constants.DOUBLE_CLICK_THRESHOLD_SECONDS)
         {
-            // ダブルクリック処理 - デッキに追加
+            // デッキ追加処理を実行（バリデーション付き）
             AddCardToDeck();
         }
         
+        // 今回のクリック時刻を記録（次回のダブルクリック判定用）
+        // Time.time は起動からの経過時間（秒）
         lastClickTime = Time.time;
     }
     
@@ -184,21 +285,23 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     // ----------------------------------------------------------------------
     private void AddCardToDeck()
     {
+        // 1. 基本的な前提条件をチェック（null チェック等）
         if (!ValidateBasicRequirements())
             return;
 
-        // CardDatabaseに登録
+        // 2. CardDatabaseにカードを事前登録（参照整合性確保）
         RegisterCardToDatabase();
 
-        // バリデーション実行
+        // 3. デッキ追加可能性をバリデーション（上限チェック等）
         var validationResult = ValidateCardAddition();
         if (!validationResult.IsValid)
         {
+            // バリデーション失敗時はエラーメッセージを表示して終了
             ShowFailureFeedback(validationResult.ErrorMessage);
             return;
         }
 
-        // デッキに追加実行
+        // 4. 実際のデッキ追加処理を実行
         ExecuteCardAddition();
     }
 
@@ -226,22 +329,28 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     // ----------------------------------------------------------------------
     private (bool IsValid, string ErrorMessage) ValidateCardAddition()
     {
-        // 同名カード上限チェック
+        // 同名カード上限チェック（ポケモンカードゲームのルール準拠）
         if (!string.IsNullOrEmpty(data.name))
         {
+            // 現在のデッキ内の同名カード数を取得
+            // GetSameNameCardCount() は大文字小文字を区別しない比較を実行
             int sameNameCount = DeckManager.Instance.CurrentDeck.GetSameNameCardCount(data.name);
+            
+            // 上限に達している場合はエラー（通常は4枚まで）
             if (sameNameCount >= DeckModel.MAX_SAME_NAME_CARDS)
             {
-                return (false, $"{SAME_CARD_LIMIT_TEXT}（{DeckModel.MAX_SAME_NAME_CARDS}枚）");
+                return (false, $"{Constants.SAME_CARD_LIMIT_TEXT}（{DeckModel.MAX_SAME_NAME_CARDS}枚）");
             }
         }
 
-        // デッキ上限チェック
+        // デッキ総枚数上限チェック（標準60枚 + 予備4枚 = 64枚）
+        // 予備枠は編集時の一時的な状態を許容するためのバッファ
         if (DeckManager.Instance.CurrentDeck.CardCount >= DeckModel.MAX_CARDS + 4)
         {
-            return (false, "デッキは24枚まで追加可能です");
+            return (false, Constants.DECK_FULL_MESSAGE);
         }
 
+        // すべてのバリデーションを通過
         return (true, string.Empty);
     }
 
@@ -251,12 +360,14 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     private void ExecuteCardAddition()
     {
         // カードがCardDatabaseに存在するか確認・登録
+        // データベース整合性を保つため事前に登録処理を実行
         CardModel dbCard = EnsureCardInDatabase();
 
-        // デッキに追加実行
+        // デッキに追加実行（内部でDeckModelの制約チェックも実行される）
         bool success = DeckManager.Instance.CurrentDeck.AddCard(data);
 
         // 結果に応じてフィードバック表示
+        // ユーザーに操作結果を視覚的に通知
         if (success)
         {
             ShowAdditionSuccessFeedback();
@@ -291,9 +402,8 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     {
         int deckSize = DeckManager.Instance.CurrentDeck.CardCount;
         int maxDeckSize = DeckModel.MAX_CARDS;
-        string message = $"「{data.name}」をデッキに追加しました！\n" +
-                         $"デッキサイズ: {deckSize}/{maxDeckSize}";
-        ShowSuccessFeedback(message);
+        string message = string.Format(Constants.CARD_ADDED_MESSAGE_FORMAT, data.name, deckSize, maxDeckSize);
+        ShowFeedback(message, true);
     }
 
     // ----------------------------------------------------------------------
@@ -302,7 +412,7 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     private void ShowAdditionFailureFeedback()
     {
         string failureReason = DetermineFailureReason();
-        ShowFailureFeedback(failureReason);
+        ShowFeedback(failureReason, false);
     }
 
     // ----------------------------------------------------------------------
@@ -310,17 +420,20 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     // ----------------------------------------------------------------------
     private string DetermineFailureReason()
     {
+        // デッキ総枚数制限チェック（最高優先度）
         if (DeckManager.Instance.CurrentDeck.CardCount >= DeckModel.MAX_CARDS + 4)
         {
-            return "デッキ上限（24枚）";
+            return Constants.DECK_FULL_REASON;
         }
         
+        // 同名カード制限チェック（ポケモンカードの基本ルール）
         if (DeckManager.Instance.CurrentDeck.GetSameNameCardCount(data.name) >= DeckModel.MAX_SAME_NAME_CARDS)
         {
-            return $"同名上限（{DeckModel.MAX_SAME_NAME_CARDS}枚）";
+            return string.Format(Constants.SAME_NAME_LIMIT_REASON_FORMAT, DeckModel.MAX_SAME_NAME_CARDS);
         }
         
-        return "追加失敗";
+        // 上記以外の原因による失敗（システムエラー等）
+        return Constants.ADDITION_FAILED_TEXT;
     }
 
     // ----------------------------------------------------------------------
@@ -333,27 +446,38 @@ public class CardView : MonoBehaviour, IPointerClickHandler
             initialHandSign.gameObject.SetActive(isVisible);
         }
     }
+    
     // ----------------------------------------------------------------------
-    // 成功フィードバックメッセージを表示
+    // フィードバック表示の統合メソッド
     // ----------------------------------------------------------------------
-    private void ShowSuccessFeedback(string message)
+    private void ShowFeedback(string message, bool isSuccess)
     {
-        // FeedbackContainerを使用して画面上部に表示
         if (FeedbackContainer.Instance != null)
         {
-            FeedbackContainer.Instance.ShowSuccessFeedback(message);
+            if (isSuccess)
+            {
+                FeedbackContainer.Instance.ShowSuccessFeedback(message);
+            }
+            else
+            {
+                FeedbackContainer.Instance.ShowFailureFeedback(message);
+            }
         }
     }
     
     // ----------------------------------------------------------------------
-    // 失敗フィードバックメッセージを表示
+    // 成功フィードバックメッセージを表示（レガシー互換性）
+    // ----------------------------------------------------------------------
+    private void ShowSuccessFeedback(string message)
+    {
+        ShowFeedback(message, true);
+    }
+    
+    // ----------------------------------------------------------------------
+    // 失敗フィードバックメッセージを表示（レガシー互換性）
     // ----------------------------------------------------------------------
     private void ShowFailureFeedback(string message)
     {
-        // FeedbackContainerを使用して画面上部に表示
-        if (FeedbackContainer.Instance != null)
-        {
-            FeedbackContainer.Instance.ShowFailureFeedback(message);
-        }
+        ShowFeedback(message, false);
     }
 }

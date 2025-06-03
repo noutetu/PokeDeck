@@ -18,9 +18,17 @@ using System.Threading.Tasks;
 public class AllCardPresenter
 {
     // ----------------------------------------------------------------------
+    // 定数クラス
+    // ----------------------------------------------------------------------
+    private static class Constants
+    {
+        public const bool SHOULD_NOT_SAVE_IMMEDIATELY = false;
+    }
+
+    // ----------------------------------------------------------------------
     // フィールドとプロパティ
     // ----------------------------------------------------------------------
-    private AllCardModel model;                          // 保持するモデル参照
+    private AllCardModel model;
 
     // 表示用のカードデータコレクション（ReactiveCollectionでリアクティブに通知）
     public ReactiveCollection<CardModel> DisplayedCards { get; private set; } = new ReactiveCollection<CardModel>();
@@ -46,82 +54,28 @@ public class AllCardPresenter
     // ----------------------------------------------------------------------
     // カードデータの一括読み込み
     // 既存のデータをクリアし、新しいデータで置き換える
+    // @param cards 読み込むカードのリスト
     // ----------------------------------------------------------------------
     public void LoadCards(List<CardModel> cards)
     {
-        // モデルにデータを設定
         model.SetCards(cards);
-        
-        // CardDatabaseにもカードを登録して永続化（アプリ再起動時にも使えるように）
-        if (CardDatabase.Instance != null)
-        {
-            foreach (var card in cards)
-            {
-                CardDatabase.Instance.RegisterCard(card, false); // 保存しないように設定
-            }
-            
-            // すべてのカードを登録した後に1回だけ保存
-            if (cards.Count > 0)
-            {
-                CardDatabase.Instance.SaveCardDatabase();
-            }
-        }
-        
-        // 表示用コレクションをクリアして新しいデータを追加
-        DisplayedCards.Clear();
-        foreach (var card in cards)
-        {
-            DisplayedCards.Add(card);
-        }
-        
-        // 読み込み完了イベントを発行（Viewが購読して表示を更新）
-        OnLoadComplete.OnNext(Unit.Default);
+        RegisterCardsToDatabase(cards);
+        RefreshDisplayedCards(cards);
     }
 
     // ----------------------------------------------------------------------
     // カードデータの追加
     // 既存のデータを保持したまま、新しいデータを追加する
     // @param newCards 追加するカードのリスト
+    // @returns 非同期タスク
     // ----------------------------------------------------------------------
     public async Task AddCardsAsync(List<CardModel> newCards)
     {
-        // 重複を避けるための処理
-        var existingIds = new HashSet<string>(DisplayedCards.Select(c => c.id));
-        var uniqueNewCards = newCards.Where(c => !existingIds.Contains(c.id)).ToList();
-        
-        // モデルにデータを追加
-        if (model.cards == null)
-        {
-            model.cards = new List<CardModel>();
-        }
-        model.cards.AddRange(uniqueNewCards);
-        
-        // CardDatabaseにも新しいカードを登録
-        if (CardDatabase.Instance != null)
-        {
-            foreach (var card in uniqueNewCards)
-            {
-                CardDatabase.Instance.RegisterCard(card, false); // 保存しないように設定
-            }
-            
-            // すべてのカードを登録した後に1回だけ保存
-            if (uniqueNewCards.Count > 0)
-            {
-                CardDatabase.Instance.SaveCardDatabase();
-            }
-        }
-        
-        // 表示用コレクションに新しいカードを追加
-        foreach (var card in uniqueNewCards)
-        {
-            DisplayedCards.Add(card);
-        }
-        
-        // 追加完了を通知（スクロール位置を保持するモード）
-        onCardsAppended.OnNext(Unit.Default);
-        
-        // 読み込み完了イベントを発行（Viewが購読して表示を更新）
-        OnLoadComplete.OnNext(Unit.Default);
+        var uniqueNewCards = GetUniqueCards(newCards);
+        AddCardsToModel(uniqueNewCards);
+        RegisterCardsToDatabase(uniqueNewCards);
+        AddCardsToDisplayCollection(uniqueNewCards);
+        NotifyCardsAppended();
 
         await Task.CompletedTask;
     }
@@ -132,11 +86,7 @@ public class AllCardPresenter
     // ----------------------------------------------------------------------
     public void ClearCards()
     {
-        // 表示用コレクションをクリア
-        DisplayedCards.Clear();
-        
-        // 読み込み完了イベントを発行（Viewが購読して表示を更新）
-        OnLoadComplete.OnNext(Unit.Default);
+        ClearDisplayedCardsAndNotify();
     }
     
     // ----------------------------------------------------------------------
@@ -145,16 +95,97 @@ public class AllCardPresenter
     // ----------------------------------------------------------------------
     public void UpdateDisplayedCards(List<CardModel> cards)
     {
-        // 表示用コレクションをクリア
+        RefreshDisplayedCards(cards);
+    }
+
+    // ----------------------------------------------------------------------
+    // プライベートヘルパーメソッド
+    // ----------------------------------------------------------------------
+
+    // ----------------------------------------------------------------------
+    // CardDatabaseにカードを登録し、必要に応じて保存する
+    // @param cardsToRegister 登録するカードのリスト
+    // ----------------------------------------------------------------------
+    private void RegisterCardsToDatabase(List<CardModel> cardsToRegister)
+    {
+        if (CardDatabase.Instance == null || cardsToRegister.Count == 0)
+            return;
+
+        foreach (var card in cardsToRegister)
+        {
+            CardDatabase.Instance.RegisterCard(card, Constants.SHOULD_NOT_SAVE_IMMEDIATELY);
+        }
+        
+        CardDatabase.Instance.SaveCardDatabase();
+    }
+
+    // ----------------------------------------------------------------------
+    // 重複を除いたユニークなカードのリストを取得する
+    // @param newCards 新しいカードのリスト
+    // @returns 重複を除いたカードのリスト
+    // ----------------------------------------------------------------------
+    private List<CardModel> GetUniqueCards(List<CardModel> newCards)
+    {
+        var existingCardIds = new HashSet<string>(DisplayedCards.Select(c => c.id));
+        return newCards.Where(c => !existingCardIds.Contains(c.id)).ToList();
+    }
+
+    // ----------------------------------------------------------------------
+    // カードをモデルに追加する
+    // @param cardsToAdd 追加するカードのリスト
+    // ----------------------------------------------------------------------
+    private void AddCardsToModel(List<CardModel> cardsToAdd)
+    {
+        if (model.cards == null)
+        {
+            model.cards = new List<CardModel>();
+        }
+        model.cards.AddRange(cardsToAdd);
+    }
+
+    // ----------------------------------------------------------------------
+    // カードを表示用コレクションに追加する
+    // @param cardsToAdd 追加するカードのリスト
+    // ----------------------------------------------------------------------
+    private void AddCardsToDisplayCollection(List<CardModel> cardsToAdd)
+    {
+        foreach (var card in cardsToAdd)
+        {
+            DisplayedCards.Add(card);
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // カード追加完了の通知を行う
+    // ----------------------------------------------------------------------
+    private void NotifyCardsAppended()
+    {
+        onCardsAppended.OnNext(Unit.Default);
+        OnLoadComplete.OnNext(Unit.Default);
+    }
+
+    // ----------------------------------------------------------------------
+    // 表示用カードコレクションを更新し、完了イベントを発行する
+    // @param cards 表示するカードのリスト
+    // ----------------------------------------------------------------------
+    private void RefreshDisplayedCards(List<CardModel> cards)
+    {
         DisplayedCards.Clear();
         
-        // 新しいカードを追加
         foreach (var card in cards)
         {
             DisplayedCards.Add(card);
         }
         
-        // 読み込み完了イベントを発行（Viewが購読して表示を更新）
+        OnLoadComplete.OnNext(Unit.Default);
+    }
+
+    // ----------------------------------------------------------------------
+    // 表示用カードコレクションをクリアし、完了イベントを発行する
+    // ----------------------------------------------------------------------
+    private void ClearDisplayedCardsAndNotify()
+    {
+        DisplayedCards.Clear();
         OnLoadComplete.OnNext(Unit.Default);
     }
 }

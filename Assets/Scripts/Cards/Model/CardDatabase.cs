@@ -55,8 +55,19 @@ public class CardDatabase : MonoBehaviour
     private Dictionary<string, List<string>> nameToIdMap = new Dictionary<string, List<string>>();
     
     // カードデータの保存パス
-    private string SavePath => Path.Combine(Application.persistentDataPath, "card_database.json");
+    private string SavePath => Path.Combine(Application.persistentDataPath, Constants.DATABASE_FILENAME);
     
+    // ----------------------------------------------------------------------
+    // 定数定義
+    // ----------------------------------------------------------------------
+    private static class Constants
+    {
+        public const float INITIALIZATION_TIMEOUT_SECONDS = 5f;
+        public const float INITIALIZATION_PROGRESS = 0.8f;
+        public const string DATABASE_FILENAME = "card_database.json";
+        public const string BACKUP_EXTENSION = ".backup";
+    }
+
     // ----------------------------------------------------------------------
     // 初期化と状態管理
     // ----------------------------------------------------------------------
@@ -80,38 +91,70 @@ public class CardDatabase : MonoBehaviour
     // ----------------------------------------------------------------------
     private void Awake()
     {
+        if (!InitializeSingleton())
+            return;
+
+        InitializeDatabase();
+    }
+
+    // ----------------------------------------------------------------------
+    // シングルトンの初期化
+    // ----------------------------------------------------------------------
+    private bool InitializeSingleton()
+    {
         // シングルトンチェック - 複数のインスタンスが作成された場合は破棄する
         if (_instance != null && _instance != this)
         {
             Destroy(gameObject);
-            return;
+            return false;
         }
         
         // このインスタンスをシングルトンとして設定
         _instance = this;
         DontDestroyOnLoad(gameObject);
-        
-        // 初期化開始フィードバック
+        return true;
+    }
+
+    // ----------------------------------------------------------------------
+    // データベースの初期化処理
+    // ----------------------------------------------------------------------
+    private void InitializeDatabase()
+    {
+        ShowInitializationStartFeedback();
+        LoadCardDatabase();
+        CompleteInitialization();
+        ShowInitializationCompleteFeedback();
+    }
+
+    // ----------------------------------------------------------------------
+    // 初期化開始フィードバック表示
+    // ----------------------------------------------------------------------
+    private void ShowInitializationStartFeedback()
+    {
         if (FeedbackContainer.Instance != null)
         {
             FeedbackContainer.Instance.ShowProgressFeedback("カードデータベースを初期化中...");
         }
-        
-        // 保存されたカードデータを読み込み
-        LoadCardDatabase();
-        
-        // 初期化完了フラグを設定
+    }
+
+    // ----------------------------------------------------------------------
+    // 初期化完了処理
+    // ----------------------------------------------------------------------
+    private void CompleteInitialization()
+    {
         isInitialized = true;
-        
-        // 初期化完了イベント発火
         OnDatabaseInitialized?.Invoke();
-        
-        // 初期化完了フィードバック
+    }
+
+    // ----------------------------------------------------------------------
+    // 初期化完了フィードバック表示
+    // ----------------------------------------------------------------------
+    private void ShowInitializationCompleteFeedback()
+    {
         if (FeedbackContainer.Instance != null)
         {
-            FeedbackContainer.Instance.CompleteProgressFeedback("カードデータベースの初期化が完了しました", 0.8f);
+            FeedbackContainer.Instance.CompleteProgressFeedback("カードデータベースの初期化が完了しました", Constants.INITIALIZATION_PROGRESS);
         }
-        
     }
     
     // ----------------------------------------------------------------------
@@ -122,22 +165,7 @@ public class CardDatabase : MonoBehaviour
         if (card == null)
             return;
             
-        // ID→CardModelのマッピングを更新
-        cardCache[card.id] = card;
-        
-        // カード名→IDマッピングを更新
-        if (!string.IsNullOrEmpty(card.name))
-        {
-            if (!nameToIdMap.ContainsKey(card.name))
-            {
-                nameToIdMap[card.name] = new List<string>();
-            }
-            
-            if (!nameToIdMap[card.name].Contains(card.id))
-            {
-                nameToIdMap[card.name].Add(card.id);
-            }
-        }
+        RegisterCardInCache(card);
         
         // データベースが変更されたので保存（オプションが有効な場合のみ）
         if (saveImmediately)
@@ -196,50 +224,77 @@ public class CardDatabase : MonoBehaviour
     {
         try
         {
-            // 空のデータベースを保存しないように確認
-            if (cardCache.Count == 0)
-            {
+            if (!CanSaveDatabase())
                 return;
-            }
             
-            // カードデータのリストに変換（JSONシリアライズ用に準備）
-            List<SerializableCardModel> cardsToSave = new List<SerializableCardModel>();
-            
-            foreach (var card in cardCache.Values)
-            {
-                // シリアライズ可能なモデルに変換
-                var serializableCard = new SerializableCardModel
-                {
-                    id = card.id,
-                    name = card.name,
-                    cardType = card.cardType,
-                    evolutionStage = card.evolutionStage,
-                    pack = card.pack,
-                    hp = card.hp,
-                    type = card.type,
-                    weakness = card.weakness,
-                    retreatCost = card.retreatCost,
-                    // 最大エネルギーコストを追加
-                    maxMoveEnergy = card.maxEnergyCost,
-                    abilityName = card.abilityName,
-                    abilityEffect = card.abilityEffect,
-                    moves = card.moves,
-                    tags = card.tags,
-                    maxDamage = card.maxDamage,
-                    imageKey = card.imageKey
-                    // imageTextureは保存しない（ランタイムデータ）
-                };
-                
-                cardsToSave.Add(serializableCard);
-            }
-            
-            // JSONに変換して保存
-            string json = JsonConvert.SerializeObject(cardsToSave, Formatting.Indented, jsonSettings);
-            File.WriteAllText(SavePath, json);
+            var cardsToSave = PrepareCardsForSave();
+            SaveCardsToFile(cardsToSave);
         }
-        catch (System.Exception e)
+        catch (System.Exception ex)
         {
+            Debug.LogError($"カードデータベースの保存に失敗しました: {ex.Message}");
         }
+    }
+
+    // ----------------------------------------------------------------------
+    /// 保存可能かチェック
+    // ----------------------------------------------------------------------
+    private bool CanSaveDatabase()
+    {
+        // 空のデータベースを保存しないように確認
+        return cardCache.Count > 0;
+    }
+
+    // ----------------------------------------------------------------------
+    /// 保存用カードデータを準備
+    // ----------------------------------------------------------------------
+    private List<SerializableCardModel> PrepareCardsForSave()
+    {
+        List<SerializableCardModel> cardsToSave = new List<SerializableCardModel>();
+        
+        foreach (var card in cardCache.Values)
+        {
+            var serializableCard = CreateSerializableCard(card);
+            cardsToSave.Add(serializableCard);
+        }
+        
+        return cardsToSave;
+    }
+
+    // ----------------------------------------------------------------------
+    /// SerializableCardModelを作成
+    // ----------------------------------------------------------------------
+    private SerializableCardModel CreateSerializableCard(CardModel card)
+    {
+        return new SerializableCardModel
+        {
+            id = card.id,
+            name = card.name,
+            cardType = card.cardType,
+            evolutionStage = card.evolutionStage,
+            pack = card.pack,
+            hp = card.hp,
+            type = card.type,
+            weakness = card.weakness,
+            retreatCost = card.retreatCost,
+            maxMoveEnergy = card.maxEnergyCost,
+            abilityName = card.abilityName,
+            abilityEffect = card.abilityEffect,
+            moves = card.moves,
+            tags = card.tags,
+            maxDamage = card.maxDamage,
+            imageKey = card.imageKey
+            // imageTextureは保存しない（ランタイムデータ）
+        };
+    }
+
+    // ----------------------------------------------------------------------
+    /// ファイルに保存
+    // ----------------------------------------------------------------------
+    private void SaveCardsToFile(List<SerializableCardModel> cardsToSave)
+    {
+        string json = JsonConvert.SerializeObject(cardsToSave, Formatting.Indented, jsonSettings);
+        File.WriteAllText(SavePath, json);
     }
     
     // ----------------------------------------------------------------------
@@ -253,13 +308,16 @@ public class CardDatabase : MonoBehaviour
             if (loadedCards != null && loadedCards.Count > 0)
             {
                 PopulateCardCache(loadedCards);
+                Debug.Log($"カードデータベースを読み込みました。カード数: {loadedCards.Count}");
             }
             else
             {
+                Debug.Log("カードデータファイルが存在しないか、データが空です。");
             }
         }
-        catch (System.Exception e)
+        catch (System.Exception ex)
         {
+            Debug.LogError($"カードデータベースの読み込みに失敗しました: {ex.Message}");
         }
     }
 
@@ -279,8 +337,9 @@ public class CardDatabase : MonoBehaviour
         {
             return JsonConvert.DeserializeObject<List<SerializableCardModel>>(json, jsonSettings);
         }
-        catch (JsonException jsonEx)
+        catch (JsonException ex)
         {
+            Debug.LogError($"JSONファイルの解析に失敗しました: {ex.Message}");
             HandleCorruptedJsonFile();
             return null;
         }
@@ -293,7 +352,7 @@ public class CardDatabase : MonoBehaviour
     {
         if (File.Exists(SavePath))
         {
-            string backupPath = SavePath + ".backup";
+            string backupPath = SavePath + Constants.BACKUP_EXTENSION;
             File.Copy(SavePath, backupPath, true);
             File.Delete(SavePath);
         }
@@ -373,7 +432,7 @@ public class CardDatabase : MonoBehaviour
     // ----------------------------------------------------------------------
     /// カードデータベースの初期化が完了するまで待機するUniTask
     // ----------------------------------------------------------------------
-    public static async UniTask WaitForInitializationAsync(float timeoutSeconds = 5f)
+    public static async UniTask WaitForInitializationAsync(float timeoutSeconds = Constants.INITIALIZATION_TIMEOUT_SECONDS)
     {
         if (Instance == null)
         {
@@ -395,8 +454,9 @@ public class CardDatabase : MonoBehaviour
             await UniTask.WaitUntil(() => Instance.isInitialized, cancellationToken: cts.Token);
             
         }
-        catch (System.OperationCanceledException)
+        catch (System.OperationCanceledException ex)
         {
+            Debug.LogWarning($"カードデータベースの初期化待機がタイムアウトしました: {ex.Message}");
         }
     }
     
@@ -421,31 +481,29 @@ public class CardDatabase : MonoBehaviour
     }
     
     // ----------------------------------------------------------------------
-    //  デバッグ用：全てのカードキャッシュを削除してリロードする
+    // デバッグ用：全てのカードキャッシュを削除してリロードする
     // ----------------------------------------------------------------------
     public void ClearCacheAndReload()
     {
-        
         try
         {
-            // メモリキャッシュをクリア
-            cardCache.Clear();
-            nameToIdMap.Clear();
-            
-            
-            // データベースを再読み込み
+            ClearMemoryCache();
             LoadCardDatabase();
-            
-            // 初期化完了フラグを更新
-            isInitialized = true;
-            
-            // 初期化完了イベントを発火
-            OnDatabaseInitialized?.Invoke();
-            
+            CompleteInitialization();
         }
         catch (System.Exception ex)
         {
+            Debug.LogError($"キャッシュのクリアと再読み込みに失敗しました: {ex.Message}");
         }
+    }
+
+    // ----------------------------------------------------------------------
+    // メモリキャッシュをクリア
+    // ----------------------------------------------------------------------
+    private void ClearMemoryCache()
+    {
+        cardCache.Clear();
+        nameToIdMap.Clear();
     }
 
     // ----------------------------------------------------------------------
@@ -468,6 +526,7 @@ public class CardDatabase : MonoBehaviour
         }
         catch (System.Exception ex)
         {
+            Debug.LogError($"カードデータファイルの削除に失敗しました: {ex.Message}");
             return false;
         }
     }
@@ -477,16 +536,13 @@ public class CardDatabase : MonoBehaviour
     // ----------------------------------------------------------------------
     public void FullReset()
     {
-        
         try
         {
             // ファイルキャッシュを削除
             bool fileDeleted = ClearCardDataFile();
             
             // メモリキャッシュをクリア
-            cardCache.Clear();
-            nameToIdMap.Clear();
-            
+            ClearMemoryCache();
             
             // 初期化フラグをリセット
             isInitialized = false;
@@ -495,6 +551,7 @@ public class CardDatabase : MonoBehaviour
         }
         catch (System.Exception ex)
         {
+            Debug.LogError($"カードデータベースの完全リセットに失敗しました: {ex.Message}");
         }
     }
     
@@ -508,7 +565,6 @@ public class CardDatabase : MonoBehaviour
 public class SerializableCardModel
 {
     public string id;
-    public string idString; // 互換性維持用の元のID文字列
     public string name;
     public string cardType;
     public string evolutionStage;

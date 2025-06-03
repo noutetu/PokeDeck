@@ -75,6 +75,7 @@ public class DeckView : MonoBehaviour
         }
         catch (System.Exception ex)
         {
+            Debug.LogError($"デッキの読み込み中にエラーが発生しました: {ex.Message}");
             // エラーが発生した場合も基本的な状態を確保
             UpdateCardCount();
         }
@@ -115,6 +116,7 @@ public class DeckView : MonoBehaviour
         }
         catch (System.Exception ex)
         {
+            Debug.LogError($"デッキ作成の初期化中にエラーが発生しました: {ex.Message}");
         }
     }
 
@@ -265,6 +267,7 @@ public class DeckView : MonoBehaviour
         }
         catch (System.Exception ex)
         {
+            Debug.LogError($"エネルギーカードの追加中にエラーが発生しました: {ex.Message}");
             // エラーが発生した場合でもカード枚数は更新
             UpdateCardCount();
         }
@@ -445,6 +448,7 @@ public class DeckView : MonoBehaviour
         }
         catch (System.Exception ex)
         {
+            Debug.LogError($"カード画像の設定に失敗しました: {ex.Message}");
         }
     }
 
@@ -537,6 +541,7 @@ public class DeckView : MonoBehaviour
         }
         catch (System.Exception ex)
         {
+            Debug.LogError($"デッキ名の設定に失敗しました: {ex.Message}");
         }
     }
 
@@ -571,6 +576,7 @@ public class DeckView : MonoBehaviour
         }
         catch (System.Exception ex)
         {
+            Debug.LogError($"デッキメモの設定に失敗しました: {ex.Message}");
         }
     }
 
@@ -655,6 +661,7 @@ public class DeckView : MonoBehaviour
         }
         catch (System.Exception ex)
         {
+            Debug.LogError($"デッキの保存に失敗しました: {ex.Message}");
             if (FeedbackContainer.Instance != null)
             {
                 FeedbackContainer.Instance.ShowFailureFeedback("デッキの保存中にエラーが発生しました");
