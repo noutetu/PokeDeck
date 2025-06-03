@@ -69,7 +69,6 @@ public class CardUIManager : MonoBehaviour
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"❌ CardUIManager初期化エラー: {ex.Message}");
             if (FeedbackContainer.Instance != null)
             {
                 FeedbackContainer.Instance.ShowFailureFeedback("アプリの初期化中にエラーが発生しました");
@@ -126,7 +125,6 @@ public class CardUIManager : MonoBehaviour
             searchView.SetCards(allCards);
         }
         
-        Debug.Log($"✅ カードデータ読み込み完了: {allCards.Count}枚");
     }
 
     // ----------------------------------------------------------------------
@@ -141,7 +139,6 @@ public class CardUIManager : MonoBehaviour
         }
         catch (System.Exception ex)
         {
-            Debug.LogWarning($"⚠️ カードデータ読み込み失敗: {ex.Message}");
             if (FeedbackContainer.Instance != null)
             {
                 FeedbackContainer.Instance.ShowFailureFeedback("カードデータの読み込みに失敗しました");

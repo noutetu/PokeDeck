@@ -22,7 +22,6 @@ namespace Enum
                 case "ポケモンのどうぐ": return CardType.ポケモンのどうぐ;
                 case "化石": return CardType.化石;
                 default:
-                    Debug.LogError($"❌ 未知のカードタイプ: {typeString}");
                     return default;
             }
         }
@@ -40,7 +39,6 @@ namespace Enum
                 case "2進化":
                 case "２進化": return EvolutionStage.進化2;
                 default:
-                    Debug.LogError($"❌ 未知の進化段階: {stageString}");
                     return default;
             }
         }
@@ -64,7 +62,6 @@ namespace Enum
                 case "ドラゴン": return PokemonType.ドラゴン;
                 case "無色": return PokemonType.無色;
                 default:
-                    Debug.LogError($"❌ 未知のポケモンタイプ: {typeString}");
                     return default;
             }
         }
@@ -85,7 +82,6 @@ namespace Enum
                 case "異次元クライシス": return CardPack.異次元クライシス;
                 case "PROMO": return CardPack.PROMO;
                 default:
-                    Debug.LogError($"❌ 未知のカードパック: {packString}");
                     return default;
             }
         }
@@ -151,7 +147,6 @@ namespace Enum
                     case "ワザコピー": result |= CardTag.ワザコピー; break;
                     case "コイン": result |= CardTag.コイン; break;
                     default:
-                        Debug.LogWarning($"⚠️ 未知のタグ: {tag}");
                         break;
                 }
             }

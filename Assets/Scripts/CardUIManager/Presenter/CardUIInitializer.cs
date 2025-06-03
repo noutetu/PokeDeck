@@ -53,7 +53,6 @@ public class CardUIInitializer
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"❌ UI初期化エラー: {ex.Message}");
             return false;
         }
     }

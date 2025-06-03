@@ -222,7 +222,6 @@ public class ImageCacheManager : MonoBehaviour
         }
         catch (Exception ex)
         {
-            Debug.LogError($"画像読み込み中にエラーが発生しました: {ex.GetType().Name}: {ex.Message}, URL: {url}");
             
             // エラー発生時は読み込み状態を解除
             try
@@ -231,7 +230,6 @@ public class ImageCacheManager : MonoBehaviour
             }
             catch (Exception cleanupEx)
             {
-                Debug.LogError($"クリーンアップ中にさらにエラーが発生: {cleanupEx.Message}");
             }
 
             if (assignToCard != null)

@@ -118,7 +118,6 @@ public class CardView : MonoBehaviour, IPointerClickHandler
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"カード画像の読み込みでエラー: {ex.Message}");
             // エラー時はデフォルトテクスチャまたはプレースホルダーを設定
             if (cardImage != null)
             {

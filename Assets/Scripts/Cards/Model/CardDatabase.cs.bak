@@ -39,6 +39,7 @@ public class CardDatabase : MonoBehaviour
                 var go = new GameObject("CardDatabase");
                 _instance = go.AddComponent<CardDatabase>();
                 DontDestroyOnLoad(go);
+                Debug.Log("CardDatabaseの新規インスタンスを作成しました");
             }
             
             return _instance;
@@ -199,6 +200,7 @@ public class CardDatabase : MonoBehaviour
             // 空のデータベースを保存しないように確認
             if (cardCache.Count == 0)
             {
+                Debug.LogWarning("カードデータベースが空のため保存をスキップします");
                 return;
             }
             
@@ -239,6 +241,7 @@ public class CardDatabase : MonoBehaviour
         }
         catch (System.Exception e)
         {
+            Debug.LogException(e);
         }
     }
     
@@ -253,13 +256,17 @@ public class CardDatabase : MonoBehaviour
             if (loadedCards != null && loadedCards.Count > 0)
             {
                 PopulateCardCache(loadedCards);
+                Debug.Log($"カードデータベースを読み込みました: {loadedCards.Count}枚のカード");
             }
             else
             {
+                Debug.LogWarning("カードデータベースの読み込みに失敗または空のデータベースでした");
             }
         }
         catch (System.Exception e)
         {
+            Debug.LogError($"カードデータベースの読み込み中にエラーが発生しました: {e.Message}");
+            Debug.LogException(e);
         }
     }
 
@@ -281,6 +288,7 @@ public class CardDatabase : MonoBehaviour
         }
         catch (JsonException jsonEx)
         {
+            Debug.LogError($"JSONのデシリアライズエラー: {jsonEx.Message}");
             HandleCorruptedJsonFile();
             return null;
         }
@@ -294,6 +302,7 @@ public class CardDatabase : MonoBehaviour
         if (File.Exists(SavePath))
         {
             string backupPath = SavePath + ".backup";
+            Debug.LogWarning($"無効なJSONファイルをバックアップ: {backupPath}");
             File.Copy(SavePath, backupPath, true);
             File.Delete(SavePath);
         }
@@ -377,6 +386,7 @@ public class CardDatabase : MonoBehaviour
     {
         if (Instance == null)
         {
+            Debug.LogWarning("CardDatabase.Instanceがnullです。初期化を待機できません。");
             return;
         }
         
@@ -394,9 +404,11 @@ public class CardDatabase : MonoBehaviour
             
             await UniTask.WaitUntil(() => Instance.isInitialized, cancellationToken: cts.Token);
             
+            Debug.Log($"✅ CardDatabase初期化完了を確認しました（UniTask待機）");
         }
         catch (System.OperationCanceledException)
         {
+            Debug.LogWarning($"⚠️ CardDatabase初期化待機がタイムアウトしました ({timeoutSeconds}秒)");
         }
     }
     
@@ -415,6 +427,7 @@ public class CardDatabase : MonoBehaviour
     {
         if (pause && cardCache.Count > 0) // バックグラウンドに移行かつデータが存在する場合
         {
+            Debug.Log("アプリがバックグラウンドに移行: データベースを保存します");
             SaveCardDatabase();
         }
 
@@ -425,6 +438,7 @@ public class CardDatabase : MonoBehaviour
     // ----------------------------------------------------------------------
     public void ClearCacheAndReload()
     {
+        Debug.Log("🧹 カードデータベースのキャッシュをクリアして再読み込みします...");
         
         try
         {
@@ -432,6 +446,7 @@ public class CardDatabase : MonoBehaviour
             cardCache.Clear();
             nameToIdMap.Clear();
             
+            Debug.Log("✅ メモリキャッシュをクリアしました");
             
             // データベースを再読み込み
             LoadCardDatabase();
@@ -442,9 +457,11 @@ public class CardDatabase : MonoBehaviour
             // 初期化完了イベントを発火
             OnDatabaseInitialized?.Invoke();
             
+            Debug.Log($"✅ CardDatabase再読み込み完了: {cardCache.Count}枚のカード");
         }
         catch (System.Exception ex)
         {
+            Debug.LogError($"💾 キャッシュクリア中にエラーが発生しました: {ex.Message}");
         }
     }
 
@@ -459,15 +476,18 @@ public class CardDatabase : MonoBehaviour
             {
                 // ファイルを削除
                 File.Delete(SavePath);
+                Debug.Log($"✅ カードデータファイルを削除しました: {SavePath}");
                 return true;
             }
             else
             {
+                Debug.Log("削除するカードデータファイルが見つかりませんでした");
                 return false;
             }
         }
         catch (System.Exception ex)
         {
+            Debug.LogError($"❌ カードデータファイル削除中にエラーが発生しました: {ex.Message}");
             return false;
         }
     }
@@ -477,6 +497,7 @@ public class CardDatabase : MonoBehaviour
     // ----------------------------------------------------------------------
     public void FullReset()
     {
+        Debug.Log("🔄 カードデータベースの完全リセットを開始...");
         
         try
         {
@@ -487,6 +508,7 @@ public class CardDatabase : MonoBehaviour
             cardCache.Clear();
             nameToIdMap.Clear();
             
+            Debug.Log($"✅ カードデータベースの完全リセット完了 (ファイル削除: {(fileDeleted ? "成功" : "不要")})");
             
             // 初期化フラグをリセット
             isInitialized = false;
@@ -495,6 +517,7 @@ public class CardDatabase : MonoBehaviour
         }
         catch (System.Exception ex)
         {
+            Debug.LogError($"❌ カードデータベースのリセット中にエラーが発生しました: {ex.Message}");
         }
     }
     

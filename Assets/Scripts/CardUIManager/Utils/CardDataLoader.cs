@@ -58,7 +58,6 @@ public class CardDataLoader
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"❌ カード読み込みエラー: {ex.Message}");
             if (FeedbackContainer.Instance != null)
             {
                 FeedbackContainer.Instance.ShowFailureFeedback("カードデータの読み込みに失敗しました");

@@ -73,7 +73,6 @@ public class AllCardView : MonoBehaviour
             searchModel = FindFirstObjectByType<SearchModel>();
             if (searchModel == null)
             {
-                Debug.LogError("SearchModelが見つかりません。SearchModelコンポーネントをシーンに追加してください。");
                 return;
             }
         }

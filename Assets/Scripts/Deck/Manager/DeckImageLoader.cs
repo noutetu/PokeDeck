@@ -157,11 +157,9 @@ public class DeckImageLoader
         try
         {
             await UniTask.WhenAll(tasks);
-            Debug.Log($"{deckType}の画像読み込み完了: {tasks.Count}枚");
         }
         catch (Exception ex)
         {
-            Debug.LogError($"{deckType}の画像読み込み中にエラー: {ex.Message}");
         }
     }
 
@@ -203,11 +201,9 @@ public class DeckImageLoader
                 try
                 {
                     await UniTask.WhenAll(tasks);
-                    Debug.Log($"コピーデッキの画像読み込み完了: {tasks.Count}枚");
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"コピーデッキの画像読み込み中にエラー: {ex.Message}");
                 }
             }
         }

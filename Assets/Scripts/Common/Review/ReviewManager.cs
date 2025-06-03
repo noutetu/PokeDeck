@@ -53,7 +53,6 @@ public class ReviewManager : MonoBehaviour
         _instance = this;
         DontDestroyOnLoad(gameObject);
 
-        Debug.Log($"[ReviewManager] 初期化完了 - 現在の累計使用時間: {GetPlaytime():F1}秒");
     }
 
     // ----------------------------------------------------------------------
@@ -76,13 +75,11 @@ public class ReviewManager : MonoBehaviour
     private void OnApplicationFocus(bool hasFocus)
     {
         _isAppActive = hasFocus;
-        Debug.Log($"[ReviewManager] アプリフォーカス変更: {hasFocus}");
     }
 
     private void OnApplicationPause(bool pauseStatus)
     {
         _isAppActive = !pauseStatus;
-        Debug.Log($"[ReviewManager] アプリポーズ変更: {pauseStatus}");
     }
 
     // ----------------------------------------------------------------------
@@ -95,12 +92,10 @@ public class ReviewManager : MonoBehaviour
         bool review1Shown = PlayerPrefs.GetInt(REVIEW1_KEY, 0) == 1;
         bool review2Shown = PlayerPrefs.GetInt(REVIEW2_KEY, 0) == 1;
 
-        Debug.Log($"[ReviewManager] レビュー依頼チェック - 使用時間: {playtime:F1}秒, review1: {review1Shown}, review2: {review2Shown}");
 
         // 初回レビュー依頼（2時間後）
         if (playtime >= REVIEW_TIME_1 && !review1Shown)
         {
-            Debug.Log("[ReviewManager] 初回レビュー依頼を表示");
             Device.RequestStoreReview();
             PlayerPrefs.SetInt(REVIEW1_KEY, 1);
             PlayerPrefs.Save();
@@ -114,7 +109,6 @@ public class ReviewManager : MonoBehaviour
         // 2回目レビュー依頼（10時間後）
         else if (playtime >= REVIEW_TIME_2 && !review2Shown)
         {
-            Debug.Log("[ReviewManager] 2回目レビュー依頼を表示");
             Device.RequestStoreReview();
             PlayerPrefs.SetInt(REVIEW2_KEY, 1);
             PlayerPrefs.Save();
@@ -126,7 +120,6 @@ public class ReviewManager : MonoBehaviour
             }
         }
 #else
-        Debug.Log("[ReviewManager] レビュー依頼はiOSプラットフォームでのみ動作します");
 #endif
     }
 
@@ -173,7 +166,6 @@ public class ReviewManager : MonoBehaviour
         PlayerPrefs.DeleteKey(REVIEW1_KEY);
         PlayerPrefs.DeleteKey(REVIEW2_KEY);
         PlayerPrefs.Save();
-        Debug.Log("[ReviewManager] レビューデータをリセットしました");
     }
 
     // ----------------------------------------------------------------------
@@ -184,7 +176,6 @@ public class ReviewManager : MonoBehaviour
     {
         PlayerPrefs.SetFloat(PLAYTIME_KEY, seconds);
         PlayerPrefs.Save();
-        Debug.Log($"[ReviewManager] テスト用使用時間を設定: {seconds}秒");
     }
 
     // ----------------------------------------------------------------------
@@ -192,10 +183,5 @@ public class ReviewManager : MonoBehaviour
     // ----------------------------------------------------------------------
     public void LogDebugInfo()
     {
-        Debug.Log($"[ReviewManager] === デバッグ情報 ===");
-        Debug.Log($"累計使用時間: {GetPlaytimeFormatted()} ({GetPlaytime():F1}秒)");
-        Debug.Log($"初回レビュー表示済み: {IsReview1Shown()}");
-        Debug.Log($"2回目レビュー表示済み: {IsReview2Shown()}");
-        Debug.Log($"次回レビュー条件: {(GetPlaytime() < REVIEW_TIME_1 ? $"{REVIEW_TIME_1 - GetPlaytime():F0}秒後" : GetPlaytime() < REVIEW_TIME_2 ? $"{REVIEW_TIME_2 - GetPlaytime():F0}秒後" : "すべて完了")}");
     }
 }

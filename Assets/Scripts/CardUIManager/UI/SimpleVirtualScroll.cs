@@ -270,7 +270,6 @@ public class SimpleVirtualScroll : MonoBehaviour
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogWarning($"カードの非アクティブ化でエラー発生: {e.Message}");
                     removeIndices.Add(kvp.Key);
                 }
             }
@@ -331,7 +330,6 @@ public class SimpleVirtualScroll : MonoBehaviour
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogError($"カード表示でエラー発生: {e.Message}");
                 }
             }
         }
