@@ -130,6 +130,50 @@ Search/
 ```
 </details>
 
+<details>
+<summary>Assets/Scripts/CardUIManager</summary>
+
+```text
+CardUIManager/
+├── Manager/        # 管理クラス
+│   └── CardUIManager.cs
+├── Presenter/      # ModelとViewの仲介
+│   └── CardUIInitializer.cs
+├── UI/             # UI専用コンポーネント
+│   └── SimpleVirtualScroll.cs
+└── Utils/          # ユーティリティ
+    ├── CardDataLoader.cs
+    └── LazyLoadManager.cs
+```
+</details>
+<details>
+<summary>Assets/Scripts/Common</summary>
+
+```text
+Common/
+├── FeedBack/
+│   └── FeedbackContainer.cs
+├── Review/
+│   └── ReviewManager.cs
+└── UI/
+    └── TogglePanel.cs
+```
+</details>
+<details>
+<summary>Assets/Scripts/その他</summary>
+
+```text
+Debug/
+└── CacheClearButton.cs
+
+Editor/
+└── SampleDeckCreatorWindow.cs
+
+ImageCache/
+├── ImageCacheManager.cs
+└── ImageDiskCache.cs
+```
+</details>
 ## 🚀 このアプリを動作させるには
 ### 🔍 注意事項（Unity ビルドについて）
 
