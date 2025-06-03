@@ -83,7 +83,19 @@ Debug/                    ── 開発支援 (CacheClearButton)
 </details>
 
 ## 🚀 このアプリを動作させるには
+## 🔍 注意事項（Unity ビルドについて）
 
+本リポジトリには “コード・設定ファイル” をすべて含めていますが、  
+UI ソフトシャドウ用の **有料アセット「TrueShadow」** はライセンス上同梱できません。  
+プロジェクト内のスクリプトが TrueShadow クラスを参照しているため、 **アセットを購入して Import しない限り Unity でのビルド／実機動作はできません。**
+
+| ビルド可否 | 条件 |
+|------------|------|
+| **不可** | TrueShadow 未導入（デフォルト状態） |
+| **可能** | Asset Store で TrueShadow を購入 → `Import` した後に Build |
+
+> **動作確認のみ** を行いたい場合は、下記の APK / TestFlight あるいは デモ動画をご利用ください。  
+> コード設計・実装方針のレビューを主目的としたポートフォリオです。
 ### 🔸 Android 端末の場合
 
 - `P-Deck.apk` を端末にインストールしてください（ https://drive.google.com/file/d/1UxiUdqzU4po2-TfWeRRg-21vvyzB8LYx/view?usp=sharing ）
