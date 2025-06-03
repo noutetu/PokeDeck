@@ -15,13 +15,27 @@ public class ReviewManager : MonoBehaviour
     // ----------------------------------------------------------------------
     private static class Constants
     {
+        // レビュータイミング設定
         public const float DEFAULT_REVIEW_TIME_1 = 7200f;   // 2時間
         public const float DEFAULT_REVIEW_TIME_2 = 36000f;  // 10時間
+        
+        // PlayerPrefsキー
         public const string DEFAULT_PLAYTIME_KEY = "playtime";
         public const string DEFAULT_REVIEW1_KEY = "review1";
         public const string DEFAULT_REVIEW2_KEY = "review2";
+        
+        // フィードバックメッセージ
         public const string DEFAULT_FEEDBACK_MSG_1 = "ご利用ありがとうございます！";
         public const string DEFAULT_FEEDBACK_MSG_2 = "いつもご利用いただき、ありがとうございます！";
+        
+        // 時間計算関連
+        public const float SECONDS_PER_HOUR = 3600f;
+        public const float SECONDS_PER_MINUTE = 60f;
+        public const string TIME_FORMAT = "{0:D2}:{1:D2}:{2:D2}";
+        
+        // プレイヤープレフス値
+        public const int REVIEW_SHOWN_VALUE = 1;
+        public const int REVIEW_NOT_SHOWN_VALUE = 0;
     }
 
     [Header("レビュー依頼タイミング（秒）")]
@@ -116,29 +130,37 @@ public class ReviewManager : MonoBehaviour
     // ----------------------------------------------------------------------
     // レビュー依頼を必要に応じて実行
     // ----------------------------------------------------------------------
-    // レビュー依頼を必要に応じて実行
     public void TryRequestReviewIfNeeded()
     {
 #if UNITY_IOS
         try
         {
-            float playtime = GetPlaytime();
-            bool review1Shown = IsReview1Shown();
-            bool review2Shown = IsReview2Shown();
-
-            if (ShouldRequestFirstReview(playtime, review1Shown))
-            {
-                RequestReview(review1Key, feedbackMsg1);
-            }
-            else if (ShouldRequestSecondReview(playtime, review2Shown))
-            {
-                RequestReview(review2Key, feedbackMsg2);
-            }
+            ProcessReviewRequest();
         }
         catch (Exception ex)
         {
             Debug.LogError($"[ReviewManager] レビュー依頼処理中にエラー: {ex.Message}");
             Debug.LogException(ex);
+        }
+#endif
+    }
+    
+    // レビュー依頼の内部処理ロジック
+    // @summary 使用時間に基づいて適切なレビュー依頼を表示
+    private void ProcessReviewRequest()
+    {
+#if UNITY_IOS
+        float playtime = GetPlaytime();
+        bool review1Shown = IsReview1Shown();
+        bool review2Shown = IsReview2Shown();
+
+        if (ShouldRequestFirstReview(playtime, review1Shown))
+        {
+            RequestReview(review1Key, feedbackMsg1);
+        }
+        else if (ShouldRequestSecondReview(playtime, review2Shown))
+        {
+            RequestReview(review2Key, feedbackMsg2);
         }
 #endif
     }
@@ -167,7 +189,7 @@ public class ReviewManager : MonoBehaviour
         try
         {
             Device.RequestStoreReview();
-            PlayerPrefs.SetInt(reviewKey, 1);
+            PlayerPrefs.SetInt(reviewKey, Constants.REVIEW_SHOWN_VALUE);
             PlayerPrefs.Save();
             ShowFeedback(feedbackMsg);
         }
@@ -212,10 +234,36 @@ public class ReviewManager : MonoBehaviour
     public string GetPlaytimeFormatted()
     {
         float totalSeconds = GetPlaytime();
-        int hours = Mathf.FloorToInt(totalSeconds / 3600f);
-        int minutes = Mathf.FloorToInt((totalSeconds % 3600f) / 60f);
-        int seconds = Mathf.FloorToInt(totalSeconds % 60f);
-        return $"{hours:D2}:{minutes:D2}:{seconds:D2}";
+        TimeComponents components = CalculateTimeComponents(totalSeconds);
+        return FormatTimeComponents(components);
+    }
+    
+    // 秒数から時・分・秒の構成要素を計算
+    // @param totalSeconds 総秒数
+    // @returns 時間コンポーネント構造体
+    private TimeComponents CalculateTimeComponents(float totalSeconds)
+    {
+        TimeComponents result;
+        result.hours = Mathf.FloorToInt(totalSeconds / Constants.SECONDS_PER_HOUR);
+        result.minutes = Mathf.FloorToInt((totalSeconds % Constants.SECONDS_PER_HOUR) / Constants.SECONDS_PER_MINUTE);
+        result.seconds = Mathf.FloorToInt(totalSeconds % Constants.SECONDS_PER_MINUTE);
+        return result;
+    }
+    
+    // 時間コンポーネントをフォーマット
+    // @param components 時間コンポーネント
+    // @returns フォーマット済み文字列 (HH:MM:SS)
+    private string FormatTimeComponents(TimeComponents components)
+    {
+        return $"{components.hours:D2}:{components.minutes:D2}:{components.seconds:D2}";
+    }
+    
+    // 時間コンポーネント構造体
+    private struct TimeComponents
+    {
+        public int hours;
+        public int minutes;
+        public int seconds;
     }
 
     // ----------------------------------------------------------------------
@@ -224,13 +272,21 @@ public class ReviewManager : MonoBehaviour
     // ----------------------------------------------------------------------
     public bool IsReview1Shown()
     {
-        return PlayerPrefs.GetInt(review1Key, 0) == 1;
+        return IsReviewShown(review1Key);
     }
 
     // @returns 2回目レビュー依頼済みか
     public bool IsReview2Shown()
     {
-        return PlayerPrefs.GetInt(review2Key, 0) == 1;
+        return IsReviewShown(review2Key);
+    }
+    
+    // 特定のレビュー依頼が表示済みかどうかを確認
+    // @param reviewKey 確認するレビューキー
+    // @returns レビュー依頼済みかどうか
+    private bool IsReviewShown(string reviewKey)
+    {
+        return PlayerPrefs.GetInt(reviewKey, Constants.REVIEW_NOT_SHOWN_VALUE) == Constants.REVIEW_SHOWN_VALUE;
     }
 
     // ----------------------------------------------------------------------
