@@ -1,4 +1,4 @@
-# ========== Unity一般 ==========
+# ========== Unity 一般 ==========
 [Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
@@ -8,38 +8,39 @@
 [Mm]emoryCaptures/
 UserSettings/
 
-# ========== Visual Studio / Rider ==========
-*.csproj
-*.sln
-*.user
-*.unityproj
-*.pidb
-*.suo
-*.tmp
-*.userprefs
+# ========== IDE / エディタ設定 ==========
+.vs/
 .vscode/
 .idea/
-*.sln.DotSettings
+
+*.sln
+*.csproj
+*.unityproj
+*.suo
+*.user
+*.userprefs
+*.tmp
+*.pidb
 *.svd
+*.sln.DotSettings
 *.Utmp/
 
-# ========== OSによる不要ファイル ==========
+# ========== OS による不要ファイル ==========
 .DS_Store
 Thumbs.db
 
-# ========== バージョン管理外のアセット ==========
+# ========== 出力バイナリ・署名ファイル ==========
 *.apk
 *.aab
 *.keystore
-
-# ========== CrashlyticsやGradleが作るファイル ==========
-.gradle/
-*.gradle
-*.apk
 *.log
 *.hprof
 
-# ========== iOSビルド時のXcode生成ファイル ==========
+# ========== Android / Gradle ==========
+.gradle/
+*.gradle
+
+# ========== iOS / Xcode ==========
 Pods/
 DerivedData/
 xcuserdata/
