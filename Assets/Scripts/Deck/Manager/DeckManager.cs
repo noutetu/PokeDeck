@@ -52,6 +52,54 @@ public class SimplifiedDeck
 // ----------------------------------------------------------------------
 public class DeckManager : MonoBehaviour
 {
+    // ----------------------------------------------------------------------
+    // 定数クラス
+    // ----------------------------------------------------------------------
+    private static class Constants
+    {
+        // ファイルパス
+        public const string DECKS_FILENAME = "decks.json";
+        
+        // フィードバックメッセージ
+        public const string FEEDBACK_DECK_EMPTY = "デッキが空です。カードを追加してください。";
+        public const string FEEDBACK_DECK_TOO_MANY_CARDS = "デッキは{0}枚以下である必要があります。{1}枚削除してください。";
+        public const string FEEDBACK_LOADING_IMAGES = "デッキ画像を準備中...";
+        public const string FEEDBACK_SAVE_SUCCESS = "デッキ '{0}' を保存しました";
+        public const string FEEDBACK_SAVE_SUCCESS_WITH_IMAGES = "デッキ '{0}' を保存しました（画像{1}枚を読み込み）";
+        public const string FEEDBACK_COPY_SUCCESS = "デッキ '{0}' のコピーが完了しました";
+        public const string FEEDBACK_COPY_ERROR = "デッキのコピーに失敗しました: {0}";
+        public const string FEEDBACK_SAMPLE_DECK_CREATED = "サンプルデッキ作成完了: {0}個";
+        public const string FEEDBACK_SAMPLE_DECK_ERROR = "サンプルデータの作成中にエラーが発生しました。";
+        public const string FEEDBACK_CARD_REFERENCE_ERROR = "カード参照の復元中にエラーが発生しました。";
+        public const string FEEDBACK_INIT_START = "デッキシステムを初期化中...";
+        public const string FEEDBACK_INIT_CARD_DB = "カードデータベースの準備中...";
+        public const string FEEDBACK_INIT_DECK_DATA = "デッキデータを読み込み中...";
+        public const string FEEDBACK_INIT_SAMPLE_DECK = "サンプルデッキを作成中...";
+        public const string FEEDBACK_INIT_CARD_REF = "カード参照を復元中...";
+        public const string FEEDBACK_INIT_COMPLETE = "デッキシステムの初期化が完了しました";
+        public const string FEEDBACK_INIT_ERROR = "デッキの初期化中にエラーが発生しました。";
+        public const string FEEDBACK_SAVE_ERROR = "デッキデータの保存中にエラーが発生しました。";
+        public const string FEEDBACK_LOADING_PROGRESS = "デッキ画像を準備中... ({0}/{1})";
+        public const string FEEDBACK_LOAD_ERROR = "デッキデータを読み込めませんでした。新しいデッキを作成します。";
+        public const string FEEDBACK_TEXTURE_LOAD_ERROR = "カードテクスチャの読み込み中にエラーが発生しました。";
+        
+        // エラーメッセージ
+        public const string ERROR_INIT = "初期化中にエラー: {0}";
+        public const string ERROR_SAVE = "デッキデータ保存中にエラー: {0}";
+        public const string ERROR_LOAD = "デッキデータ読み込み中にエラー: {0}";
+        public const string ERROR_CARD_REF = "カード参照の復元中にエラー: {0}";
+        public const string ERROR_TEXTURE_LOAD = "カードテクスチャ読み込み中にエラー: {0}";
+        public const string ERROR_DECK_COPY = "デッキコピー中にエラー: {0}";
+        public const string ERROR_DECK_IMAGE_LOAD = "デッキ画像読み込み中にエラー: {0}";
+        public const string ERROR_SAMPLE_DECK = "サンプルデッキ作成中にエラー: {0}";
+        
+        // 遅延設定
+        public const int RETRY_DELAY_MS = 100;
+        public const int SMALL_RETRY_DELAY_MS = 50;
+        
+        // 再試行回数
+        public const int MAX_RETRIES = 3;
+    }
     // シングルトンインスタンス
     private static DeckManager _instance;
     public static DeckManager Instance
@@ -89,7 +137,7 @@ public class DeckManager : MonoBehaviour
     // ----------------------------------------------------------------------
     // ファイル保存パス
     // ----------------------------------------------------------------------
-    private string SavePath => Path.Combine(Application.persistentDataPath, "decks.json");
+    private string SavePath => Path.Combine(Application.persistentDataPath, Constants.DECKS_FILENAME);
 
     // ----------------------------------------------------------------------
     // デッキ表示用のパネル参照
@@ -141,13 +189,13 @@ public class DeckManager : MonoBehaviour
             // 初期化開始フィードバック
             if (FeedbackContainer.Instance != null)
             {
-                FeedbackContainer.Instance.ShowProgressFeedback("デッキシステムを初期化中...");
+                FeedbackContainer.Instance.ShowProgressFeedback(Constants.FEEDBACK_INIT_START);
             }
             
             // CardDatabaseの初期化完了を待機
             if (FeedbackContainer.Instance != null)
             {
-                FeedbackContainer.Instance.UpdateFeedbackMessage("カードデータベースの準備中...");
+                FeedbackContainer.Instance.UpdateFeedbackMessage(Constants.FEEDBACK_INIT_CARD_DB);
             }
             float startTime = Time.time;
             await CardDatabase.WaitForInitializationAsync();
@@ -156,14 +204,14 @@ public class DeckManager : MonoBehaviour
             // カードデータベースが利用可能になったらデッキを読み込む
             if (FeedbackContainer.Instance != null)
             {
-                FeedbackContainer.Instance.UpdateFeedbackMessage("デッキデータを読み込み中...");
+                FeedbackContainer.Instance.UpdateFeedbackMessage(Constants.FEEDBACK_INIT_DECK_DATA);
             }
             await LoadSavedDecksAsync();
 
             // サンプルデッキを非同期で作成（起動時のみ）
             if (FeedbackContainer.Instance != null)
             {
-                FeedbackContainer.Instance.UpdateFeedbackMessage("サンプルデッキを作成中...");
+                FeedbackContainer.Instance.UpdateFeedbackMessage(Constants.FEEDBACK_INIT_SAMPLE_DECK);
             }
             await CreateSampleDecksAsync();
 
@@ -173,7 +221,7 @@ public class DeckManager : MonoBehaviour
             // カード参照の復元
             if (FeedbackContainer.Instance != null)
             {
-                FeedbackContainer.Instance.UpdateFeedbackMessage("カード参照を復元中...");
+                FeedbackContainer.Instance.UpdateFeedbackMessage(Constants.FEEDBACK_INIT_CARD_REF);
             }
             await RestoreCardReferencesInDecksAsync();
 
@@ -187,15 +235,18 @@ public class DeckManager : MonoBehaviour
             // 初期化完了フィードバック
             if (FeedbackContainer.Instance != null)
             {
-                FeedbackContainer.Instance.CompleteProgressFeedback("デッキシステムの初期化が完了しました", 1.0f);
+                FeedbackContainer.Instance.CompleteProgressFeedback(Constants.FEEDBACK_INIT_COMPLETE, 1.0f);
             }
         }
         catch (System.Exception ex)
         {
             // デッキの初期化中にエラーが発生
+            Debug.LogError(string.Format(Constants.ERROR_INIT, ex.Message));
+            Debug.LogException(ex);
+            
             if (FeedbackContainer.Instance != null)
             {
-                FeedbackContainer.Instance.ShowFailureFeedback("デッキの初期化中にエラーが発生しました。");
+                FeedbackContainer.Instance.ShowFailureFeedback(Constants.FEEDBACK_INIT_ERROR);
             }
         }
     }
@@ -238,7 +289,7 @@ public class DeckManager : MonoBehaviour
             // ユーザーにフィードバックを表示
             if (FeedbackContainer.Instance != null)
             {
-                FeedbackContainer.Instance.ShowFailureFeedback("デッキが空です。カードを追加してください。");
+                FeedbackContainer.Instance.ShowFailureFeedback(Constants.FEEDBACK_DECK_EMPTY);
             }
             return;
         }
@@ -248,7 +299,10 @@ public class DeckManager : MonoBehaviour
             // ユーザーにフィードバックを表示
             if (FeedbackContainer.Instance != null)
             {
-                FeedbackContainer.Instance.ShowFailureFeedback($"デッキは{DeckModel.MAX_CARDS}枚以下である必要があります。{_currentDeck.CardCount - DeckModel.MAX_CARDS}枚削除してください。");
+                string message = string.Format(Constants.FEEDBACK_DECK_TOO_MANY_CARDS, 
+                    DeckModel.MAX_CARDS, 
+                    _currentDeck.CardCount - DeckModel.MAX_CARDS);
+                FeedbackContainer.Instance.ShowFailureFeedback(message);
             }
             return;
         }
@@ -262,22 +316,35 @@ public class DeckManager : MonoBehaviour
     // ----------------------------------------------------------------------
     private async UniTask LoadCardTexturesAndSaveDeckAsync()
     {
-        // ローディングインジケータを表示
-        ShowLoadingFeedback("デッキ画像を準備中...");
+        try
+        {
+            // ローディングインジケータを表示
+            ShowLoadingFeedback(Constants.FEEDBACK_LOADING_IMAGES);
 
-        // テクスチャ読み込み対象のカードをリストアップ
-        List<CardModel> cardsToLoad = GetCardsRequiringTextureLoad();
+            // テクスチャ読み込み対象のカードをリストアップ
+            List<CardModel> cardsToLoad = GetCardsRequiringTextureLoad();
 
-        // 画像の読み込み処理
-        await LoadCardTexturesWithProgressAsync(cardsToLoad);
+            // 画像の読み込み処理
+            await LoadCardTexturesWithProgressAsync(cardsToLoad);
 
-        // デッキの整理と保存
-        PrepareDeckForSaving();
-        SaveCurrentDeckToList();
-        SaveDecks();
+            // デッキの整理と保存
+            PrepareDeckForSaving();
+            SaveCurrentDeckToList();
+            SaveDecks();
 
-        // 成功フィードバックの表示
-        ShowSaveSuccessFeedback(cardsToLoad.Count);
+            // 成功フィードバックの表示
+            ShowSaveSuccessFeedback(cardsToLoad.Count);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError(string.Format(Constants.ERROR_DECK_IMAGE_LOAD, ex.Message));
+            Debug.LogException(ex);
+            
+            if (FeedbackContainer.Instance != null)
+            {
+                FeedbackContainer.Instance.ShowFailureFeedback(Constants.FEEDBACK_TEXTURE_LOAD_ERROR);
+            }
+        }
     }
 
     private void ShowLoadingFeedback(string message)
@@ -304,25 +371,41 @@ public class DeckManager : MonoBehaviour
 
     private async UniTask LoadCardTexturesWithProgressAsync(List<CardModel> cardsToLoad)
     {
-        if (cardsToLoad.Count == 0)
+        if (cardsToLoad == null || cardsToLoad.Count == 0)
             return;
 
-        int loadedCount = 0;
-        foreach (CardModel card in cardsToLoad)
+        try
         {
-            // ImageCacheManagerを使用してテクスチャを読み込む
-            if (ImageCacheManager.Instance != null)
+            int loadedCount = 0;
+            int totalCount = cardsToLoad.Count;
+            
+            foreach (CardModel card in cardsToLoad)
             {
-                await ImageCacheManager.Instance.GetCardTextureAsync(card);
-            }
+                // ImageCacheManagerを使用してテクスチャを読み込む
+                if (ImageCacheManager.Instance != null && card != null)
+                {
+                    await ImageCacheManager.Instance.GetCardTextureAsync(card);
+                }
 
-            loadedCount++;
-            // プログレスを更新
-            if (FeedbackContainer.Instance != null)
-            {
-                float progress = (float)loadedCount / cardsToLoad.Count;
-                FeedbackContainer.Instance.UpdateFeedbackMessage($"デッキ画像を準備中... ({loadedCount}/{cardsToLoad.Count})");
+                loadedCount++;
+                // プログレスを更新
+                UpdateLoadingProgress(loadedCount, totalCount);
             }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError(string.Format(Constants.ERROR_TEXTURE_LOAD, ex.Message));
+            Debug.LogException(ex);
+        }
+    }
+    
+    private void UpdateLoadingProgress(int loadedCount, int totalCount)
+    {
+        if (FeedbackContainer.Instance != null)
+        {
+            float progress = (float)loadedCount / totalCount;
+            FeedbackContainer.Instance.UpdateFeedbackMessage(
+                string.Format(Constants.FEEDBACK_LOADING_PROGRESS, loadedCount, totalCount));
         }
     }
 
@@ -366,8 +449,8 @@ public class DeckManager : MonoBehaviour
         if (FeedbackContainer.Instance != null)
         {
             string message = loadedImageCount > 0 
-                ? $"デッキ '{_currentDeck.Name}' を保存しました（画像{loadedImageCount}枚を読み込み）"
-                : $"デッキ '{_currentDeck.Name}' を保存しました";
+                ? string.Format(Constants.FEEDBACK_SAVE_SUCCESS_WITH_IMAGES, _currentDeck.Name, loadedImageCount)
+                : string.Format(Constants.FEEDBACK_SAVE_SUCCESS, _currentDeck.Name);
             FeedbackContainer.Instance.CompleteProgressFeedback(message, 1.0f);
         }
         
@@ -395,16 +478,11 @@ public class DeckManager : MonoBehaviour
                         method.Invoke(reviewManager, null);
                     }
                 }
-                else
-                {
-                }
-            }
-            else
-            {
             }
         }
         catch (System.Exception ex)
         {
+            Debug.LogWarning($"[DeckManager] レビュー依頼処理中に例外が発生しましたが、無視します: {ex.Message}");
         }
     }
 
@@ -433,10 +511,16 @@ public class DeckManager : MonoBehaviour
             // JSONにシリアライズして保存
             string json = JsonConvert.SerializeObject(simplifiedDecks, Formatting.Indented);
             File.WriteAllText(SavePath, json);
-
         }
         catch (System.Exception ex)
         {
+            Debug.LogError(string.Format(Constants.ERROR_SAVE, ex.Message));
+            Debug.LogException(ex);
+            
+            if (FeedbackContainer.Instance != null)
+            {
+                FeedbackContainer.Instance.ShowFailureFeedback(Constants.FEEDBACK_SAVE_ERROR);
+            }
         }
     }
 
@@ -485,49 +569,56 @@ public class DeckManager : MonoBehaviour
     }
 
     // ----------------------------------------------------------------------
-    // コピーしたデッキのカードテクスチャをロードするUniTask版メソッド
+    // コピーしたデッキを保存してフィードバックを表示する
     // ----------------------------------------------------------------------
-    private async UniTask LoadCardTexturesForCopiedDeckAsync(DeckModel deck)
+    private async UniTask<DeckModel> CopyAndSaveDeckAsync(DeckModel sourceDeck, string newName, bool isFromSampleDeck)
     {
-        if (deck == null)
-            return;
-
-        // テクスチャ読み込み対象のカードをリストアップ
-        List<CardModel> cardsToLoad = new List<CardModel>();
-        foreach (string cardId in deck.CardIds)
+        try
         {
-            CardModel card = deck.GetCardModel(cardId);
-            if (card != null && card.imageTexture == null && !string.IsNullOrEmpty(card.imageKey))
+            // 新しいデッキを作成
+            DeckModel newDeck = new DeckModel
             {
-                cardsToLoad.Add(card);
+                Name = newName,
+                Memo = sourceDeck.Memo
+            };
+
+            // カードをコピー
+            foreach (string cardId in sourceDeck.CardIds)
+            {
+                newDeck._AddCardId(cardId);
             }
+
+            // エネルギータイプをコピー
+            foreach (var energyType in sourceDeck.SelectedEnergyTypes)
+            {
+                newDeck.AddSelectedEnergyType(energyType);
+            }
+
+            // 複製したデッキを通常デッキリストに保存
+            _savedDecks.Add(newDeck);
+            SaveDecks();
+            
+            // 画像を読み込んでからUIを更新
+            await LoadCardTexturesAndRefreshUIAsync(newDeck, !isFromSampleDeck);
+
+            // サンプルデッキからのコピーの場合は、通常デッキパネルも更新
+            if (isFromSampleDeck)
+            {
+                // DeckListPanelの更新を明示的に行う
+                DeckListPanel normalDeckListPanel = FindFirstObjectByType<DeckListPanel>();
+                if (normalDeckListPanel != null)
+                {
+                    normalDeckListPanel.RefreshDeckList();
+                }
+            }
+            
+            return newDeck;
         }
-
-        // 読み込むカードがなければ終了
-        if (cardsToLoad.Count == 0)
-            return;
-
-        // 同時に処理するタスクリスト
-        List<UniTask> tasks = new List<UniTask>();
-
-        // ImageCacheManagerを使用してテクスチャを非同期で読み込む
-        if (ImageCacheManager.Instance != null)
+        catch (System.Exception ex)
         {
-            foreach (CardModel card in cardsToLoad)
-            {
-                tasks.Add(ImageCacheManager.Instance.GetCardTextureAsync(card));
-            }
-
-            if (tasks.Count > 0)
-            {
-                try
-                {
-                    await UniTask.WhenAll(tasks);
-                }
-                catch (Exception ex)
-                {
-                }
-            }
+            Debug.LogError($"[DeckManager] デッキコピー中にエラー: {ex.Message}");
+            Debug.LogException(ex);
+            return null;
         }
     }
 
@@ -601,6 +692,8 @@ public class DeckManager : MonoBehaviour
         }
         catch (System.Exception ex)
         {
+            Debug.LogError($"[DeckManager] デッキデータ読み込み中にエラー: {ex.Message}");
+            Debug.LogException(ex);
             HandleLoadDecksError();
         }
     }
@@ -630,6 +723,7 @@ public class DeckManager : MonoBehaviour
         }
         catch (System.Exception ex)
         {
+            Debug.LogWarning(string.Format(Constants.ERROR_LOAD, ex.Message));
             CreateEmptyDeckList();
         }
     }
@@ -647,7 +741,7 @@ public class DeckManager : MonoBehaviour
         try
         {
             int createdDeckCount = 0;
-            int maxRetries = 3;
+            int maxRetries = Constants.MAX_RETRIES;
 
             // Inspectorで設定された各サンプルデッキを作成
             foreach (var sampleDeck in sampleDecks)
@@ -668,14 +762,18 @@ public class DeckManager : MonoBehaviour
             
             if (FeedbackContainer.Instance != null)
             {
-                FeedbackContainer.Instance.UpdateFeedbackMessage($"サンプルデッキ作成完了: {createdDeckCount}個");
+                string message = string.Format(Constants.FEEDBACK_SAMPLE_DECK_CREATED, createdDeckCount);
+                FeedbackContainer.Instance.UpdateFeedbackMessage(message);
             }
         }
         catch (System.Exception ex)
         {
+            Debug.LogError(string.Format(Constants.ERROR_SAMPLE_DECK, ex.Message));
+            Debug.LogException(ex);
+            
             if (FeedbackContainer.Instance != null)
             {
-                FeedbackContainer.Instance.ShowFailureFeedback("サンプルデッキの作成中にエラーが発生しました。");
+                FeedbackContainer.Instance.ShowFailureFeedback(Constants.FEEDBACK_SAMPLE_DECK_ERROR);
             }
         }
     }
@@ -839,13 +937,15 @@ public class DeckManager : MonoBehaviour
             {
                 await RestoreDeckCardReferencesAsync(_currentDeck);
             }
-
         }
         catch (System.Exception ex)
         {
+            Debug.LogError(string.Format(Constants.ERROR_CARD_REF, ex.Message));
+            Debug.LogException(ex);
+            
             if (FeedbackContainer.Instance != null)
             {
-                FeedbackContainer.Instance.ShowFailureFeedback("カード参照の復元中にエラーが発生しました。");
+                FeedbackContainer.Instance.ShowFailureFeedback(Constants.FEEDBACK_CARD_REFERENCE_ERROR);
             }
         }
     }
@@ -868,6 +968,7 @@ public class DeckManager : MonoBehaviour
         }
         catch (System.Exception ex)
         {
+            Debug.LogWarning($"[DeckManager] デッキ '{deck.Name}' のカード参照復元中にエラー: {ex.Message}");
         }
     }
 
@@ -957,6 +1058,11 @@ public class DeckManager : MonoBehaviour
     private void HandleLoadDecksError()
     {
         CreateEmptyDeckList();
+        
+        if (FeedbackContainer.Instance != null)
+        {
+            FeedbackContainer.Instance.ShowFailureFeedback(Constants.FEEDBACK_LOAD_ERROR);
+        }
     }
 
     // ----------------------------------------------------------------------
@@ -1031,139 +1137,18 @@ public class DeckManager : MonoBehaviour
     }
 
     // ----------------------------------------------------------------------
-    // すべてのデッキに含まれるカード画像を読み込む（改良版、DeckImageLoaderから統合）
+    // すべてのデッキに含まれるカード画像を読み込む
     // ----------------------------------------------------------------------
     private async UniTask LoadCardImagesForAllDecks()
     {
         try
         {
-            // 重複するカードを避けるためのハッシュセット
-            var processedCards = new HashSet<string>();
-            var tasks = new List<UniTask>();
-
-            // 現在のデッキの画像を優先的に読み込む
-            await LoadCurrentDeckImagesAsync(processedCards, tasks);
-
-            // 通常デッキの画像を読み込む
-            await LoadSavedDecksImagesAsync(processedCards, tasks);
-
-            // サンプルデッキの画像を読み込む
-            await LoadSampleDecksImagesAsync(processedCards, tasks);
+            await DeckImageLoader.LoadCardImagesForAllDecksAsync(_currentDeck, _savedDecks, _sampleDecks);
         }
         catch (System.Exception ex)
         {
-        }
-    }
-
-    // ----------------------------------------------------------------------
-    // 現在のデッキの画像を優先的に読み込む
-    // ----------------------------------------------------------------------
-    private async UniTask LoadCurrentDeckImagesAsync(HashSet<string> processedCards, List<UniTask> tasks)
-    {
-        if (_currentDeck?.CardIds?.Count > 0)
-        {
-            tasks.Clear();
-            
-            foreach (var cardId in _currentDeck.CardIds)
-            {
-                if (ShouldLoadCardImage(cardId, _currentDeck, processedCards))
-                {
-                    var cardModel = _currentDeck.GetCardModel(cardId);
-                    if (IsValidForImageLoad(cardModel))
-                    {
-                        tasks.Add(ImageCacheManager.Instance.GetCardTextureAsync(cardModel));
-                        processedCards.Add(cardId);
-                    }
-                }
-            }
-
-            if (tasks.Count > 0)
-            {
-                await ExecuteImageLoadTasks(tasks, "現在のデッキ");
-            }
-        }
-    }
-
-    // ----------------------------------------------------------------------
-    // 保存済みデッキの画像を読み込む
-    // ----------------------------------------------------------------------
-    private async UniTask LoadSavedDecksImagesAsync(HashSet<string> processedCards, List<UniTask> tasks)
-    {
-        tasks.Clear();
-
-        foreach (var deck in _savedDecks)
-        {
-            if (deck == _currentDeck) continue; // 現在のデッキはスキップ
-
-            LoadDeckImages(deck, processedCards, tasks);
-        }
-
-        if (tasks.Count > 0)
-        {
-            await ExecuteImageLoadTasks(tasks, "保存済みデッキ");
-        }
-    }
-
-    // ----------------------------------------------------------------------
-    // サンプルデッキの画像を読み込む
-    // ----------------------------------------------------------------------
-    private async UniTask LoadSampleDecksImagesAsync(HashSet<string> processedCards, List<UniTask> tasks)
-    {
-        tasks.Clear();
-
-        foreach (var deck in _sampleDecks)
-        {
-            if (deck == _currentDeck) continue; // 現在のデッキはスキップ
-
-            LoadDeckImages(deck, processedCards, tasks);
-        }
-
-        if (tasks.Count > 0)
-        {
-            await ExecuteImageLoadTasks(tasks, "サンプルデッキ");
-        }
-    }
-
-    // ----------------------------------------------------------------------
-    // 画像読み込みヘルパーメソッド
-    // ----------------------------------------------------------------------
-    private bool ShouldLoadCardImage(string cardId, DeckModel deck, HashSet<string> processedCards)
-    {
-        return !processedCards.Contains(cardId);
-    }
-
-    private bool IsValidForImageLoad(CardModel cardModel)
-    {
-        return cardModel != null && 
-               cardModel.imageTexture == null && 
-               !string.IsNullOrEmpty(cardModel.imageKey) &&
-               ImageCacheManager.Instance != null;
-    }
-
-    private void LoadDeckImages(DeckModel deck, HashSet<string> processedCards, List<UniTask> tasks)
-    {
-        foreach (var cardId in deck.CardIds)
-        {
-            if (ShouldLoadCardImage(cardId, deck, processedCards))
-            {
-                var cardModel = deck.GetCardModel(cardId);
-                if (IsValidForImageLoad(cardModel))
-                {
-                    tasks.Add(ImageCacheManager.Instance.GetCardTextureAsync(cardModel));
-                    processedCards.Add(cardId);
-                }
-            }
-        }
-    }
-
-    private async UniTask ExecuteImageLoadTasks(List<UniTask> tasks, string deckType)
-    {
-        try
-        {
-            await UniTask.WhenAll(tasks);
-        }
-        catch (System.Exception ex)
-        {
+            Debug.LogError(string.Format(Constants.ERROR_DECK_IMAGE_LOAD, ex.Message));
+            Debug.LogException(ex);
         }
     }
 
@@ -1237,20 +1222,29 @@ public class DeckManager : MonoBehaviour
         if (deck == null)
             return;
             
-        // まず画像をロード
-        await LoadCardTexturesForCopiedDeckAsync(deck);
-        
-        // 画像読み込み完了後にUIを更新
-        DeckListPanel deckListPanel = FindFirstObjectByType<DeckListPanel>();
-        if (deckListPanel != null)
+        try
         {
-            deckListPanel.RefreshDeckList();
+            // まず画像をロード
+            await DeckImageLoader.LoadCardTexturesForCopiedDeckAsync(deck);
+            
+            // 画像読み込み完了後にUIを更新
+            DeckListPanel deckListPanel = FindFirstObjectByType<DeckListPanel>();
+            if (deckListPanel != null)
+            {
+                deckListPanel.RefreshDeckList();
+            }
+            
+            // フィードバックメッセージ表示（通常デッキからのコピーの場合のみ）
+            if (showFeedback && FeedbackContainer.Instance != null)
+            {
+                string message = string.Format(Constants.FEEDBACK_COPY_SUCCESS, deck.Name);
+                FeedbackContainer.Instance.ShowSuccessFeedback(message);
+            }
         }
-        
-        // フィードバックメッセージ表示（通常デッキからのコピーの場合のみ）
-        if (showFeedback && FeedbackContainer.Instance != null)
+        catch (System.Exception ex)
         {
-            FeedbackContainer.Instance.ShowSuccessFeedback($"デッキ '{deck.Name}' のコピーが完了しました");
+            Debug.LogError($"[DeckManager] デッキ画像読み込み中にエラー: {ex.Message}");
+            Debug.LogException(ex);
         }
     }
 
