@@ -58,36 +58,49 @@
 
 ## 📂 ディレクトリ構成（タップで開閉）
 <details>
-<summary>Assets/Scripts/</summary>
+<summary>Assets/Scripts/Cards</summary>
 
 ```text
-Assets/Scripts/
-├── Cards/
-│   ├── Model/
-│   ├── View/
-│   ├── Presenter/
-│   └── Utils/Enum/
-├── Deck/
-│   ├── Model/
-│   ├── View/
-│   ├── Presenter/
-│   ├── Manager/
-│   ├── UI/SampleDeck/
-│   └── Utils/
-├── Search/
-│   ├── Model/
-│   ├── View/
-│   ├── Presenter/
-│   └── Utils/Filters/
-├── CardUIManager/
-│   ├── Manager/
-│   ├── Presenter/
-│   ├── UI/
-│   └── Utils/
-└── Common/
-    └── UI/
+Cards/
+├── Model/          # データとビジネスロジック
+│   ├── AllCardModel.cs
+│   ├── CardDatabase.cs
+│   └── CardModel.cs
+├── View/           # UI表示とユーザー入力
+│   ├── AllCardView.cs
+│   └── CardView.cs
+├── Presenter/      # ModelとViewの仲介
+│   └── AllCardPresenter.cs
+└── Utils/          # ユーティリティ
+    └── Enum/
+        ├── EnumConverter.cs
+        └── Enums.cs
 ```
 </details>
+<details>
+<summary>Assets/Scripts/Deck</summary>
+
+```text
+Deck/
+├── Model/          # データとビジネスロジック
+│   └── DeckModel.cs
+├── View/           # UI表示とユーザー入力
+│   ├── DeckView.cs
+│   ├── DeckViewButton.cs
+│   └── SetEnergyPanel.cs
+├── Presenter/      # ModelとViewの仲介
+│   └── DeckPresenter.cs
+├── Manager/        # 管理クラス
+│   ├── DeckImageLoader.cs
+│   └── DeckManager.cs
+└── UI/             # UI専用コンポーネント
+    ├── DeckListItem.cs
+    ├── DeckListPanel.cs
+    └── SampleDeck/
+        └── SampleDeckPanel.cs
+```
+</details>
+
 
 ## 🚀 このアプリを動作させるには
 ### 🔍 注意事項（Unity ビルドについて）
